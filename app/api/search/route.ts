@@ -3,6 +3,16 @@ import { getProducts } from "@/lib/data/products";
 import { getServices } from "@/lib/data/services";
 import { getProjects } from "@/lib/data/projects";
 
+type SearchResult = {
+  type: "product" | "service" | "project";
+  id: string;
+  title: string;
+  description: string;
+  category?: string;
+  image?: string;
+  url: string;
+};
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get("q")?.toLowerCase().trim() || "";
@@ -18,7 +28,7 @@ export async function GET(request: NextRequest) {
       getProjects(),
     ]);
 
-    const results = [];
+    const results: SearchResult[] = [];
 
     // Buscar en productos
     products
