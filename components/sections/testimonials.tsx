@@ -51,7 +51,7 @@ export function Testimonials() {
                   ))}
                 </div>
                 <p className="mb-4 text-muted-foreground">
-                  "{testimonial.content}"
+                  &ldquo;{testimonial.content}&rdquo;
                 </p>
                 <div>
                   <p className="font-semibold">{testimonial.name}</p>

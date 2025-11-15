@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -186,10 +187,11 @@ export function ProductForm({ product }: ProductFormProps) {
         <Label htmlFor="image">Imagen *</Label>
         {product?.image && (
           <div className="relative w-full h-64 rounded-lg overflow-hidden border mb-4">
-            <img
+            <Image
               src={product.image}
               alt="Preview"
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
             />
           </div>
         )}
