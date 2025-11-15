@@ -8,7 +8,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Obtener la ruta actual del header agregado por el middleware
+  // Obtener la ruta actual del header agregado por el proxy
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") || "";
   
@@ -17,7 +17,7 @@ export default async function AdminLayout({
     return <>{children}</>;
   }
 
-  // El middleware ya maneja las redirecciones, pero verificamos el rol aquí
+  // El proxy ya maneja las redirecciones, pero verificamos el rol aquí
   const user = await getCurrentUser();
 
   if (!user || user.role !== "admin") {
