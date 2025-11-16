@@ -8,9 +8,10 @@ type ProductGalleryProps = {
   gallery?: string[];
   name: string;
   aspect?: "square" | "video";
+  fit?: "cover" | "contain";
 };
 
-export function ProductGallery({ image, gallery = [], name, aspect = "square" }: ProductGalleryProps) {
+export function ProductGallery({ image, gallery = [], name, aspect = "square", fit = "cover" }: ProductGalleryProps) {
   const initial = image || gallery[0] || "";
   const [current, setCurrent] = useState<string>(initial);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -34,7 +35,7 @@ export function ProductGallery({ image, gallery = [], name, aspect = "square" }:
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className={`group relative ${aspect === "video" ? "aspect-video" : "aspect-square"} w-full overflow-hidden rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary`}
+        className={`group relative ${aspect === "video" ? "aspect-video" : "aspect-square"} w-full overflow-hidden rounded-lg border bg-muted focus:outline-none focus:ring-2 focus:ring-primary`}
       >
         {current && (
           <Image
@@ -42,7 +43,7 @@ export function ProductGallery({ image, gallery = [], name, aspect = "square" }:
             alt={name}
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className={`${fit === "contain" ? "object-contain" : "object-cover"} transition-transform duration-300 group-hover:scale-105`}
             unoptimized
           />
         )}

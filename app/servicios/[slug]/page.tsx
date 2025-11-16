@@ -81,12 +81,12 @@ export default async function ServicePage({ params }: ServicePageProps) {
           </div>
 
           {service.image && (
-            <div className="mb-10">
+            <div className="mb-10 flex justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={service.image}
                 alt={service.title}
-                className="w-full aspect-video rounded-lg object-cover border"
+                className="max-h-[480px] w-full max-w-4xl rounded-lg border bg-muted object-contain"
               />
             </div>
           )}
