@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/select";
 
 const serviceSchema = z.object({
-  slug: z.string().min(1, "El slug es requerido"),
   title: z.string().min(1, "El título es requerido"),
   description: z.string().min(1, "La descripción es requerida"),
   longDescription: z.string().min(1, "La descripción larga es requerida"),
@@ -69,7 +68,6 @@ export function ServiceForm({ service }: ServiceFormProps) {
     resolver: zodResolver(serviceSchema),
     defaultValues: service
       ? {
-          slug: service.slug,
           title: service.title,
           description: service.description,
           longDescription: service.longDescription,
@@ -82,23 +80,11 @@ export function ServiceForm({ service }: ServiceFormProps) {
   });
 
   const title = watch("title");
-  useEffect(() => {
-    if (!service && title) {
-      const slug = title
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-      setValue("slug", slug);
-    }
-  }, [title, service, setValue]);
 
   const onSubmit = async (data: ServiceFormData) => {
     setIsSubmitting(true);
     try {
       const serviceData = {
-        slug: data.slug,
         title: data.title,
         description: data.description,
         longDescription: data.longDescription,
@@ -152,13 +138,7 @@ export function ServiceForm({ service }: ServiceFormProps) {
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="slug">Slug *</Label>
-          <Input id="slug" {...register("slug")} />
-          {errors.slug && (
-            <p className="text-sm text-destructive">{errors.slug.message}</p>
-          )}
-        </div>
+        {/* Slug se genera automáticamente en el servidor */}
       </div>
 
       <div className="space-y-2">
