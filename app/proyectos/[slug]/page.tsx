@@ -72,7 +72,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           </div>
 
           <div className="mb-8">
-            <ProductGallery image={project.image} gallery={project.gallery || []} name={project.title} />
+            <ProductGallery image={project.image} gallery={project.gallery || []} name={project.title} aspect="video" />
           </div>
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">

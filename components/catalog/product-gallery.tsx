@@ -7,9 +7,10 @@ type ProductGalleryProps = {
   image: string;
   gallery?: string[];
   name: string;
+  aspect?: "square" | "video";
 };
 
-export function ProductGallery({ image, gallery = [], name }: ProductGalleryProps) {
+export function ProductGallery({ image, gallery = [], name, aspect = "square" }: ProductGalleryProps) {
   const initial = image || gallery[0] || "";
   const [current, setCurrent] = useState<string>(initial);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -33,7 +34,7 @@ export function ProductGallery({ image, gallery = [], name }: ProductGalleryProp
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="group relative aspect-square w-full overflow-hidden rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary"
+        className={`group relative ${aspect === "video" ? "aspect-video" : "aspect-square"} w-full overflow-hidden rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary`}
       >
         {current && (
           <Image
