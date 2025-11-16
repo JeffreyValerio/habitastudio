@@ -13,6 +13,7 @@ const serviceSchema = z.object({
   process: z.array(z.string()).default([]),
   benefits: z.array(z.string()).default([]),
   icon: z.string().default("Home"),
+  image: z.string().url().optional(),
 });
 
 export async function createService(data: z.infer<typeof serviceSchema>) {

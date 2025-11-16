@@ -24,6 +24,17 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
   return {
     title: service.title,
     description: service.description,
+    openGraph: {
+      title: service.title,
+      description: service.description,
+      images: service.image ? [service.image] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: service.title,
+      description: service.description,
+      images: service.image ? [service.image] : undefined,
+    },
   };
 }
 
@@ -68,6 +79,17 @@ export default async function ServicePage({ params }: ServicePageProps) {
               {service.description}
             </p>
           </div>
+
+          {service.image && (
+            <div className="mb-10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={service.image}
+                alt={service.title}
+                className="w-full aspect-video rounded-lg object-cover border"
+              />
+            </div>
+          )}
 
           <Separator className="my-8" />
 

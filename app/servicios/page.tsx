@@ -25,11 +25,17 @@ export default async function ServicesPage() {
           </p>
         </div>
 
-        <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2">
+        <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3">
           {services.map((service) => {
             const Icon = service.icon;
             return (
               <Card key={service.title} className="border-2">
+                {service.image && (
+                  <div className="relative w-full aspect-video overflow-hidden rounded-t-lg border-b">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={service.image} alt={service.title} className="h-full w-full object-cover" />
+                  </div>
+                )}
                 <CardHeader>
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-primary/10">
                     <Icon className="h-8 w-8 text-primary" />
@@ -40,14 +46,6 @@ export default async function ServicesPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-3">
-                    {service.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 h-5 w-5 text-primary" />
-                        <span className="text-muted-foreground">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
                   <Button asChild className="mt-6 w-full">
                     <Link href={`/servicios/${service.slug}`}>Ver Detalles</Link>
                   </Button>

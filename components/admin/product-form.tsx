@@ -61,12 +61,16 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
   const [gallery, setGallery] = useState<string[]>(product?.gallery || []);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFilesChange = (filesList: FileList | null) => {
+  const handleFilesChange = (filesList: FileList | File[] | null) => {
     const files = filesList ? Array.from(filesList) : [];
-    setNewFiles(files);
-    const urls = files.map((f) => URL.createObjectURL(f));
-    setPreviews(urls);
+    const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+    if (imageFiles.length === 0) return;
+
+    setNewFiles((prev) => [...prev, ...imageFiles]);
+    const urls = imageFiles.map((f) => URL.createObjectURL(f));
+    setPreviews((prev) => [...prev, ...urls]);
   };
 
   const removeGalleryUrl = (url: string) => {
@@ -220,7 +224,6 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
           <Input 
             id="cost" 
             {...register("cost")} 
-            placeholder="500000" 
             type="number"
             step="0.01"
           />
@@ -232,7 +235,6 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
           <Input 
             id="price" 
             {...register("price")} 
-            placeholder="750000" 
             type="number"
             step="0.01"
             required
@@ -309,7 +311,34 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
           </div>
           <div className="space-y-2">
             <Label htmlFor="images">Galería (archivos locales)</Label>
-            <Input id="images" name="images" type="file" multiple accept="image/*" onChange={(e) => handleFilesChange(e.target.files)} />
+            <Input id="images" name="images" type="file" multiple accept="image/*" onChange={(e) => handleFilesChange(e.target.files)} className="hidden" />
+            <label
+              htmlFor="images"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+                if (e.dataTransfer?.files?.length) {
+                  handleFilesChange(e.dataTransfer.files);
+                }
+              }}
+              className={`flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary hover:bg-primary/5"}`}
+            >
+              <div className="text-center">
+                <p className="text-sm font-medium">Arrastra y suelta imágenes aquí</p>
+                <p className="text-xs text-muted-foreground mt-1">o haz clic para seleccionar</p>
+              </div>
+            </label>
             {(gallery.length > 0 || previews.length > 0) && (
               <div className="mt-2 grid grid-cols-2 gap-3">
                 {gallery.map((url, idx) => (
