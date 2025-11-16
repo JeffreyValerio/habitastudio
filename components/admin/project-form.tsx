@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 const projectSchema = z.object({
-  slug: z.string().min(1, "El slug es requerido"),
   title: z.string().min(1, "El título es requerido"),
   description: z.string().min(1, "La descripción es requerida"),
   longDescription: z.string().min(1, "La descripción larga es requerida"),
@@ -194,7 +193,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
         </div>
       </div>
 
-      <div className="space-y-3 rounded-lg border p-4">
+      <div className="space-y-3 rounded-lg border p-4 relative z-0">
         <Label>Imágenes</Label>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
@@ -215,7 +214,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
             <Label htmlFor="images">Galería (archivos locales)</Label>
             <Input id="images" name="images" type="file" multiple accept="image/*" onChange={(e) => handleFilesChange(e.target.files)} />
             {(gallery.length > 0 || previews.length > 0) && (
-              <div className="mt-2 grid grid-cols-2 gap-3">
+              <div className="mt-2 grid grid-cols-2 gap-3 relative z-0">
                 {gallery.map((url, idx) => (
                   <div key={`existing-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -295,7 +294,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
 
 
-      <div className="flex gap-4">
+      <div className="flex gap-4 relative z-10">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
