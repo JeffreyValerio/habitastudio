@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -14,7 +15,8 @@ import {
 } from "@/components/ui/table";
 import { deleteProject } from "@/app/actions/projects";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Edit } from "lucide-react";
+import { Trash2, Edit, Search, X as XIcon } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 interface Project {
   id: string;
@@ -25,9 +27,13 @@ interface Project {
   image: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export function ProjectsTable({ projects }: { projects: Project[] }) {
   const { toast } = useToast();
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de que quieres eliminar este proyecto? Esta acción eliminará también todas las imágenes asociadas.")) {
@@ -53,6 +59,31 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
     }
   };
 
+  const filteredProjects = useMemo(() => {
+    if (!searchQuery.trim()) return projects;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return projects.filter(
+      (project) =>
+        project.title.toLowerCase().includes(query) ||
+        project.slug.toLowerCase().includes(query) ||
+        project.category.toLowerCase().includes(query) ||
+        project.year.toLowerCase().includes(query)
+    );
+  }, [projects, searchQuery]);
+
+  const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
+  const paginatedProjects = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredProjects.slice(startIndex, endIndex);
+  }, [filteredProjects, currentPage]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
   if (projects.length === 0) {
     return (
       <div className="text-center py-12">
@@ -65,7 +96,35 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
   }
 
   return (
-    <div className="border rounded-lg">
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Buscar por título, categoría, año..."
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
+              onClick={() => handleSearchChange("")}
+            >
+              <XIcon className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        {searchQuery && (
+          <p className="text-sm text-muted-foreground">
+            {filteredProjects.length} resultado{filteredProjects.length !== 1 ? "s" : ""}
+          </p>
+        )}
+      </div>
+      <div className="border rounded-lg">
       <Table>
         <TableHeader>
           <TableRow>
@@ -77,7 +136,7 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {projects.map((project) => (
+          {paginatedProjects.map((project) => (
             <TableRow key={project.id}>
               <TableCell>
                 <div className="relative h-16 w-16 rounded overflow-hidden">
@@ -114,6 +173,14 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
           ))}
         </TableBody>
       </Table>
+      </div>
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
     </div>
   );
 }

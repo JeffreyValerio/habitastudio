@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -13,7 +14,8 @@ import {
 } from "@/components/ui/table";
 import { deleteService } from "@/app/actions/services";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Edit } from "lucide-react";
+import { Trash2, Edit, Search, X as XIcon } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 interface Service {
   id: string;
@@ -22,9 +24,13 @@ interface Service {
   description: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export function ServicesTable({ services }: { services: Service[] }) {
   const { toast } = useToast();
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de que quieres eliminar este servicio?")) {
@@ -50,6 +56,30 @@ export function ServicesTable({ services }: { services: Service[] }) {
     }
   };
 
+  const filteredServices = useMemo(() => {
+    if (!searchQuery.trim()) return services;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return services.filter(
+      (service) =>
+        service.title.toLowerCase().includes(query) ||
+        service.slug.toLowerCase().includes(query) ||
+        service.description.toLowerCase().includes(query)
+    );
+  }, [services, searchQuery]);
+
+  const totalPages = Math.ceil(filteredServices.length / ITEMS_PER_PAGE);
+  const paginatedServices = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredServices.slice(startIndex, endIndex);
+  }, [filteredServices, currentPage]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
   if (services.length === 0) {
     return (
       <div className="text-center py-12">
@@ -62,7 +92,35 @@ export function ServicesTable({ services }: { services: Service[] }) {
   }
 
   return (
-    <div className="border rounded-lg">
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Buscar por título, slug, descripción..."
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
+              onClick={() => handleSearchChange("")}
+            >
+              <XIcon className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        {searchQuery && (
+          <p className="text-sm text-muted-foreground">
+            {filteredServices.length} resultado{filteredServices.length !== 1 ? "s" : ""}
+          </p>
+        )}
+      </div>
+      <div className="border rounded-lg">
       <Table>
         <TableHeader>
           <TableRow>
@@ -73,7 +131,7 @@ export function ServicesTable({ services }: { services: Service[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {services.map((service) => (
+          {paginatedServices.map((service) => (
             <TableRow key={service.id}>
               <TableCell className="font-medium">{service.title}</TableCell>
               <TableCell className="text-muted-foreground">{service.slug}</TableCell>
@@ -99,6 +157,14 @@ export function ServicesTable({ services }: { services: Service[] }) {
           ))}
         </TableBody>
       </Table>
+      </div>
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
     </div>
   );
 }

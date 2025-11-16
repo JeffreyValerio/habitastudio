@@ -123,7 +123,7 @@ export function ContactForm() {
           id="phone"
           type="tel"
           {...register("phone")}
-          placeholder="+1 (234) 567-890"
+          placeholder="+506 6364 4915"
           aria-invalid={errors.phone ? "true" : "false"}
         />
         {errors.phone && (

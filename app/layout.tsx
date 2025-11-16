@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
+import { MainWrapper } from "@/components/layout/main-wrapper";
 import { StructuredData } from "@/components/seo/structured-data";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
@@ -71,9 +70,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider defaultTheme="dark" storageKey="habita-studio-theme">
           <StructuredData />
-          <Header />
-          <main className="min-h-screen">{children}</main>
-          <Footer />
+          <MainWrapper>{children}</MainWrapper>
           <Toaster />
         </ThemeProvider>
       </body>

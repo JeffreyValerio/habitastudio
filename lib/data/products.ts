@@ -5,7 +5,7 @@ export interface Product {
   name: string;
   slug: string;
   category: string;
-  price: string;
+  price: string; // Formateado como string en CRC para mostrar
   image: string;
   description: string;
   features: string[];
@@ -17,6 +17,15 @@ export interface Product {
   };
 }
 
+const formatPriceCRC = (price: number): string => {
+  return new Intl.NumberFormat("es-CR", {
+    style: "currency",
+    currency: "CRC",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
+};
+
 export async function getProducts(): Promise<Product[]> {
   const products = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
@@ -27,7 +36,7 @@ export async function getProducts(): Promise<Product[]> {
     name: p.name,
     slug: p.slug,
     category: p.category,
-    price: p.price,
+    price: typeof p.price === 'number' ? formatPriceCRC(p.price) : p.price,
     image: p.image,
     description: p.description,
     features: p.features,
@@ -52,7 +61,7 @@ export async function getProductById(id: string): Promise<Product | null> {
     name: product.name,
     slug: product.slug,
     category: product.category,
-    price: product.price,
+    price: typeof product.price === 'number' ? formatPriceCRC(product.price) : product.price,
     image: product.image,
     description: product.description,
     features: product.features,
@@ -77,7 +86,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     name: product.name,
     slug: product.slug,
     category: product.category,
-    price: product.price,
+    price: typeof product.price === 'number' ? formatPriceCRC(product.price) : product.price,
     image: product.image,
     description: product.description,
     features: product.features,

@@ -18,6 +18,7 @@ const productSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   slug: z.string().min(1, "El slug es requerido"),
   category: z.string().min(1, "La categoría es requerida"),
+  cost: z.string().optional(),
   price: z.string().min(1, "El precio es requerido"),
   description: z.string().min(1, "La descripción es requerida"),
   features: z.string().optional(),
@@ -35,7 +36,8 @@ interface ProductFormProps {
     name: string;
     slug: string;
     category: string;
-    price: string;
+    cost: number;
+    price: number;
     image: string;
     description: string;
     features: string[];
@@ -51,6 +53,16 @@ export function ProductForm({ product }: ProductFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const formatCurrency = (amount: number): string => {
+    // Para inputs tipo number, solo devolver el número sin formato
+    return amount.toString();
+  };
+
+  const parseCurrency = (value: string | number): number => {
+    if (typeof value === 'number') return value;
+    return parseFloat(String(value).replace(/[^0-9.]/g, '')) || 0;
+  };
+
   const {
     register,
     handleSubmit,
@@ -64,7 +76,8 @@ export function ProductForm({ product }: ProductFormProps) {
           name: product.name,
           slug: product.slug,
           category: product.category,
-          price: product.price,
+          cost: formatCurrency(product.cost || 0),
+          price: formatCurrency(product.price),
           description: product.description,
           features: product.features.join("\n"),
           material: product.material || "",
@@ -74,6 +87,18 @@ export function ProductForm({ product }: ProductFormProps) {
         }
       : undefined,
   });
+
+  const cost = watch("cost");
+  const price = watch("price");
+
+  const calculateMargin = (): number => {
+    const costNum = parseCurrency(cost || "0");
+    const priceNum = parseCurrency(price || "0");
+    if (costNum === 0 || priceNum === 0) return 0;
+    return ((priceNum - costNum) / costNum) * 100;
+  };
+
+  const margin = calculateMargin();
 
   // Generar slug automáticamente desde el nombre
   const name = watch("name");
@@ -101,7 +126,8 @@ export function ProductForm({ product }: ProductFormProps) {
       formData.append("name", data.name);
       formData.append("slug", data.slug);
       formData.append("category", data.category);
-      formData.append("price", data.price);
+      formData.append("cost", parseCurrency(data.cost || "0").toString());
+      formData.append("price", parseCurrency(data.price).toString());
       formData.append("description", data.description);
       if (data.features) formData.append("features", data.features);
       if (data.material) formData.append("material", data.material);
@@ -175,13 +201,76 @@ export function ProductForm({ product }: ProductFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="price">Precio *</Label>
-          <Input id="price" {...register("price")} placeholder="$1,299" />
+          <Label htmlFor="cost">Costo (CRC)</Label>
+          <Input 
+            id="cost" 
+            {...register("cost")} 
+            placeholder="500000" 
+            type="number"
+            step="0.01"
+          />
+          <p className="text-xs text-muted-foreground">Costo del producto (solo visible en admin)</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="price">Precio de Venta (CRC) *</Label>
+          <Input 
+            id="price" 
+            {...register("price")} 
+            placeholder="750000" 
+            type="number"
+            step="0.01"
+            required
+          />
           {errors.price && (
             <p className="text-sm text-destructive">{errors.price.message}</p>
           )}
+          <p className="text-xs text-muted-foreground">Precio que se muestra al cliente</p>
         </div>
       </div>
+
+      {(cost && parseCurrency(cost || "0") > 0) && (
+        <div className="rounded-lg border bg-muted/50 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Costo</p>
+              <p className="text-lg font-semibold">
+                {new Intl.NumberFormat("es-CR", {
+                  style: "currency",
+                  currency: "CRC",
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                }).format(parseCurrency(cost || "0"))}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Precio de Venta</p>
+              <p className="text-lg font-semibold">
+                {new Intl.NumberFormat("es-CR", {
+                  style: "currency",
+                  currency: "CRC",
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                }).format(parseCurrency(price || "0"))}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Margen de Ganancia</p>
+              <p className={`text-lg font-semibold ${margin >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {margin.toFixed(2)}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Ganancia: {new Intl.NumberFormat("es-CR", {
+                  style: "currency",
+                  currency: "CRC",
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                }).format(parseCurrency(price || "0") - parseCurrency(cost || "0"))}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="image">Imagen *</Label>

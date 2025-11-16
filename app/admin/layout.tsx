@@ -14,7 +14,11 @@ export default async function AdminLayout({
   
   // Si estamos en la ruta de login, no aplicar verificación ni sidebar
   if (pathname === "/admin/login") {
-    return <>{children}</>;
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto">{children}</div>
+      </div>
+    );
   }
 
   // El proxy ya maneja las redirecciones, pero verificamos el rol aquí
@@ -25,7 +29,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-background">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto">
         <div className="container mx-auto p-6">{children}</div>

@@ -4,15 +4,25 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Crear usuario admin
-  const hashedPassword = await bcrypt.hash("mipass2025#", 10);
+  console.log("Deleting all existing data...");
   
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@habitastudio.online" },
-    update: {},
-    create: {
-      email: "admin@habitastudio.online",
-      name: "Administrador",
+  // Eliminar todos los datos existentes en orden (respetando foreign keys)
+  await prisma.quoteItem.deleteMany({});
+  await prisma.quote.deleteMany({});
+  await prisma.project.deleteMany({});
+  await prisma.service.deleteMany({});
+  await prisma.product.deleteMany({});
+  await prisma.user.deleteMany({});
+  
+  console.log("All existing data deleted.");
+
+  // Crear usuario admin
+  const hashedPassword = await bcrypt.hash("hspass#2025michael", 10);
+  
+  const admin = await prisma.user.create({
+    data: {
+      email: "info@habitastudio.online",
+      name: "Michael Valerio",
       password: hashedPassword,
       role: "admin",
     },
@@ -21,12 +31,14 @@ async function main() {
   console.log("Admin user created:", admin.email);
 
   // Productos
+  // Precios en CRC (colones costarricenses)
   const products = [
     {
       name: "Sofá Moderno de 3 Plazas",
       slug: "sofa-moderno-3-plazas",
       category: "Salas",
-      price: "$1,299",
+      cost: 500000,
+      price: 715000,
       image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800",
       description: "Sofá elegante y cómodo con diseño contemporáneo. Perfecto para espacios modernos, fabricado con materiales de alta calidad y tapizado en tela premium.",
       features: ["Estructura de madera sólida", "Tapizado en tela premium", "Almohadas incluidas", "Diseño moderno y elegante", "Fácil mantenimiento"],
@@ -39,7 +51,8 @@ async function main() {
       name: "Mesa de Comedor Extensible",
       slug: "mesa-comedor-extensible",
       category: "Comedores",
-      price: "$899",
+      cost: 350000,
+      price: 495000,
       image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800",
       description: "Mesa de comedor extensible con capacidad para 6-10 personas. Diseño elegante en madera maciza con acabado natural.",
       features: ["Extensible hasta 280cm", "Madera maciza de roble", "Base robusta de metal", "Fácil de limpiar", "Diseño atemporal"],
@@ -52,7 +65,8 @@ async function main() {
       name: "Juego de Sillas de Comedor",
       slug: "juego-sillas-comedor",
       category: "Comedores",
-      price: "$599",
+      cost: 240000,
+      price: 330000,
       image: "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=800",
       description: "Set de 6 sillas de comedor con diseño ergonómico y estilo moderno. Asientos acolchados para máxima comodidad.",
       features: ["Set de 6 sillas", "Asientos acolchados", "Diseño ergonómico", "Fácil de apilar", "Resistente y duradero"],
@@ -65,7 +79,8 @@ async function main() {
       name: "Cama King Size con Base",
       slug: "cama-king-size-base",
       category: "Dormitorios",
-      price: "$1,599",
+      cost: 630000,
+      price: 880000,
       image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800",
       description: "Cama king size con base integrada y cabecero acolchado. Diseño elegante que transforma tu dormitorio.",
       features: ["Tamaño King (200x200cm)", "Base integrada con almacenamiento", "Cabecero acolchado", "Diseño moderno", "Fácil montaje"],
@@ -78,7 +93,8 @@ async function main() {
       name: "Escritorio Ejecutivo Moderno",
       slug: "escritorio-ejecutivo-moderno",
       category: "Oficinas",
-      price: "$799",
+      cost: 315000,
+      price: 440000,
       image: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800",
       description: "Escritorio ejecutivo amplio con cajones y estantería integrada. Perfecto para espacios de trabajo profesionales.",
       features: ["Superficie amplia", "3 cajones con llave", "Estantería superior", "Cable management", "Diseño profesional"],
@@ -91,7 +107,8 @@ async function main() {
       name: "Isla de Cocina con Barra",
       slug: "isla-cocina-barra",
       category: "Cocinas",
-      price: "$1,899",
+      cost: 750000,
+      price: 1045000,
       image: "https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?w=800",
       description: "Isla de cocina con barra desayunadora. Espacio adicional de trabajo y almacenamiento con diseño contemporáneo.",
       features: ["Barra desayunadora", "Almacenamiento amplio", "Encimera de cuarzo", "4 taburetes incluidos", "Diseño personalizable"],
@@ -104,7 +121,8 @@ async function main() {
       name: "Sofá Cama Convertible",
       slug: "sofa-cama-convertible",
       category: "Salas",
-      price: "$1,099",
+      cost: 420000,
+      price: 605000,
       image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800",
       description: "Sofá cama convertible de 3 plazas. Perfecto para espacios pequeños que necesitan versatilidad.",
       features: ["Convierte en cama doble", "Mecanismo fácil de usar", "Colchón incluido", "Diseño compacto", "Múltiples usos"],
@@ -117,7 +135,8 @@ async function main() {
       name: "Mesa de Centro con Almacenamiento",
       slug: "mesa-centro-almacenamiento",
       category: "Salas",
-      price: "$399",
+      cost: 160000,
+      price: 220000,
       image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800",
       description: "Mesa de centro moderna con cajones y estante inferior. Combina estilo y funcionalidad.",
       features: ["2 cajones espaciosos", "Estante inferior", "Diseño moderno", "Fácil de mover", "Múltiples acabados"],
@@ -130,7 +149,8 @@ async function main() {
       name: "Armario Empotrado 3 Puertas",
       slug: "armario-empotrado-3-puertas",
       category: "Dormitorios",
-      price: "$1,499",
+      cost: 590000,
+      price: 825000,
       image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800",
       description: "Armario empotrado de 3 puertas con sistema de organización interior. Máximo aprovechamiento del espacio.",
       features: ["3 puertas correderas", "Interior organizable", "Espejo en una puerta", "Sistema de iluminación LED", "Diseño personalizable"],
@@ -143,7 +163,8 @@ async function main() {
       name: "Silla Ergonómica de Oficina",
       slug: "silla-ergonomica-oficina",
       category: "Oficinas",
-      price: "$499",
+      cost: 200000,
+      price: 275000,
       image: "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=800",
       description: "Silla ergonómica de oficina con soporte lumbar ajustable. Diseñada para largas jornadas de trabajo.",
       features: ["Soporte lumbar ajustable", "Reposabrazos regulables", "Altura ajustable", "Ruedas silenciosas", "Respaldo reclinable"],
@@ -156,7 +177,8 @@ async function main() {
       name: "Estantería Modular 5 Niveles",
       slug: "estanteria-modular-5-niveles",
       category: "Salas",
-      price: "$599",
+      cost: 240000,
+      price: 330000,
       image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800",
       description: "Estantería modular de 5 niveles con diseño abierto. Perfecta para organizar libros, decoración y objetos personales.",
       features: ["5 niveles espaciosos", "Diseño abierto", "Fácil de montar", "Modular y expandible", "Múltiples usos"],
@@ -169,7 +191,8 @@ async function main() {
       name: "Mesa de Noche con USB",
       slug: "mesa-noche-usb",
       category: "Dormitorios",
-      price: "$299",
+      cost: 120000,
+      price: 165000,
       image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800",
       description: "Mesa de noche moderna con puerto USB integrado y cajón. Diseño funcional y elegante.",
       features: ["Puerto USB integrado", "Cajón con llave", "Diseño moderno", "Fácil acceso", "Múltiples acabados"],
@@ -182,10 +205,8 @@ async function main() {
 
   console.log("Creating products...");
   for (const product of products) {
-    await prisma.product.upsert({
-      where: { slug: product.slug },
-      update: product,
-      create: product,
+    await prisma.product.create({
+      data: product,
     });
   }
   console.log(`Created ${products.length} products`);
@@ -306,10 +327,8 @@ async function main() {
 
   console.log("Creating services...");
   for (const service of services) {
-    await prisma.service.upsert({
-      where: { slug: service.slug },
-      update: service,
-      create: service,
+    await prisma.service.create({
+      data: service,
     });
   }
   console.log(`Created ${services.length} services`);
@@ -328,7 +347,7 @@ async function main() {
       ],
       category: "Remodelación",
       year: "2024",
-      location: "Ciudad de México",
+      location: "San José",
       duration: "8 semanas",
       challenges: ["Optimización de espacio en cocina pequeña", "Integración de electrodomésticos inteligentes", "Mantenimiento de estructura existente"],
       solutions: ["Diseño de gabinetes a medida para maximizar almacenamiento", "Instalación de sistema domótico para control de iluminación y electrodomésticos", "Refuerzo estructural sin modificar la estructura principal"],
@@ -345,7 +364,7 @@ async function main() {
       ],
       category: "Renovación",
       year: "2024",
-      location: "Guadalajara",
+      location: "Heredia",
       duration: "10 semanas",
       challenges: ["Espacio limitado", "Presupuesto ajustado", "Múltiples áreas a renovar"],
       solutions: ["Diseño open space para maximizar sensación de amplitud", "Selección de materiales económicos pero de calidad", "Planificación detallada para optimizar tiempos y costos"],
@@ -362,7 +381,7 @@ async function main() {
       ],
       category: "Comercial",
       year: "2024",
-      location: "Monterrey",
+      location: "Alajuela",
       duration: "12 semanas",
       challenges: ["Múltiples espacios funcionales", "Presupuesto corporativo", "Plazos ajustados"],
       solutions: ["Diseño modular y escalable", "Coordinación eficiente con proveedores", "Trabajo en etapas para minimizar interrupciones"],
@@ -379,7 +398,7 @@ async function main() {
       ],
       category: "Remodelación",
       year: "2023",
-      location: "Puebla",
+      location: "Cartago",
       duration: "16 semanas",
       challenges: ["Múltiples áreas simultáneas", "Vivir durante la obra", "Coordinación de múltiples especialistas"],
       solutions: ["Planificación por etapas", "Protección de áreas no en obra", "Coordinación diaria con el cliente"],
@@ -396,7 +415,7 @@ async function main() {
       ],
       category: "Comercial",
       year: "2024",
-      location: "Ciudad de México",
+      location: "San José",
       duration: "14 semanas",
       challenges: ["Cumplir normativas de seguridad", "Diseño único y funcional", "Plazos de apertura"],
       solutions: ["Colaboración con arquitectos especializados", "Diseño iterativo con el cliente", "Coordinación estrecha con proveedores"],
@@ -413,7 +432,7 @@ async function main() {
       ],
       category: "Renovación",
       year: "2023",
-      location: "Guadalajara",
+      location: "Heredia",
       duration: "12 semanas",
       challenges: ["Preservar elementos históricos", "Aislamiento térmico y acústico", "Instalaciones modernas en estructura antigua"],
       solutions: ["Restauración cuidadosa de elementos originales", "Aislamiento sin afectar estética", "Instalaciones ocultas pero accesibles"],
@@ -430,7 +449,7 @@ async function main() {
       ],
       category: "Interiores",
       year: "2024",
-      location: "Monterrey",
+      location: "Alajuela",
       duration: "6 semanas",
       challenges: ["Aislamiento acústico completo", "Integración de tecnología", "Diseño funcional y estético"],
       solutions: ["Aislamiento multicapa", "Pre-cableado para tecnología", "Diseño que oculta tecnología sin sacrificar estética"],
@@ -447,7 +466,7 @@ async function main() {
       ],
       category: "Remodelación",
       year: "2024",
-      location: "Ciudad de México",
+      location: "San José",
       duration: "6 semanas",
       challenges: ["Espacio limitado", "Instalaciones complejas", "Materiales de lujo"],
       solutions: ["Diseño optimizado para espacio", "Coordinación con especialistas", "Selección cuidadosa de proveedores"],
@@ -464,7 +483,7 @@ async function main() {
       ],
       category: "Interiores",
       year: "2024",
-      location: "Puebla",
+      location: "Cartago",
       duration: "8 semanas",
       challenges: ["Integración de múltiples espacios", "Máximo almacenamiento", "Diseño cohesivo"],
       solutions: ["Diseño integral de todos los espacios", "Sistemas de organización personalizados", "Paleta de colores unificada"],
@@ -481,7 +500,7 @@ async function main() {
       ],
       category: "Exteriores",
       year: "2024",
-      location: "Guadalajara",
+      location: "Heredia",
       duration: "10 semanas",
       challenges: ["Clima y exposición", "Mantenimiento de plantas", "Integración con estructura existente"],
       solutions: ["Materiales resistentes a intemperie", "Selección de plantas nativas de bajo mantenimiento", "Diseño que respeta estructura existente"],
@@ -498,7 +517,7 @@ async function main() {
       ],
       category: "Renovación",
       year: "2023",
-      location: "Ciudad de México",
+      location: "San José",
       duration: "6 semanas",
       challenges: ["Espacio extremadamente limitado", "Múltiples funciones en un espacio", "Presupuesto ajustado"],
       solutions: ["Mobiliario multifuncional", "Diseño vertical para aprovechar altura", "Materiales económicos pero de calidad"],
@@ -515,7 +534,7 @@ async function main() {
       ],
       category: "Comercial",
       year: "2024",
-      location: "Monterrey",
+      location: "Alajuela",
       duration: "16 semanas",
       challenges: ["Cumplir normativas sanitarias", "Instalaciones especializadas", "Diseño funcional y estético"],
       solutions: ["Colaboración con especialistas médicos", "Materiales certificados", "Diseño que prioriza funcionalidad sin sacrificar estética"],
@@ -524,13 +543,325 @@ async function main() {
 
   console.log("Creating projects...");
   for (const project of projects) {
-    await prisma.project.upsert({
-      where: { slug: project.slug },
-      update: project,
-      create: project,
+    await prisma.project.create({
+      data: project,
     });
   }
   console.log(`Created ${projects.length} projects`);
+
+  // Cotizaciones
+  const quotes = [
+    {
+      quoteNumber: `COT-${new Date().getFullYear()}-0001`,
+      clientName: "María González",
+      clientEmail: "maria.gonzalez@email.com",
+      clientPhone: "+506 6364 4915",
+      clientAddress: "San José, Barrio Escalante, Calle 25, Casa #45",
+      projectName: "Remodelación de Cocina Completa",
+      projectDescription: "Remodelación integral de cocina con diseño moderno, isla central y electrodomésticos de última generación.",
+      status: "sent",
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 días desde ahora
+      subtotal: 2500000,
+      tax: 325000,
+      discount: 0,
+      total: 2825000,
+      notes: "La cotización incluye materiales de primera calidad. Válida por 30 días. Se requiere anticipo del 30% para iniciar el proyecto.",
+      items: [
+        {
+          description: "Diseño y planificación de cocina",
+          quantity: 1,
+          unitPrice: 150000,
+          total: 150000,
+        },
+        {
+          description: "Gabinetes a medida en melamina blanca mate",
+          quantity: 1,
+          unitPrice: 800000,
+          total: 800000,
+        },
+        {
+          description: "Encimera de cuarzo (3 metros lineales)",
+          quantity: 3,
+          unitPrice: 120000,
+          total: 360000,
+        },
+        {
+          description: "Isla central con barra desayunadora",
+          quantity: 1,
+          unitPrice: 450000,
+          total: 450000,
+        },
+        {
+          description: "Instalación de electrodomésticos (horno, cocina, campana)",
+          quantity: 1,
+          unitPrice: 200000,
+          total: 200000,
+        },
+        {
+          description: "Instalación eléctrica y plomería",
+          quantity: 1,
+          unitPrice: 180000,
+          total: 180000,
+        },
+        {
+          description: "Sistema de iluminación LED integrado",
+          quantity: 1,
+          unitPrice: 160000,
+          total: 160000,
+        },
+        {
+          description: "Mano de obra y acabados",
+          quantity: 1,
+          unitPrice: 200000,
+          total: 200000,
+        },
+      ],
+    },
+    {
+      quoteNumber: `COT-${new Date().getFullYear()}-0002`,
+      clientName: "Carlos Rodríguez",
+      clientEmail: "carlos.rodriguez@email.com",
+      clientPhone: "+506 6364 4915",
+      clientAddress: "Heredia, San Pablo, Avenida Central, Edificio Los Robles, Apt 302",
+      projectName: "Remodelación de Baño Principal",
+      projectDescription: "Renovación completa de baño principal con acabados de lujo y diseño moderno.",
+      status: "accepted",
+      validUntil: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
+      subtotal: 1800000,
+      tax: 234000,
+      discount: 90000,
+      total: 1944000,
+      notes: "Proyecto aceptado. Inicio programado para la próxima semana. Incluye materiales premium.",
+      items: [
+        {
+          description: "Diseño y planificación de baño",
+          quantity: 1,
+          unitPrice: 80000,
+          total: 80000,
+        },
+        {
+          description: "Azulejos de porcelanato premium (paredes y piso)",
+          quantity: 25,
+          unitPrice: 15000,
+          total: 375000,
+        },
+        {
+          description: "Sanitarios modernos (inodoro y lavabo)",
+          quantity: 1,
+          unitPrice: 280000,
+          total: 280000,
+        },
+        {
+          description: "Ducha a la italiana con sistema de lluvia",
+          quantity: 1,
+          unitPrice: 350000,
+          total: 350000,
+        },
+        {
+          description: "Grifería de diseño premium",
+          quantity: 1,
+          unitPrice: 180000,
+          total: 180000,
+        },
+        {
+          description: "Vanitorio con encimera de mármol",
+          quantity: 1,
+          unitPrice: 320000,
+          total: 320000,
+        },
+        {
+          description: "Sistema de almacenamiento integrado",
+          quantity: 1,
+          unitPrice: 150000,
+          total: 150000,
+        },
+        {
+          description: "Instalación de plomería y electricidad",
+          quantity: 1,
+          unitPrice: 165000,
+          total: 165000,
+        },
+      ],
+    },
+    {
+      quoteNumber: `COT-${new Date().getFullYear()}-0003`,
+      clientName: "Ana Martínez",
+      clientEmail: "ana.martinez@email.com",
+      clientPhone: "+506 6364 4915",
+      clientAddress: "Cartago, Centro, Calle 5, Casa #12",
+      projectName: "Muebles a la Medida para Sala",
+      projectDescription: "Fabricación e instalación de muebles personalizados para sala de estar.",
+      status: "draft",
+      validUntil: null,
+      subtotal: 1200000,
+      tax: 156000,
+      discount: 0,
+      total: 1356000,
+      notes: "Cotización en borrador. Pendiente aprobación de diseño final.",
+      items: [
+        {
+          description: "Sofá de 3 plazas a medida",
+          quantity: 1,
+          unitPrice: 450000,
+          total: 450000,
+        },
+        {
+          description: "Mesa de centro con almacenamiento",
+          quantity: 1,
+          unitPrice: 180000,
+          total: 180000,
+        },
+        {
+          description: "Estantería modular de 5 niveles",
+          quantity: 1,
+          unitPrice: 320000,
+          total: 320000,
+        },
+        {
+          description: "Mesa de noche con USB integrado",
+          quantity: 2,
+          unitPrice: 75000,
+          total: 150000,
+        },
+        {
+          description: "Tapizado y acabados premium",
+          quantity: 1,
+          unitPrice: 100000,
+          total: 100000,
+        },
+      ],
+    },
+    {
+      quoteNumber: `COT-${new Date().getFullYear()}-0004`,
+      clientName: "Roberto Sánchez",
+      clientEmail: "roberto.sanchez@email.com",
+      clientPhone: "+506 6364 4915",
+      clientAddress: "Alajuela, Centro, Avenida 2, Local #8",
+      projectName: "Oficina Corporativa - Diseño e Implementación",
+      projectDescription: "Diseño e implementación completa de oficina corporativa con espacios colaborativos.",
+      status: "sent",
+      validUntil: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000),
+      subtotal: 4500000,
+      tax: 585000,
+      discount: 225000,
+      total: 4860000,
+      notes: "Cotización corporativa con descuento por volumen. Incluye diseño, mobiliario y instalación. Plazo de ejecución: 12 semanas.",
+      items: [
+        {
+          description: "Diseño arquitectónico y planificación",
+          quantity: 1,
+          unitPrice: 500000,
+          total: 500000,
+        },
+        {
+          description: "Mobiliario ergonómico para 15 puestos de trabajo",
+          quantity: 15,
+          unitPrice: 120000,
+          total: 1800000,
+        },
+        {
+          description: "Salas de reuniones (3 unidades)",
+          quantity: 3,
+          unitPrice: 350000,
+          total: 1050000,
+        },
+        {
+          description: "Sistema de iluminación LED inteligente",
+          quantity: 1,
+          unitPrice: 400000,
+          total: 400000,
+        },
+        {
+          description: "Divisiones con drywall y vidrio",
+          quantity: 1,
+          unitPrice: 350000,
+          total: 350000,
+        },
+        {
+          description: "Pisos laminados de alta gama",
+          quantity: 1,
+          unitPrice: 200000,
+          total: 200000,
+        },
+        {
+          description: "Instalación eléctrica y cableado estructurado",
+          quantity: 1,
+          unitPrice: 200000,
+          total: 200000,
+        },
+      ],
+    },
+    {
+      quoteNumber: `COT-${new Date().getFullYear()}-0005`,
+      clientName: "Laura Fernández",
+      clientEmail: "laura.fernandez@email.com",
+      clientPhone: "+506 6364 4915",
+      clientAddress: "San José, Escazú, Residencial Los Laureles, Casa #23",
+      projectName: "Closet Walk-in Personalizado",
+      projectDescription: "Diseño e instalación de walk-in closet personalizado con sistema de organización completo.",
+      status: "rejected",
+      validUntil: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // Expirada hace 10 días
+      subtotal: 950000,
+      tax: 123500,
+      discount: 0,
+      total: 1073500,
+      notes: "Cotización rechazada por el cliente. Presupuesto fuera de rango.",
+      items: [
+        {
+          description: "Diseño personalizado de closet",
+          quantity: 1,
+          unitPrice: 80000,
+          total: 80000,
+        },
+        {
+          description: "Sistema modular con estantes y colgadores",
+          quantity: 1,
+          unitPrice: 420000,
+          total: 420000,
+        },
+        {
+          description: "Cajones con sistema de organización",
+          quantity: 8,
+          unitPrice: 35000,
+          total: 280000,
+        },
+        {
+          description: "Puertas correderas con espejo",
+          quantity: 3,
+          unitPrice: 50000,
+          total: 150000,
+        },
+        {
+          description: "Iluminación LED integrada",
+          quantity: 1,
+          unitPrice: 20000,
+          total: 20000,
+        },
+      ],
+    },
+  ];
+
+  console.log("Creating quotes...");
+  for (const quoteData of quotes) {
+    const { items, ...quoteFields } = quoteData;
+    const quote = await prisma.quote.create({
+      data: {
+        ...quoteFields,
+        sentAt: quoteData.status === "sent" || quoteData.status === "accepted" ? new Date() : null,
+      },
+    });
+
+    // Crear items de la cotización
+    for (const item of items) {
+      await prisma.quoteItem.create({
+        data: {
+          quoteId: quote.id,
+          ...item,
+        },
+      });
+    }
+  }
+  console.log(`Created ${quotes.length} quotes`);
 
   console.log("Seed completed successfully!");
 }

@@ -16,7 +16,7 @@ export default function PrivacyPolicyPage() {
             Política de Privacidad
           </h1>
           <p className="mt-4 text-muted-foreground">
-            Última actualización: {new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })}
+            Última actualización: {new Date().toLocaleDateString("es-CR", { year: "numeric", month: "long", day: "numeric" })}
           </p>
 
           <Separator className="my-8" />
@@ -167,8 +167,8 @@ export default function PrivacyPolicyPage() {
                   </p>
                   <p>
                     <strong>Teléfono:</strong>{" "}
-                    <a href="tel:+1234567890" className="text-primary hover:underline">
-                      +1 (234) 567-890
+                    <a href="tel:+50663644915" className="text-primary hover:underline">
+                      +506 6364 4915
                     </a>
                   </p>
                 </div>
