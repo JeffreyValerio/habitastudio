@@ -24,6 +24,22 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   return {
     title: product.name,
     description: product.description,
+    openGraph: {
+      title: product.name,
+      description: product.description,
+      images: [
+        {
+          url: product.image,
+          alt: product.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.name,
+      description: product.description,
+      images: [product.image],
+    },
   };
 }
 
