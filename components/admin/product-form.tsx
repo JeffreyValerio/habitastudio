@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { createUpdateProduct } from "@/app/actions/products";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { MultiImageUpload } from "@/components/admin/multi-image-upload";
+
 
 const productSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -60,6 +60,24 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [gallery, setGallery] = useState<string[]>(product?.gallery || []);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+
+  const handleFilesChange = (filesList: FileList | null) => {
+    const files = filesList ? Array.from(filesList) : [];
+    setNewFiles(files);
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+  };
+
+  const removeGalleryUrl = (url: string) => {
+    setGallery((prev) => prev.filter((u) => u !== url));
+  };
+
+  const removePreviewAt = (idx: number) => {
+    setPreviews((prev) => prev.filter((_, i) => i !== idx));
+    setNewFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const formatCurrency = (amount: number): string => {
     // Para inputs tipo number, solo devolver el número sin formato
@@ -157,11 +175,8 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
         formData.append("image", fileInput.files[0]);
       }
 
-      // Agregar múltiples archivos si el usuario los selecciona
-      const filesInput = (event?.target as HTMLFormElement)?.querySelector('#images') as HTMLInputElement | null;
-      if (filesInput?.files && filesInput.files.length > 0) {
-        Array.from(filesInput.files).forEach((f) => formData.append("images", f));
-      }
+      // Agregar múltiples archivos nuevos para la galería
+      newFiles.forEach((f) => formData.append("images", f));
 
       const result = await createUpdateProduct(formData);
 
@@ -312,23 +327,40 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="images">Imágenes adicionales (opcional)</Label>
-        <Input id="images" name="images" type="file" multiple accept="image/*" />
-        <p className="text-xs text-muted-foreground">Puedes seleccionar varios archivos para subir.</p>
-      </div>
+
 
       <div className="space-y-2">
-        <Label>Galería de Imágenes</Label>
-        <MultiImageUpload
-          values={gallery}
-          onChange={setGallery}
-          folder="habita-studio/products/gallery"
-          maxImages={10}
-          cloudName={cloudName}
-          uploadPreset={uploadPreset}
-        />
-        <p className="text-xs text-muted-foreground">Puedes agregar varias imágenes del producto.</p>
+        <Label htmlFor="images">Galería (archivos locales)</Label>
+        <Input id="images" name="images" type="file" multiple accept="image/*" onChange={(e) => handleFilesChange(e.target.files)} />
+        {(gallery.length > 0 || previews.length > 0) && (
+          <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
+            {gallery.map((url) => (
+              <div key={url} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                <Image src={url} alt="Imagen existente" fill className="object-cover" unoptimized />
+                <button
+                  type="button"
+                  onClick={() => removeGalleryUrl(url)}
+                  className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                >
+                  Eliminar
+                </button>
+              </div>
+            ))}
+            {previews.map((url, idx) => (
+              <div key={`new-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                <Image src={url} alt={`Nueva imagen ${idx + 1}`} fill className="object-cover" unoptimized />
+                <button
+                  type="button"
+                  onClick={() => removePreviewAt(idx)}
+                  className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                >
+                  Eliminar
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Puedes seleccionar varias imágenes; se cargarán al guardar.</p>
       </div>
 
       <div className="space-y-2">
