@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { Home, Hammer, Palette, Wrench } from "lucide-react";
+import { Home, Hammer, Palette, Wrench, Ruler, Paintbrush, Drill, Plug, PlugZap, Lightbulb, Fan, AirVent, ShowerHead, BedDouble, Sofa, Lamp, DoorOpen } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -7,6 +7,19 @@ const iconMap: Record<string, LucideIcon> = {
   Hammer,
   Palette,
   Wrench,
+  Ruler,
+  Paintbrush,
+  Drill,
+  Plug,
+  PlugZap,
+  Lightbulb,
+  Fan,
+  AirVent,
+  ShowerHead,
+  BedDouble,
+  Sofa,
+  Lamp,
+  DoorOpen,
 };
 
 export interface Service {
@@ -18,6 +31,7 @@ export interface Service {
   features: string[];
   process?: string[];
   benefits?: string[];
+  image?: string | null;
 }
 
 export async function getServices(): Promise<Service[]> {
@@ -34,6 +48,7 @@ export async function getServices(): Promise<Service[]> {
     features: s.features,
     process: s.process,
     benefits: s.benefits,
+    image: s.image || null,
   }));
 }
 
@@ -53,6 +68,7 @@ export async function getServiceBySlug(slug: string): Promise<Service | null> {
     features: service.features,
     process: service.process,
     benefits: service.benefits,
+    image: service.image || null,
   };
 }
 

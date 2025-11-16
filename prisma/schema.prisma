@@ -45,6 +45,7 @@ model Service {
   title           String
   description     String    @db.Text
   longDescription String    @db.Text
+  image           String?
   features        String[]  @default([])
   process         String[]  @default([])
   benefits        String[]  @default([])

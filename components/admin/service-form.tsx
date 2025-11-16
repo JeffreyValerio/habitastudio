@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createService, updateService } from "@/app/actions/services";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Home, Hammer, Palette, Wrench, Ruler, Paintbrush, Drill, Plug, PlugZap, Lightbulb, Fan, AirVent, ShowerHead, BedDouble, Sofa, Lamp, DoorOpen } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -39,6 +39,7 @@ interface ServiceFormProps {
     title: string;
     description: string;
     longDescription: string;
+    image?: string | null;
     features: string[];
     process: string[];
     benefits: string[];
@@ -47,16 +48,32 @@ interface ServiceFormProps {
 }
 
 const icons = [
-  { value: "Home", label: "Home" },
-  { value: "Hammer", label: "Hammer" },
-  { value: "Palette", label: "Palette" },
-  { value: "Wrench", label: "Wrench" },
+  { value: "Home", label: "Home", Icon: Home },
+  { value: "Hammer", label: "Hammer", Icon: Hammer },
+  { value: "Palette", label: "Palette", Icon: Palette },
+  { value: "Wrench", label: "Wrench", Icon: Wrench },
+  { value: "Ruler", label: "Ruler", Icon: Ruler },
+  { value: "Paintbrush", label: "Paintbrush", Icon: Paintbrush },
+  { value: "Drill", label: "Drill", Icon: Drill },
+  { value: "Plug", label: "Plug", Icon: Plug },
+  { value: "PlugZap", label: "PlugZap", Icon: PlugZap },
+  { value: "Lightbulb", label: "Lightbulb", Icon: Lightbulb },
+  { value: "Fan", label: "Fan", Icon: Fan },
+  { value: "AirVent", label: "AirVent", Icon: AirVent },
+  { value: "ShowerHead", label: "ShowerHead", Icon: ShowerHead },
+  { value: "BedDouble", label: "BedDouble", Icon: BedDouble },
+  { value: "Sofa", label: "Sofa", Icon: Sofa },
+  { value: "Lamp", label: "Lamp", Icon: Lamp },
+  { value: "DoorOpen", label: "DoorOpen", Icon: DoorOpen },
 ];
 
 export function ServiceForm({ service }: ServiceFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(service?.image || null);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
 
   const {
     register,
@@ -81,9 +98,32 @@ export function ServiceForm({ service }: ServiceFormProps) {
 
   const title = watch("title");
 
+  const slugify = (str: string) =>
+    (str || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
   const onSubmit = async (data: ServiceFormData) => {
     setIsSubmitting(true);
     try {
+      // 1) Subir imagen si existe al folder basado en el slug
+      let imageUrl: string | undefined = undefined;
+      if (imageFile) {
+        const slug = slugify(data.title);
+        const body = new FormData();
+        body.append("file", imageFile);
+        body.append("folder", `habita-studio/services/${slug}`);
+        const res = await fetch("/api/upload", { method: "POST", body });
+        if (!res.ok) {
+          throw new Error("No se pudo subir la imagen");
+        }
+        const json = await res.json();
+        imageUrl = json.url as string;
+      }
+
       const serviceData = {
         title: data.title,
         description: data.description,
@@ -98,6 +138,7 @@ export function ServiceForm({ service }: ServiceFormProps) {
           ? data.benefits.split("\n").filter((b) => b.trim())
           : [],
         icon: data.icon,
+        ...(imageUrl ? { image: imageUrl } : {}),
       };
 
       if (service) {
@@ -150,14 +191,90 @@ export function ServiceForm({ service }: ServiceFormProps) {
           <SelectTrigger>
             <SelectValue placeholder="Seleccionar icono" />
           </SelectTrigger>
-          <SelectContent>
-            {icons.map((icon) => (
-              <SelectItem key={icon.value} value={icon.value}>
-                {icon.label}
-              </SelectItem>
-            ))}
+          <SelectContent className="max-h-[340px]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 p-1">
+              {icons.map(({ value, label, Icon }) => (
+                <SelectItem key={value} value={value} className="cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-5 w-5" />
+                    <span>{label}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </div>
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Imagen del servicio (una sola) */}
+      <div className="space-y-2">
+        <Label htmlFor="serviceImage">Imagen del Servicio</Label>
+        <Input
+          id="serviceImage"
+          name="serviceImage"
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file && file.type.startsWith("image/")) {
+              setImageFile(file);
+              setImagePreview(URL.createObjectURL(file));
+            }
+          }}
+        />
+        <label
+          htmlFor="serviceImage"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDraggingImage(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDraggingImage(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDraggingImage(false);
+            const file = e.dataTransfer?.files?.[0];
+            if (file && file.type.startsWith("image/")) {
+              setImageFile(file);
+              setImagePreview(URL.createObjectURL(file));
+            }
+          }}
+          className={`flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDraggingImage ? "border-primary bg-primary/5" : "border-border hover:border-primary hover:bg-primary/5"}`}
+        >
+          <div className="text-center">
+            <p className="text-sm font-medium">
+              Arrastra y suelta una imagen aquí
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              o haz clic para seleccionar (solo una)
+            </p>
+          </div>
+        </label>
+        {imagePreview && (
+          <div className="mt-2 relative aspect-video w-full overflow-hidden rounded-md border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imagePreview} alt="Imagen del servicio" className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => {
+                setImageFile(null);
+                setImagePreview(null);
+              }}
+              className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+            >
+              Quitar
+            </button>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">
+          La imagen se adjuntará al guardar (1 archivo máximo).
+        </p>
       </div>
 
       <div className="space-y-2">
