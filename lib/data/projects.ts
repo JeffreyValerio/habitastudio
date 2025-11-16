@@ -18,7 +18,10 @@ export interface Project {
 
 export async function getProjects(): Promise<Project[]> {
   const projects = await prisma.project.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: [
+      { year: "desc" },
+      { createdAt: "desc" },
+    ],
   });
 
   return projects.map((p) => ({
