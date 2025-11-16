@@ -7,6 +7,7 @@ export interface Product {
   category: string;
   price: string; // Formateado como string en CRC para mostrar
   image: string;
+  gallery?: string[];
   description: string;
   features: string[];
   specifications?: {
@@ -38,6 +39,7 @@ export async function getProducts(): Promise<Product[]> {
     category: p.category,
     price: typeof p.price === 'number' ? formatPriceCRC(p.price) : p.price,
     image: p.image,
+    gallery: p.gallery ?? [],
     description: p.description,
     features: p.features,
     specifications: {
@@ -63,6 +65,7 @@ export async function getProductById(id: string): Promise<Product | null> {
     category: product.category,
     price: typeof product.price === 'number' ? formatPriceCRC(product.price) : product.price,
     image: product.image,
+    gallery: product.gallery ?? [],
     description: product.description,
     features: product.features,
     specifications: {
@@ -88,6 +91,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     category: product.category,
     price: typeof product.price === 'number' ? formatPriceCRC(product.price) : product.price,
     image: product.image,
+    gallery: product.gallery ?? [],
     description: product.description,
     features: product.features,
     specifications: {
