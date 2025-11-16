@@ -10,14 +10,14 @@ export function StructuredData() {
     "logo": `${baseUrl}/logo.png`,
     "contactPoint": {
       "@type": "ContactPoint",
-      "telephone": "+1-234-567-890",
+      "telephone": "+506 6364 4915",
       "contactType": "customer service",
       "email": "info@habitastudio.online",
       "availableLanguage": "Spanish"
     },
     "address": {
       "@type": "PostalAddress",
-      "addressCountry": "ES"
+      "addressCountry": "CR"
     },
     "sameAs": [
       "https://facebook.com/habitastudio",
@@ -27,7 +27,7 @@ export function StructuredData() {
     "priceRange": "$$",
     "areaServed": {
       "@type": "Country",
-      "name": "España"
+      "name": "Costa Rica"
     }
   }
 

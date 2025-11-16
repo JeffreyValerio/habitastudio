@@ -25,7 +25,8 @@ model Product {
   name          String
   slug          String    @unique
   category      String
-  price         String
+  cost          Float     @default(0)
+  price         Float
   image         String
   description   String    @db.Text
   features      String[]  @default([])
@@ -67,5 +68,41 @@ model Project {
   gallery       String[]  @default([])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model Quote {
+  id              String      @id @default(cuid())
+  quoteNumber     String      @unique
+  clientName      String
+  clientEmail     String
+  clientPhone     String?
+  clientAddress   String?     @db.Text
+  projectName     String
+  projectDescription String?  @db.Text
+  status          String      @default("draft") // draft, sent, accepted, rejected, expired
+  validUntil      DateTime?
+  subtotal        Float       @default(0)
+  tax             Float       @default(0)
+  discount        Float       @default(0)
+  total           Float       @default(0)
+  notes           String?     @db.Text
+  sentAt          DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           QuoteItem[]
+}
+
+model QuoteItem {
+  id          String   @id @default(cuid())
+  quoteId     String
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float
+  total       Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([quoteId])
 }
 

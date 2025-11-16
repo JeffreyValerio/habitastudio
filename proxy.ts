@@ -9,12 +9,12 @@ export async function proxy(request: NextRequest) {
   response.headers.set("x-pathname", pathname);
 
   // Permitir acceso a la página de login sin verificación
-  if (pathname === "/admin/login") {
+  if (pathname === "/admin/login" || pathname === "/admin/login/") {
     return response;
   }
 
-  // Para otras rutas de admin, verificar la cookie de sesión
-  if (pathname.startsWith("/admin")) {
+  // Para todas las rutas de admin (incluyendo /admin exacto), verificar la cookie de sesión
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     const session = request.cookies.get("session");
 
     if (!session) {
@@ -26,6 +26,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: [
+    "/admin/:path*",
+  ],
 };
 

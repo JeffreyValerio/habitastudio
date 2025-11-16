@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Wrench, FolderKanban, LogOut } from "lucide-react";
+import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, LogOut, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,7 @@ const navigation = [
   { name: "Productos", href: "/admin/products", icon: Package },
   { name: "Servicios", href: "/admin/services", icon: Wrench },
   { name: "Proyectos", href: "/admin/projects", icon: FolderKanban },
+  { name: "Cotizaciones", href: "/admin/quotes", icon: FileText },
 ];
 
 export function AdminSidebar() {
@@ -24,12 +25,24 @@ export function AdminSidebar() {
   };
 
   return (
-    <div className="w-64 border-r bg-muted/40">
-      <div className="p-6">
-        <h2 className="text-xl font-bold">Habita Studio</h2>
+    <div className="w-64 border-r bg-muted/40 flex flex-col relative">
+      <div className="p-6 border-b">
+        <h2 className="text-xl font-bold">HabitaStudio</h2>
         <p className="text-sm text-muted-foreground">Admin Panel</p>
       </div>
-      <nav className="px-3 space-y-1">
+      <div className="px-3 pt-3 pb-2">
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          asChild
+        >
+          <Link href="/">
+            <Home className="mr-2 h-4 w-4" />
+            Volver al Sitio
+          </Link>
+        </Button>
+      </div>
+      <nav className="px-3 space-y-1 flex-1">
         {navigation.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -50,7 +63,7 @@ export function AdminSidebar() {
           );
         })}
       </nav>
-      <div className="absolute bottom-0 w-64 p-4 border-t">
+      <div className="mt-auto p-4 border-t">
         <Button
           variant="ghost"
           className="w-full justify-start"

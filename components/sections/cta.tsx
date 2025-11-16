@@ -23,11 +23,11 @@ export function CTA() {
             </Button>
             <div className="flex items-center gap-4">
               <a
-                href="tel:+1234567890"
+                href="tel:+50663644915"
                 className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
               >
                 <Phone className="h-4 w-4" />
-                +1 (234) 567-890
+                +506 6364 4915
               </a>
               <a
                 href="mailto:info@habitastudio.online"

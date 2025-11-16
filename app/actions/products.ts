@@ -12,7 +12,26 @@ const productSchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   category: z.string().min(1),
-  price: z.string().min(1),
+  cost: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const num = parseFloat(val.replace(/[^0-9.]/g, ''));
+        return isNaN(num) ? 0 : num;
+      }
+      return typeof val === 'number' ? val : 0;
+    },
+    z.number().optional()
+  ),
+  price: z.preprocess(
+    (val) => {
+      if (typeof val === 'string') {
+        const num = parseFloat(val.replace(/[^0-9.]/g, ''));
+        return isNaN(num) ? 0 : num;
+      }
+      return typeof val === 'number' ? val : 0;
+    },
+    z.number().min(0.01, "El precio debe ser mayor a 0")
+  ),
   description: z.string().min(1),
   features: z.string().optional(),
   material: z.string().optional(),
@@ -71,12 +90,16 @@ export async function createUpdateProduct(formData: FormData) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-  const { id, ...rest } = product;
+  const { id, cost, price, features, ...rest } = product;
+  
+  // Los valores ya están convertidos a números por el preprocess
+  const priceNumber = price || 0;
+  const costNumber = cost || 0;
 
   try {
     const prismaTx = await prisma.$transaction(async (tx) => {
-      const featuresArray = rest.features
-        ? rest.features.split("\n").filter((f) => f.trim())
+      const featuresArray = features
+        ? features.split("\n").filter((f) => f.trim())
         : [];
 
       let dbProduct;
@@ -114,10 +137,18 @@ export async function createUpdateProduct(formData: FormData) {
         dbProduct = await tx.product.update({
           where: { id },
           data: {
-            ...rest,
+            name: product.name,
             slug,
+            category: product.category,
+            cost: costNumber,
+            price: priceNumber,
+            description: product.description,
             image: imageUrl || existing?.image || "",
             features: featuresArray,
+            material: rest.material || null,
+            dimensions: rest.dimensions || null,
+            color: rest.color || null,
+            warranty: rest.warranty || null,
           },
         });
       } else {
@@ -128,10 +159,18 @@ export async function createUpdateProduct(formData: FormData) {
 
         dbProduct = await tx.product.create({
           data: {
-            ...rest,
+            name: product.name,
             slug,
+            category: product.category,
+            cost: costNumber,
+            price: priceNumber,
+            description: product.description,
             image: imageUrl,
             features: featuresArray,
+            material: rest.material || null,
+            dimensions: rest.dimensions || null,
+            color: rest.color || null,
+            warranty: rest.warranty || null,
           },
         });
       }
@@ -188,14 +227,26 @@ export async function deleteProduct(id: string) {
 }
 
 export async function getProducts() {
-  return await prisma.product.findMany({
+  const products = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
   });
+  // Retornar productos con cost y price como números (para admin)
+  return products.map(p => ({
+    ...p,
+    cost: p.cost ?? 0,
+    price: p.price,
+  }));
 }
 
 export async function getProduct(id: string) {
-  return await prisma.product.findUnique({
+  const product = await prisma.product.findUnique({
     where: { id },
   });
+  if (!product) return null;
+  return {
+    ...product,
+    cost: product.cost ?? 0,
+    price: product.price,
+  };
 }
 
