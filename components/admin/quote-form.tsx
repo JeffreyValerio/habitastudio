@@ -364,7 +364,14 @@ export function QuoteForm({ quote }: QuoteFormProps) {
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full">
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-[50%]" />
+              <col className="w-[7.5rem]" />
+              <col className="w-[9rem]" />
+              <col className="w-[9rem]" />
+              <col className="w-[3rem]" />
+            </colgroup>
             <thead className="bg-muted">
               <tr>
                 <th className="text-left p-3 text-sm font-medium">Descripción</th>
@@ -391,7 +398,10 @@ export function QuoteForm({ quote }: QuoteFormProps) {
                       step="0.01"
                       value={item.quantity}
                       onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                      className="w-24"
+                      onFocus={(e) => e.currentTarget.select()}
+                      inputMode="decimal"
+                      min="0"
+                      className="w-full text-right font-mono"
                     />
                   </td>
                   <td className="p-3">
@@ -401,10 +411,13 @@ export function QuoteForm({ quote }: QuoteFormProps) {
                       value={item.unitPrice}
                       onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
                       placeholder="0.00"
-                      className="w-32"
+                      onFocus={(e) => e.currentTarget.select()}
+                      inputMode="decimal"
+                      min="0"
+                      className="w-full text-right font-mono"
                     />
                   </td>
-                  <td className="p-3 text-right font-medium">
+                  <td className="p-3 text-right font-medium font-mono tabular-nums">
                     {formatCRC(item.total)}
                   </td>
                   <td className="p-3">

@@ -24,13 +24,13 @@ const contactInfo = [
   {
     icon: MapPin,
     title: "Dirección",
-    content: "Dirección de la empresa, Ciudad, País",
+    content: "San José, Costa Rica",
     link: "#",
   },
   {
     icon: Clock,
     title: "Horario",
-    content: "Lun - Vie: 9:00 AM - 6:00 PM",
+    content: "Lun - Vie: 8:00 AM - 5:00 PM",
     link: "#",
   },
 ];

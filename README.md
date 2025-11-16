@@ -53,6 +53,7 @@ npm start
 ```env
 NEXT_PUBLIC_SITE_URL=https://habitastudio.online
 GOOGLE_VERIFICATION=tu-codigo-verificacion
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
 ```
 
 2. Actualiza la información de contacto en:

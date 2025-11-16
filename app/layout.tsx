@@ -5,6 +5,7 @@ import { MainWrapper } from "@/components/layout/main-wrapper";
 import { StructuredData } from "@/components/seo/structured-data";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import GoogleAnalytics from "@/scripts/GoogleAnalytics";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -12,6 +13,11 @@ export const metadata: Metadata = {
   title: {
     default: "Habita Studio - Muebles y Remodelaciones de Calidad",
     template: "%s | Habita Studio",
+  },
+  icons: {
+    icon: '/images/logo.webp',
+    shortcut: '/images/logo.webp',
+    apple: '/images/logo.webp',
   },
   description: "Habita Studio ofrece muebles de calidad y servicios de remodelación profesional. Transformamos espacios con diseño elegante y funcional.",
   keywords: ["muebles", "remodelaciones", "diseño de interiores", "mobiliario", "decoración", "cocinas", "baños", "salas"],
@@ -72,6 +78,8 @@ export default function RootLayout({
           <StructuredData />
           <MainWrapper>{children}</MainWrapper>
           <Toaster />
+
+          <GoogleAnalytics />
         </ThemeProvider>
       </body>
     </html>
