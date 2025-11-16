@@ -9,9 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ImageUpload } from "@/components/admin/image-upload";
-import { MultiImageUpload } from "@/components/admin/multi-image-upload";
-import { createProject, updateProject } from "@/app/actions/projects";
+import { createUpdateProject } from "@/app/actions/projects";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -20,7 +18,8 @@ const projectSchema = z.object({
   title: z.string().min(1, "El título es requerido"),
   description: z.string().min(1, "La descripción es requerida"),
   longDescription: z.string().min(1, "La descripción larga es requerida"),
-  image: z.string().url("Debe ser una URL válida"),
+  // La imagen principal se gestiona via input file; no obligamos URL aquí
+  image: z.string().optional(),
   category: z.string().min(1, "La categoría es requerida"),
   year: z.string().min(1, "El año es requerido"),
   location: z.string().optional(),
@@ -55,6 +54,24 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [gallery, setGallery] = useState<string[]>(project?.gallery || []);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+
+  const handleFilesChange = (filesList: FileList | null) => {
+    const files = filesList ? Array.from(filesList) : [];
+    setNewFiles(files);
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+  };
+
+  const removeGalleryUrl = (url: string) => {
+    setGallery((prev) => prev.filter((u) => u !== url));
+  };
+
+  const removePreviewAt = (idx: number) => {
+    setPreviews((prev) => prev.filter((_, i) => i !== idx));
+    setNewFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const {
     register,
@@ -82,7 +99,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
   });
 
   const title = watch("title");
-  const imageUrl = watch("image");
+  const imageUrl = project?.image || "";
 
   useEffect(() => {
     if (!project && title) {
@@ -99,40 +116,39 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const onSubmit = async (data: ProjectFormData) => {
     setIsSubmitting(true);
     try {
-      const projectData = {
-        slug: data.slug,
-        title: data.title,
-        description: data.description,
-        longDescription: data.longDescription,
-        image: data.image,
-        category: data.category,
-        year: data.year,
-        location: data.location || undefined,
-        duration: data.duration || undefined,
-        challenges: data.challenges
-          ? data.challenges.split("\n").filter((c) => c.trim())
-          : [],
-        solutions: data.solutions
-          ? data.solutions.split("\n").filter((s) => s.trim())
-          : [],
-        gallery: gallery,
-      };
+      const formData = new FormData();
+      if (project?.id) formData.append("id", project.id);
+      formData.append("slug", data.slug);
+      formData.append("title", data.title);
+      formData.append("description", data.description);
+      formData.append("longDescription", data.longDescription);
+      // Mantener imagen actual si no se sube una nueva
+      if (project?.image) formData.append("imageUrl", project.image);
+      formData.append("category", data.category);
+      formData.append("year", data.year);
+      if (data.location) formData.append("location", data.location);
+      if (data.duration) formData.append("duration", data.duration);
+      if (data.challenges) formData.append("challenges", data.challenges);
+      if (data.solutions) formData.append("solutions", data.solutions);
+      // Galería existente (URLs) y como JSON + imageUrls compat Arktee
+      formData.append("gallery", JSON.stringify(gallery));
+      gallery.forEach((url) => formData.append("imageUrls", url));
+      // Archivos nuevos
+      newFiles.forEach((f) => formData.append("images", f));
+      // Archivo de imagen principal si se seleccionó
+      const fileInput = document.getElementById("image") as HTMLInputElement | null;
+      if (fileInput?.files?.[0]) {
+        formData.append("image", fileInput.files[0]);
+      }
 
-      if (project) {
-        await updateProject(project.id, projectData, {
-          image: project.image,
-          gallery: project.gallery,
-        });
-        toast({
-          title: "Éxito",
-          description: "Proyecto actualizado correctamente",
-        });
+      const result = await createUpdateProject(formData);
+
+      if (result.ok) {
+        toast({ title: "Éxito", description: result.message || "Proyecto guardado correctamente" });
+        router.push("/admin/projects");
+        router.refresh();
       } else {
-        await createProject(projectData);
-        toast({
-          title: "Éxito",
-          description: "Proyecto creado correctamente",
-        });
+        toast({ title: "Error", description: result.message || "Error al guardar el proyecto", variant: "destructive" });
       }
 
       router.push("/admin/projects");
@@ -196,14 +212,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="image">Imagen Principal *</Label>
-        <ImageUpload
-          value={imageUrl}
-          onChange={(url) => setValue("image", url)}
-          folder="habita-studio/projects"
-        />
-        {errors.image && (
-          <p className="text-sm text-destructive">{errors.image.message}</p>
+        {imageUrl && (
+          <div className="relative w-full aspect-video overflow-hidden rounded-lg border mb-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageUrl} alt="Imagen principal actual" className="w-full h-full object-cover" />
+          </div>
         )}
+        <Input id="image" name="image" type="file" accept="image/*" />
+        <p className="text-sm text-muted-foreground">
+          {project ? "Deja vacío para mantener la imagen actual" : "Selecciona una imagen"}
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -251,13 +269,39 @@ export function ProjectForm({ project }: ProjectFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label>Galería de Imágenes</Label>
-        <MultiImageUpload
-          values={gallery}
-          onChange={setGallery}
-          folder="habita-studio/projects"
-          maxImages={10}
-        />
+        <Label htmlFor="images">Galería (archivos locales)</Label>
+        <Input id="images" name="images" type="file" multiple accept="image/*" onChange={(e) => handleFilesChange(e.target.files)} />
+        {(gallery.length > 0 || previews.length > 0) && (
+          <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
+            {gallery.map((url) => (
+              <div key={url} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="Imagen existente" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeGalleryUrl(url)}
+                  className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                >
+                  Eliminar
+                </button>
+              </div>
+            ))}
+            {previews.map((url, idx) => (
+              <div key={`new-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={`Nueva imagen ${idx + 1}`} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removePreviewAt(idx)}
+                  className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                >
+                  Eliminar
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Puedes seleccionar varias imágenes; se cargarán al guardar.</p>
       </div>
 
       <div className="flex gap-4">

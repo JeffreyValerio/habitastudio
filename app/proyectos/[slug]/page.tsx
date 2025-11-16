@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, MapPin, Calendar, Clock, CheckCircle2 } from "lucide-react";
 import { getProjectBySlug, getAllProjectSlugs } from "@/lib/data/projects";
+import { ProductGallery } from "@/components/catalog/product-gallery";
 
 interface ProjectPageProps {
   params: Promise<{ slug: string }>;
@@ -71,15 +71,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             </p>
           </div>
 
-          <div className="relative mb-8 aspect-video w-full overflow-hidden rounded-lg border">
-            <Image
-              src={project.image}
-              alt={project.title}
-              fill
-              sizes="100vw"
-              className="object-cover"
-              unoptimized
-            />
+          <div className="mb-8">
+            <ProductGallery image={project.image} gallery={project.gallery || []} name={project.title} />
           </div>
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -127,25 +120,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 </div>
               )}
 
-              {project.gallery && project.gallery.length > 1 && (
-                <div className="mb-8">
-                  <h2 className="mb-4 text-2xl font-semibold">Galería</h2>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {project.gallery.slice(1).map((image, index) => (
-                      <div key={index} className="relative aspect-video w-full overflow-hidden rounded-lg border">
-                        <Image
-                          src={image}
-                          alt={`${project.title} - Imagen ${index + 2}`}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 50vw"
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* La galería adicional se maneja dentro del componente ProductGallery (miniaturas y lightbox) */}
             </div>
 
             <div className="space-y-6">
