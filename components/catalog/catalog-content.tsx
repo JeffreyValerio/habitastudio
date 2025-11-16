@@ -112,7 +112,7 @@ export function CatalogContent({ initialProducts }: { initialProducts: Product[]
             {filteredProducts.map((product) => (
               <Card key={product.id} className="group overflow-hidden transition-shadow hover:shadow-lg">
                 <div>
-                  <Link href={`/catalogo/${product.id}`}>
+                  <Link href={`/catalogo/${product.slug}`}>
                     <div className="relative h-64 w-full overflow-hidden">
                       <Image
                         src={product.image}
@@ -132,7 +132,7 @@ export function CatalogContent({ initialProducts }: { initialProducts: Product[]
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold">{product.price}</span>
                       <Button variant="outline" size="sm" asChild>
-                        <Link href={`/catalogo/${product.id}`}>Ver Detalles</Link>
+                        <Link href={`/catalogo/${product.slug}`}>Ver Detalles</Link>
                       </Button>
                     </div>
                   </CardContent>

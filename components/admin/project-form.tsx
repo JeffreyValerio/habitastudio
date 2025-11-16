@@ -83,7 +83,6 @@ export function ProjectForm({ project }: ProjectFormProps) {
     resolver: zodResolver(projectSchema),
     defaultValues: project
       ? {
-          slug: project.slug,
           title: project.title,
           description: project.description,
           longDescription: project.longDescription,
@@ -102,15 +101,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
   const imageUrl = project?.image || "";
 
   useEffect(() => {
-    if (!project && title) {
-      const slug = title
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-      setValue("slug", slug);
-    }
+    // Slug se genera en el servidor; no es necesario en el formulario
   }, [title, project, setValue]);
 
   const onSubmit = async (data: ProjectFormData) => {
@@ -118,7 +109,6 @@ export function ProjectForm({ project }: ProjectFormProps) {
     try {
       const formData = new FormData();
       if (project?.id) formData.append("id", project.id);
-      formData.append("slug", data.slug);
       formData.append("title", data.title);
       formData.append("description", data.description);
       formData.append("longDescription", data.longDescription);
@@ -175,13 +165,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="slug">Slug *</Label>
-          <Input id="slug" {...register("slug")} />
-          {errors.slug && (
-            <p className="text-sm text-destructive">{errors.slug.message}</p>
-          )}
-        </div>
+        {/* Slug se genera automáticamente en el servidor */}
 
         <div className="space-y-2">
           <Label htmlFor="category">Categoría *</Label>
@@ -232,8 +216,8 @@ export function ProjectForm({ project }: ProjectFormProps) {
             <Input id="images" name="images" type="file" multiple accept="image/*" onChange={(e) => handleFilesChange(e.target.files)} />
             {(gallery.length > 0 || previews.length > 0) && (
               <div className="mt-2 grid grid-cols-2 gap-3">
-                {gallery.map((url) => (
-                  <div key={url} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                {gallery.map((url, idx) => (
+                  <div key={`existing-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt="Imagen existente" className="w-full h-full object-cover" />
                     <button

@@ -162,7 +162,6 @@ export async function createUpdateProject(formData: FormData) {
 
   // Campos básicos
   const id = formData.get("id") as string | null;
-  const slug = (formData.get("slug") as string) || "";
   const title = (formData.get("title") as string) || "";
   const description = (formData.get("description") as string) || "";
   const longDescription = (formData.get("longDescription") as string) || "";
@@ -233,10 +232,18 @@ export async function createUpdateProject(formData: FormData) {
           } catch {}
         }
 
+        const computedSlug =
+          title
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "") || existing.slug;
+
         const updated = await tx.project.update({
           where: { id },
           data: {
-            slug,
+            slug: computedSlug,
             title,
             description,
             longDescription,
@@ -256,9 +263,17 @@ export async function createUpdateProject(formData: FormData) {
         const mainImage = uploadedMain || imageUrlExisting || (galleryUrls.length ? galleryUrls[0] : "");
         if (!mainImage) throw new Error("La imagen principal es requerida");
 
+        const computedSlug =
+          title
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "") || crypto.randomUUID();
+
         const created = await tx.project.create({
           data: {
-            slug,
+            slug: computedSlug,
             title,
             description,
             longDescription,
@@ -277,7 +292,7 @@ export async function createUpdateProject(formData: FormData) {
     });
 
     revalidatePath("/proyectos");
-    revalidatePath(`/proyectos/${slug}`);
+    revalidatePath(`/proyectos/${project.slug}`);
     revalidatePath("/");
 
     return { ok: true, project, message: id ? "Proyecto actualizado" : "Proyecto creado" };
