@@ -94,8 +94,8 @@ export function ProductForm({ product }: ProductFormProps) {
   const calculateMargin = (): number => {
     const costNum = parseCurrency(cost || "0");
     const priceNum = parseCurrency(price || "0");
-    if (costNum === 0 || priceNum === 0) return 0;
-    return ((priceNum - costNum) / costNum) * 100;
+    if (priceNum === 0) return 0;
+    return ((priceNum - costNum) / priceNum) * 100;
   };
 
   const margin = calculateMargin();
