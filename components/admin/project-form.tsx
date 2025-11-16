@@ -210,18 +210,59 @@ export function ProjectForm({ project }: ProjectFormProps) {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="image">Imagen Principal *</Label>
-        {imageUrl && (
-          <div className="relative w-full aspect-video overflow-hidden rounded-lg border mb-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageUrl} alt="Imagen principal actual" className="w-full h-full object-cover" />
+      <div className="space-y-3 rounded-lg border p-4">
+        <Label>Imágenes</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="image">Imagen Principal *</Label>
+            {imageUrl && (
+              <div className="relative w-full aspect-video overflow-hidden rounded-lg border mb-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imageUrl} alt="Imagen principal actual" className="w-full h-full object-cover" />
+              </div>
+            )}
+            <Input id="image" name="image" type="file" accept="image/*" />
+            <p className="text-xs text-muted-foreground">
+              {project ? "Deja vacío para mantener la imagen actual" : "Selecciona una imagen"}
+            </p>
           </div>
-        )}
-        <Input id="image" name="image" type="file" accept="image/*" />
-        <p className="text-sm text-muted-foreground">
-          {project ? "Deja vacío para mantener la imagen actual" : "Selecciona una imagen"}
-        </p>
+
+          <div className="space-y-2">
+            <Label htmlFor="images">Galería (archivos locales)</Label>
+            <Input id="images" name="images" type="file" multiple accept="image/*" onChange={(e) => handleFilesChange(e.target.files)} />
+            {(gallery.length > 0 || previews.length > 0) && (
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                {gallery.map((url) => (
+                  <div key={url} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="Imagen existente" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeGalleryUrl(url)}
+                      className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                ))}
+                {previews.map((url, idx) => (
+                  <div key={`new-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Nueva imagen ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePreviewAt(idx)}
+                      className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Selecciona varias imágenes; se cargarán al guardar.</p>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -268,41 +309,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="images">Galería (archivos locales)</Label>
-        <Input id="images" name="images" type="file" multiple accept="image/*" onChange={(e) => handleFilesChange(e.target.files)} />
-        {(gallery.length > 0 || previews.length > 0) && (
-          <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
-            {gallery.map((url) => (
-              <div key={url} className="relative aspect-video w-full overflow-hidden rounded-md border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="Imagen existente" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removeGalleryUrl(url)}
-                  className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
-                >
-                  Eliminar
-                </button>
-              </div>
-            ))}
-            {previews.map((url, idx) => (
-              <div key={`new-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt={`Nueva imagen ${idx + 1}`} className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removePreviewAt(idx)}
-                  className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
-                >
-                  Eliminar
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <p className="text-xs text-muted-foreground">Puedes seleccionar varias imágenes; se cargarán al guardar.</p>
-      </div>
+
 
       <div className="flex gap-4">
         <Button type="submit" disabled={isSubmitting}>
