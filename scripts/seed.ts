@@ -9,6 +9,7 @@ async function main() {
   // Eliminar todos los datos existentes en orden (respetando foreign keys)
   await prisma.quoteItem.deleteMany({});
   await prisma.quote.deleteMany({});
+  await prisma.quoteSequence.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.service.deleteMany({});
   await prisma.product.deleteMany({});
@@ -862,6 +863,14 @@ async function main() {
     }
   }
   console.log(`Created ${quotes.length} quotes`);
+
+  // Ajustar secuencia anual según la cantidad creada
+  const currentYear = new Date().getFullYear();
+  await prisma.quoteSequence.upsert({
+    where: { year: currentYear },
+    update: { lastNumber: quotes.length },
+    create: { year: currentYear, lastNumber: quotes.length },
+  });
 
   console.log("Seed completed successfully!");
 }

@@ -106,3 +106,10 @@ model QuoteItem {
   @@index([quoteId])
 }
 
+model QuoteSequence {
+  year        Int      @id
+  lastNumber  Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
