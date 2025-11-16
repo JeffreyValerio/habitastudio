@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, CheckCircle2, ShoppingCart } from "lucide-react";
 import { getProductById } from "@/lib/data/products";
+import { ProductGallery } from "@/components/catalog/product-gallery";
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -47,16 +47,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </Button>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          <div className="relative aspect-square w-full overflow-hidden rounded-lg border">
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
-              unoptimized
-            />
-          </div>
+          <ProductGallery image={product.image} gallery={product.gallery} name={product.name} />
 
           <div className="space-y-6">
             <div>
