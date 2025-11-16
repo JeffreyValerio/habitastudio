@@ -17,7 +17,6 @@ import { Loader2 } from "lucide-react";
 
 const productSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
-  slug: z.string().min(1, "El slug es requerido"),
   category: z.string().min(1, "La categoría es requerida"),
   cost: z.string().optional(),
   price: z.string().min(1, "El precio es requerido"),
@@ -100,7 +99,6 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
     defaultValues: product
       ? {
           name: product.name,
-          slug: product.slug,
           category: product.category,
           cost: formatCurrency(product.cost || 0),
           price: formatCurrency(product.price),
@@ -129,15 +127,7 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
   // Generar slug automáticamente desde el nombre
   const name = watch("name");
   useEffect(() => {
-    if (!product && name) {
-      const slug = name
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-      setValue("slug", slug);
-    }
+    // Slug se genera en el servidor; no es necesario en el formulario
   }, [name, product, setValue]);
 
   const onSubmit = async (data: ProductFormData, event?: React.BaseSyntheticEvent) => {
@@ -150,7 +140,6 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
       }
       
       formData.append("name", data.name);
-      formData.append("slug", data.slug);
       formData.append("category", data.category);
       formData.append("cost", parseCurrency(data.cost || "0").toString());
       formData.append("price", parseCurrency(data.price).toString());
@@ -216,13 +205,7 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="slug">Slug *</Label>
-          <Input id="slug" {...register("slug")} />
-          {errors.slug && (
-            <p className="text-sm text-destructive">{errors.slug.message}</p>
-          )}
-        </div>
+        {/* Slug se genera automáticamente en el servidor */}
 
         <div className="space-y-2">
           <Label htmlFor="category">Categoría *</Label>
@@ -304,63 +287,60 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor="image">Imagen *</Label>
-        {product?.image && (
-          <div className="relative w-full h-64 rounded-lg overflow-hidden border mb-4">
-            <Image
-              src={product.image}
-              alt="Preview"
-              fill
-              className="object-cover"
-            />
-          </div>
-        )}
-        <Input
-          id="image"
-          name="image"
-          type="file"
-          accept="image/*"
-        />
-        <p className="text-sm text-muted-foreground">
-          {product ? "Deja vacío para mantener la imagen actual" : "Selecciona una imagen"}
-        </p>
-      </div>
-
-
-
-      <div className="space-y-2">
-        <Label htmlFor="images">Galería (archivos locales)</Label>
-        <Input id="images" name="images" type="file" multiple accept="image/*" onChange={(e) => handleFilesChange(e.target.files)} />
-        {(gallery.length > 0 || previews.length > 0) && (
-          <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
-            {gallery.map((url) => (
-              <div key={url} className="relative aspect-video w-full overflow-hidden rounded-md border">
-                <Image src={url} alt="Imagen existente" fill className="object-cover" unoptimized />
-                <button
-                  type="button"
-                  onClick={() => removeGalleryUrl(url)}
-                  className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
-                >
-                  Eliminar
-                </button>
+      <div className="space-y-3 rounded-lg border p-4">
+        <Label>Imágenes</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="image">Imagen Principal *</Label>
+            {product?.image && (
+              <div className="relative w-full aspect-video rounded-lg overflow-hidden border mb-2">
+                <Image
+                  src={product.image}
+                  alt="Preview"
+                  fill
+                  className="object-cover"
+                />
               </div>
-            ))}
-            {previews.map((url, idx) => (
-              <div key={`new-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
-                <Image src={url} alt={`Nueva imagen ${idx + 1}`} fill className="object-cover" unoptimized />
-                <button
-                  type="button"
-                  onClick={() => removePreviewAt(idx)}
-                  className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
-                >
-                  Eliminar
-                </button>
-              </div>
-            ))}
+            )}
+            <Input id="image" name="image" type="file" accept="image/*" />
+            <p className="text-xs text-muted-foreground">
+              {product ? "Deja vacío para mantener la imagen actual" : "Selecciona una imagen"}
+            </p>
           </div>
-        )}
-        <p className="text-xs text-muted-foreground">Puedes seleccionar varias imágenes; se cargarán al guardar.</p>
+          <div className="space-y-2">
+            <Label htmlFor="images">Galería (archivos locales)</Label>
+            <Input id="images" name="images" type="file" multiple accept="image/*" onChange={(e) => handleFilesChange(e.target.files)} />
+            {(gallery.length > 0 || previews.length > 0) && (
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                {gallery.map((url, idx) => (
+                  <div key={`existing-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                    <Image src={url} alt="Imagen existente" fill className="object-cover" unoptimized />
+                    <button
+                      type="button"
+                      onClick={() => removeGalleryUrl(url)}
+                      className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                ))}
+                {previews.map((url, idx) => (
+                  <div key={`new-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                    <Image src={url} alt={`Nueva imagen ${idx + 1}`} fill className="object-cover" unoptimized />
+                    <button
+                      type="button"
+                      onClick={() => removePreviewAt(idx)}
+                      className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Selecciona varias imágenes; se cargarán al guardar.</p>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-2">

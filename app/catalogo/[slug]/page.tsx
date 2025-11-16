@@ -1,25 +1,24 @@
 import { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, CheckCircle2, ShoppingCart } from "lucide-react";
-import { getProductById } from "@/lib/data/products";
+import { getProductBySlug } from "@/lib/data/products";
 import { ProductGallery } from "@/components/catalog/product-gallery";
 
 interface ProductPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
-  const { id } = await params;
-  const product = await getProductById(id);
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
 
   if (!product) {
-    return {
-      title: "Producto no encontrado",
-    };
+    return { title: "Producto no encontrado" };
   }
 
   return {
@@ -29,8 +28,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const { id } = await params;
-  const product = await getProductById(id);
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     notFound();
@@ -75,40 +74,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </ul>
             </div>
 
-            {product.specifications && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Especificaciones Técnicas</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {product.specifications.material && (
-                    <div>
-                      <span className="font-medium">Material: </span>
-                      <span className="text-muted-foreground">{product.specifications.material}</span>
-                    </div>
-                  )}
-                  {product.specifications.dimensions && (
-                    <div>
-                      <span className="font-medium">Dimensiones: </span>
-                      <span className="text-muted-foreground">{product.specifications.dimensions}</span>
-                    </div>
-                  )}
-                  {product.specifications.color && (
-                    <div>
-                      <span className="font-medium">Colores disponibles: </span>
-                      <span className="text-muted-foreground">{product.specifications.color}</span>
-                    </div>
-                  )}
-                  {product.specifications.warranty && (
-                    <div>
-                      <span className="font-medium">Garantía: </span>
-                      <span className="text-muted-foreground">{product.specifications.warranty}</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
             <div className="flex gap-4">
               <Button size="lg" className="flex-1" asChild>
                 <Link href="/contacto">
@@ -123,4 +88,5 @@ export default async function ProductPage({ params }: ProductPageProps) {
     </div>
   );
 }
+
 

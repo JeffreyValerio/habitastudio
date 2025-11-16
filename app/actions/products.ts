@@ -10,7 +10,6 @@ import { getPublicIdFromUrl, uploadImages as uploadMany } from "@/lib/cloudinary
 const productSchema = z.object({
   id: z.string().optional().nullable(),
   name: z.string().min(1),
-  slug: z.string().min(1),
   category: z.string().min(1),
   cost: z.preprocess(
     (val) => {
@@ -231,7 +230,7 @@ export async function createUpdateProduct(formData: FormData) {
     });
 
     revalidatePath("/catalogo");
-    revalidatePath(`/catalogo/${prismaTx.id}`);
+    revalidatePath(`/catalogo/${prismaTx.slug}`);
     revalidatePath("/");
 
     return {
