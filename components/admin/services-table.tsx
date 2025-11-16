@@ -20,7 +20,6 @@ import { Pagination } from "@/components/ui/pagination";
 interface Service {
   id: string;
   title: string;
-  slug: string;
   description: string;
 }
 
@@ -63,7 +62,6 @@ export function ServicesTable({ services }: { services: Service[] }) {
     return services.filter(
       (service) =>
         service.title.toLowerCase().includes(query) ||
-        service.slug.toLowerCase().includes(query) ||
         service.description.toLowerCase().includes(query)
     );
   }, [services, searchQuery]);
@@ -125,7 +123,6 @@ export function ServicesTable({ services }: { services: Service[] }) {
         <TableHeader>
           <TableRow>
             <TableHead>Título</TableHead>
-            <TableHead>Slug</TableHead>
             <TableHead>Descripción</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
@@ -134,7 +131,6 @@ export function ServicesTable({ services }: { services: Service[] }) {
           {paginatedServices.map((service) => (
             <TableRow key={service.id}>
               <TableCell className="font-medium">{service.title}</TableCell>
-              <TableCell className="text-muted-foreground">{service.slug}</TableCell>
               <TableCell className="max-w-md truncate">{service.description}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">

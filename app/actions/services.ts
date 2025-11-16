@@ -6,7 +6,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const serviceSchema = z.object({
-  slug: z.string().min(1),
   title: z.string().min(1),
   description: z.string().min(1),
   longDescription: z.string().min(1),
@@ -24,12 +23,20 @@ export async function createService(data: z.infer<typeof serviceSchema>) {
 
   const validated = serviceSchema.parse(data);
 
+  const computedSlug =
+    validated.title
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
   const service = await prisma.service.create({
-    data: validated,
+    data: { ...validated, slug: computedSlug },
   });
 
   revalidatePath("/servicios");
-  revalidatePath(`/servicios/${validated.slug}`);
+  revalidatePath(`/servicios/${service.slug}`);
   revalidatePath("/");
   return service;
 }
@@ -40,9 +47,24 @@ export async function updateService(id: string, data: Partial<z.infer<typeof ser
     throw new Error("Unauthorized");
   }
 
+  const existing = await prisma.service.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error("Servicio no encontrado");
+  }
+
+  const computedSlug =
+    (data.title
+      ? data.title
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
+      : existing.slug) || existing.slug;
+
   const service = await prisma.service.update({
     where: { id },
-    data,
+    data: { ...data, slug: computedSlug },
   });
 
   revalidatePath("/servicios");
