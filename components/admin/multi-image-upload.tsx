@@ -11,6 +11,8 @@ interface MultiImageUploadProps {
   onChange: (urls: string[]) => void;
   folder?: string;
   maxImages?: number;
+  uploadPreset?: string;
+  cloudName?: string;
 }
 
 export function MultiImageUpload({
@@ -18,7 +20,22 @@ export function MultiImageUpload({
   onChange,
   folder = "habita-studio",
   maxImages = 10,
+  uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "habita-studio",
+  cloudName,
 }: MultiImageUploadProps) {
+  const resolvedCloudName = cloudName || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+  // Si falta configuración, evitar crash y mostrar aviso
+  if (!resolvedCloudName) {
+    return (
+      <div className="rounded-md border p-4 text-sm text-yellow-700 bg-yellow-50">
+        Falta configurar Cloudinary. Agrega las variables en .env.local y reinicia el servidor:
+        <pre className="mt-2 whitespace-pre-wrap text-xs">{`NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=tu_cloud_name
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=${uploadPreset}`}</pre>
+      </div>
+    );
+  }
+
   const handleRemove = (index: number) => {
     const newValues = values.filter((_, i) => i !== index);
     onChange(newValues);
@@ -52,7 +69,7 @@ export function MultiImageUpload({
       )}
       {values.length < maxImages && (
         <CldUploadWidget
-          uploadPreset="habita-studio"
+          uploadPreset={uploadPreset}
           options={{
             folder,
             maxFiles: maxImages - values.length,
