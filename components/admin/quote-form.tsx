@@ -229,6 +229,12 @@ export function QuoteForm({ quote }: QuoteFormProps) {
 
   const { subtotal, taxAmount, discountAmount, total } = calculateTotals();
 
+  const formatCRC = (value: number) =>
+    `CRC ${new Intl.NumberFormat("es-CR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value)}`;
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -399,7 +405,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
                     />
                   </td>
                   <td className="p-3 text-right font-medium">
-                    ${item.total.toFixed(2)}
+                    {formatCRC(item.total)}
                   </td>
                   <td className="p-3">
                     {items.length > 1 && (
@@ -435,23 +441,23 @@ export function QuoteForm({ quote }: QuoteFormProps) {
           <div className="w-full max-w-md space-y-2">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span className="font-medium">${subtotal.toFixed(2)}</span>
+              <span className="font-medium">{formatCRC(subtotal)}</span>
             </div>
             {taxAmount > 0 && (
               <div className="flex justify-between">
                 <span>Impuesto ({tax}%):</span>
-                <span className="font-medium">${taxAmount.toFixed(2)}</span>
+                <span className="font-medium">{formatCRC(taxAmount)}</span>
               </div>
             )}
             {discountAmount > 0 && (
               <div className="flex justify-between text-green-600">
                 <span>Descuento ({discount}%):</span>
-                <span className="font-medium">-${discountAmount.toFixed(2)}</span>
+                <span className="font-medium">-{formatCRC(discountAmount)}</span>
               </div>
             )}
             <div className="flex justify-between text-lg font-bold border-t pt-2">
               <span>Total:</span>
-              <span>${total.toFixed(2)}</span>
+              <span>{formatCRC(total)}</span>
             </div>
           </div>
         </div>

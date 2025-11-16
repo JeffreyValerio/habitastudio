@@ -111,13 +111,17 @@ export async function createUpdateQuote(formData: FormData) {
       } else {
         // CREAR
         const currentYear = new Date().getFullYear();
-        // Incremento atómico de la secuencia anual
-        const seq = await tx.quoteSequence.upsert({
-          where: { year: currentYear },
-          update: { lastNumber: { increment: 1 } },
-          create: { year: currentYear, lastNumber: 1 },
+        // Obtener el último número usado este año y calcular el siguiente
+        const lastOfYear = await tx.quote.findFirst({
+          where: { quoteNumber: { startsWith: `COT-${currentYear}-` } },
+          orderBy: { createdAt: "desc" },
+          select: { quoteNumber: true },
         });
-        const padded = String(seq.lastNumber).padStart(4, "0");
+        const lastNumber = lastOfYear
+          ? parseInt((lastOfYear.quoteNumber.split("-").pop() || "0"), 10) || 0
+          : 0;
+        const nextNumber = lastNumber + 1;
+        const padded = String(nextNumber).padStart(4, "0");
         const quoteNumber = `COT-${currentYear}-${padded}`;
         dbQuote = await tx.quote.create({
           data: {
