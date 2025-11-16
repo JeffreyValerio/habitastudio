@@ -143,7 +143,10 @@ export async function deleteProject(id: string) {
 
 export async function getProjects() {
   return await prisma.project.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: [
+      { year: "desc" },
+      { createdAt: "desc" },
+    ],
   });
 }
 
