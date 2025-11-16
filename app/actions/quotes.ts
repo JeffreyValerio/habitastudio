@@ -31,11 +31,7 @@ const quoteSchema = z.object({
   items: z.array(quoteItemSchema).min(1, "Debe agregar al menos un item"),
 });
 
-function generateQuoteNumber(): string {
-  const year = new Date().getFullYear();
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
-  return `COT-${year}-${random}`;
-}
+// Eliminado generador aleatorio; ahora usamos secuencia en DB
 
 export async function createUpdateQuote(formData: FormData) {
   const user = await getCurrentUser();
@@ -114,7 +110,15 @@ export async function createUpdateQuote(formData: FormData) {
         });
       } else {
         // CREAR
-        const quoteNumber = generateQuoteNumber();
+        const currentYear = new Date().getFullYear();
+        // Incremento atómico de la secuencia anual
+        const seq = await tx.quoteSequence.upsert({
+          where: { year: currentYear },
+          update: { lastNumber: { increment: 1 } },
+          create: { year: currentYear, lastNumber: 1 },
+        });
+        const padded = String(seq.lastNumber).padStart(4, "0");
+        const quoteNumber = `COT-${currentYear}-${padded}`;
         dbQuote = await tx.quote.create({
           data: {
             ...quoteFields,
