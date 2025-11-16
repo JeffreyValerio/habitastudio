@@ -46,14 +46,20 @@ interface ProductFormProps {
     dimensions?: string | null;
     color?: string | null;
     warranty?: string | null;
+    gallery?: string[];
   };
 }
 
-export function ProductForm({ product }: ProductFormProps) {
+type ProductFormExtraProps = {
+  cloudName?: string;
+  uploadPreset?: string;
+};
+
+export function ProductForm({ product, cloudName, uploadPreset }: ProductFormProps & ProductFormExtraProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [gallery, setGallery] = useState<string[]>(product?.['gallery' as any] || []);
+  const [gallery, setGallery] = useState<string[]>(product?.gallery || []);
 
   const formatCurrency = (amount: number): string => {
     // Para inputs tipo number, solo devolver el número sin formato
@@ -141,13 +147,20 @@ export function ProductForm({ product }: ProductFormProps) {
       if (product?.image) {
         formData.append("imageUrl", product.image);
       }
-      // Agregar galería como JSON
+      // Agregar galería como JSON y como lista de URLs (compat arktee)
       formData.append("gallery", JSON.stringify(gallery));
+      gallery.forEach((url) => formData.append("imageUrls", url));
 
       // Agregar el archivo del input si existe
-      const fileInput = event?.target?.image as HTMLInputElement;
+      const fileInput = (event?.target as HTMLFormElement)?.querySelector('#image') as HTMLInputElement | null;
       if (fileInput?.files?.[0]) {
         formData.append("image", fileInput.files[0]);
+      }
+
+      // Agregar múltiples archivos si el usuario los selecciona
+      const filesInput = (event?.target as HTMLFormElement)?.querySelector('#images') as HTMLInputElement | null;
+      if (filesInput?.files && filesInput.files.length > 0) {
+        Array.from(filesInput.files).forEach((f) => formData.append("images", f));
       }
 
       const result = await createUpdateProduct(formData);
@@ -300,12 +313,20 @@ export function ProductForm({ product }: ProductFormProps) {
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="images">Imágenes adicionales (opcional)</Label>
+        <Input id="images" name="images" type="file" multiple accept="image/*" />
+        <p className="text-xs text-muted-foreground">Puedes seleccionar varios archivos para subir.</p>
+      </div>
+
+      <div className="space-y-2">
         <Label>Galería de Imágenes</Label>
         <MultiImageUpload
           values={gallery}
           onChange={setGallery}
           folder="habita-studio/products/gallery"
           maxImages={10}
+          cloudName={cloudName}
+          uploadPreset={uploadPreset}
         />
         <p className="text-xs text-muted-foreground">Puedes agregar varias imágenes del producto.</p>
       </div>

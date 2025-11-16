@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { cloudinary } from "@/lib/cloudinary";
-import { getPublicIdFromUrl } from "@/lib/cloudinary";
+import { getPublicIdFromUrl, uploadImages as uploadMany } from "@/lib/cloudinary";
 
 const productSchema = z.object({
   id: z.string().optional().nullable(),
@@ -117,11 +117,14 @@ export async function createUpdateProduct(formData: FormData) {
 
       let dbProduct;
 
-      // Manejo de imágenes
+      // Manejo de imágenes (estilo arktee): múltiples archivos 'images' y múltiples 'imageUrls'
       const imageFile = formData.get("image") as File;
       let imageUrl = formData.get("imageUrl") as string | null;
-      // La galería llega ya como URLs desde el cliente (next-cloudinary)
-      // También aceptamos 'gallery' en formData si no vino por zod
+
+      const files = formData.getAll("images") as File[]; // múltiples
+      const directUrls = formData.getAll("imageUrls") as string[]; // múltiples
+
+      // La galería también puede venir consolidada como JSON 'gallery'
       if (!galleryUrls.length) {
         const galleryForm = formData.get("gallery") as string | null;
         if (galleryForm) {
@@ -132,6 +135,15 @@ export async function createUpdateProduct(formData: FormData) {
             }
           } catch (_e) {}
         }
+      }
+
+      // Subir archivos recibidos y combinar
+      if (files && files.length > 0) {
+        const uploaded = await uploadMany(files, "habita-studio/products/gallery");
+        galleryUrls = [...galleryUrls, ...uploaded];
+      }
+      if (directUrls && directUrls.length > 0) {
+        galleryUrls = [...galleryUrls, ...directUrls];
       }
 
       if (imageFile && imageFile.size > 0) {
@@ -160,6 +172,13 @@ export async function createUpdateProduct(formData: FormData) {
           }
         }
 
+        // Definir imagen principal: priorizar nueva 'imageUrl', luego primera de nueva galería, luego existente
+        const mainImage =
+          imageUrl ||
+          (galleryUrls.length ? galleryUrls[0] : undefined) ||
+          existing?.image ||
+          "";
+
         dbProduct = await tx.product.update({
           where: { id },
           data: {
@@ -169,8 +188,10 @@ export async function createUpdateProduct(formData: FormData) {
             cost: costNumber,
             price: priceNumber,
             description: product.description,
-            image: imageUrl || existing?.image || "",
-            gallery: galleryUrls.length ? galleryUrls : (existing?.gallery ?? []),
+            image: mainImage,
+            gallery: galleryUrls.length
+              ? [...new Set([...(existing?.gallery ?? []), ...galleryUrls])]
+              : (existing?.gallery ?? []),
             features: featuresArray,
             material: rest.material || null,
             dimensions: rest.dimensions || null,
@@ -180,9 +201,12 @@ export async function createUpdateProduct(formData: FormData) {
         });
       } else {
         // CREAR
-        if (!imageUrl) {
-          throw new Error("La imagen es requerida");
-        }
+        const mainImage =
+          imageUrl ||
+          (galleryUrls.length ? galleryUrls[0] : undefined) ||
+          null;
+
+        if (!mainImage) throw new Error("La imagen es requerida");
 
         dbProduct = await tx.product.create({
           data: {
@@ -192,8 +216,8 @@ export async function createUpdateProduct(formData: FormData) {
             cost: costNumber,
             price: priceNumber,
             description: product.description,
-            image: imageUrl,
-            gallery: galleryUrls,
+            image: mainImage,
+            gallery: galleryUrls.length ? [...new Set(galleryUrls)] : [],
             features: featuresArray,
             material: rest.material || null,
             dimensions: rest.dimensions || null,

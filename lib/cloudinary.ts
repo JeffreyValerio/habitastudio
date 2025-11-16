@@ -43,11 +43,11 @@ export async function uploadImage(
  * Sube múltiples imágenes a Cloudinary
  */
 export async function uploadImages(
-  files: File[],
+  filesOrURLs: (File | string)[],
   folder: string = "habita-studio"
 ): Promise<string[]> {
   try {
-    const uploadPromises = files.map((file) => uploadImage(file, folder));
+    const uploadPromises = filesOrURLs.map((fileOrUrl) => uploadImage(fileOrUrl, folder));
     return await Promise.all(uploadPromises);
   } catch (error) {
     console.error("Error uploading images to Cloudinary:", error);

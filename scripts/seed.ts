@@ -41,6 +41,10 @@ async function main() {
       cost: 500000,
       price: 715000,
       image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800",
+        "https://images.unsplash.com/photo-1493666438817-866a91353ca9?w=800"
+      ],
       description: "Sofá elegante y cómodo con diseño contemporáneo. Perfecto para espacios modernos, fabricado con materiales de alta calidad y tapizado en tela premium.",
       features: ["Estructura de madera sólida", "Tapizado en tela premium", "Almohadas incluidas", "Diseño moderno y elegante", "Fácil mantenimiento"],
       material: "Madera sólida, tela premium",
@@ -55,6 +59,10 @@ async function main() {
       cost: 350000,
       price: 495000,
       image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800",
+        "https://images.unsplash.com/photo-1549187774-b4e9b0445b06?w=800"
+      ],
       description: "Mesa de comedor extensible con capacidad para 6-10 personas. Diseño elegante en madera maciza con acabado natural.",
       features: ["Extensible hasta 280cm", "Madera maciza de roble", "Base robusta de metal", "Fácil de limpiar", "Diseño atemporal"],
       material: "Madera de roble maciza, acero",
@@ -69,6 +77,9 @@ async function main() {
       cost: 240000,
       price: 330000,
       image: "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=800"
+      ],
       description: "Set de 6 sillas de comedor con diseño ergonómico y estilo moderno. Asientos acolchados para máxima comodidad.",
       features: ["Set de 6 sillas", "Asientos acolchados", "Diseño ergonómico", "Fácil de apilar", "Resistente y duradero"],
       material: "Madera de pino, tela acolchada",
@@ -83,6 +94,10 @@ async function main() {
       cost: 630000,
       price: 880000,
       image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800",
+        "https://images.unsplash.com/photo-1616596874931-7ea5bf2d9dfe?w=800"
+      ],
       description: "Cama king size con base integrada y cabecero acolchado. Diseño elegante que transforma tu dormitorio.",
       features: ["Tamaño King (200x200cm)", "Base integrada con almacenamiento", "Cabecero acolchado", "Diseño moderno", "Fácil montaje"],
       material: "Madera MDF, tela acolchada",
@@ -97,6 +112,10 @@ async function main() {
       cost: 315000,
       price: 440000,
       image: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800",
+        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800"
+      ],
       description: "Escritorio ejecutivo amplio con cajones y estantería integrada. Perfecto para espacios de trabajo profesionales.",
       features: ["Superficie amplia", "3 cajones con llave", "Estantería superior", "Cable management", "Diseño profesional"],
       material: "Madera MDF, acero",
@@ -111,6 +130,10 @@ async function main() {
       cost: 750000,
       price: 1045000,
       image: "https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?w=800",
+        "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?w=800"
+      ],
       description: "Isla de cocina con barra desayunadora. Espacio adicional de trabajo y almacenamiento con diseño contemporáneo.",
       features: ["Barra desayunadora", "Almacenamiento amplio", "Encimera de cuarzo", "4 taburetes incluidos", "Diseño personalizable"],
       material: "Madera MDF, cuarzo, acero inoxidable",
@@ -125,6 +148,9 @@ async function main() {
       cost: 420000,
       price: 605000,
       image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800"
+      ],
       description: "Sofá cama convertible de 3 plazas. Perfecto para espacios pequeños que necesitan versatilidad.",
       features: ["Convierte en cama doble", "Mecanismo fácil de usar", "Colchón incluido", "Diseño compacto", "Múltiples usos"],
       material: "Madera, espuma de alta densidad",
@@ -139,6 +165,9 @@ async function main() {
       cost: 160000,
       price: 220000,
       image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800"
+      ],
       description: "Mesa de centro moderna con cajones y estante inferior. Combina estilo y funcionalidad.",
       features: ["2 cajones espaciosos", "Estante inferior", "Diseño moderno", "Fácil de mover", "Múltiples acabados"],
       material: "Madera MDF, metal",
@@ -153,6 +182,9 @@ async function main() {
       cost: 590000,
       price: 825000,
       image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800"
+      ],
       description: "Armario empotrado de 3 puertas con sistema de organización interior. Máximo aprovechamiento del espacio.",
       features: ["3 puertas correderas", "Interior organizable", "Espejo en una puerta", "Sistema de iluminación LED", "Diseño personalizable"],
       material: "Madera MDF, espejo, LED",
@@ -167,6 +199,9 @@ async function main() {
       cost: 200000,
       price: 275000,
       image: "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=800"
+      ],
       description: "Silla ergonómica de oficina con soporte lumbar ajustable. Diseñada para largas jornadas de trabajo.",
       features: ["Soporte lumbar ajustable", "Reposabrazos regulables", "Altura ajustable", "Ruedas silenciosas", "Respaldo reclinable"],
       material: "Malla transpirable, acero, plástico",
@@ -181,6 +216,9 @@ async function main() {
       cost: 240000,
       price: 330000,
       image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800"
+      ],
       description: "Estantería modular de 5 niveles con diseño abierto. Perfecta para organizar libros, decoración y objetos personales.",
       features: ["5 niveles espaciosos", "Diseño abierto", "Fácil de montar", "Modular y expandible", "Múltiples usos"],
       material: "Madera MDF",
@@ -195,6 +233,9 @@ async function main() {
       cost: 120000,
       price: 165000,
       image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800",
+      gallery: [
+        "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800"
+      ],
       description: "Mesa de noche moderna con puerto USB integrado y cajón. Diseño funcional y elegante.",
       features: ["Puerto USB integrado", "Cajón con llave", "Diseño moderno", "Fácil acceso", "Múltiples acabados"],
       material: "Madera MDF, metal",

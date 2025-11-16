@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    // Derivar cloud name para el cliente desde CLOUDINARY_URL si no existe la pública
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || (process.env.CLOUDINARY_URL ? process.env.CLOUDINARY_URL.split('@').pop()?.split('/')[0] : undefined),
+  },
   images: {
     remotePatterns: [
       {
