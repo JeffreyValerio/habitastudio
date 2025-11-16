@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { createUpdateProduct } from "@/app/actions/products";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { MultiImageUpload } from "@/components/admin/multi-image-upload";
 
 const productSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -52,6 +53,7 @@ export function ProductForm({ product }: ProductFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [gallery, setGallery] = useState<string[]>(product?.['gallery' as any] || []);
 
   const formatCurrency = (amount: number): string => {
     // Para inputs tipo number, solo devolver el número sin formato
@@ -139,6 +141,8 @@ export function ProductForm({ product }: ProductFormProps) {
       if (product?.image) {
         formData.append("imageUrl", product.image);
       }
+      // Agregar galería como JSON
+      formData.append("gallery", JSON.stringify(gallery));
 
       // Agregar el archivo del input si existe
       const fileInput = event?.target?.image as HTMLInputElement;
@@ -293,6 +297,17 @@ export function ProductForm({ product }: ProductFormProps) {
         <p className="text-sm text-muted-foreground">
           {product ? "Deja vacío para mantener la imagen actual" : "Selecciona una imagen"}
         </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Galería de Imágenes</Label>
+        <MultiImageUpload
+          values={gallery}
+          onChange={setGallery}
+          folder="habita-studio/products/gallery"
+          maxImages={10}
+        />
+        <p className="text-xs text-muted-foreground">Puedes agregar varias imágenes del producto.</p>
       </div>
 
       <div className="space-y-2">

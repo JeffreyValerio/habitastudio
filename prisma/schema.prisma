@@ -28,6 +28,7 @@ model Product {
   cost          Float     @default(0)
   price         Float
   image         String
+  gallery       String[]  @default([])
   description   String    @db.Text
   features      String[]  @default([])
   material      String?

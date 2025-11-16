@@ -38,6 +38,7 @@ const productSchema = z.object({
   dimensions: z.string().optional(),
   color: z.string().optional(),
   warranty: z.string().optional(),
+  gallery: z.string().optional(), // JSON string de URLs
 });
 
 const uploadImages = async (files: File[]): Promise<string[]> => {
@@ -90,7 +91,19 @@ export async function createUpdateProduct(formData: FormData) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-  const { id, cost, price, features, ...rest } = product;
+  const { id, cost, price, features, gallery, ...rest } = product;
+  // Parsear galería si viene como JSON string
+  let galleryUrls: string[] = [];
+  if (gallery) {
+    try {
+      const parsed = JSON.parse(gallery);
+      if (Array.isArray(parsed)) {
+        galleryUrls = parsed.filter((u) => typeof u === "string");
+      }
+    } catch (_) {
+      // ignore parse error
+    }
+  }
   
   // Los valores ya están convertidos a números por el preprocess
   const priceNumber = price || 0;
@@ -107,6 +120,19 @@ export async function createUpdateProduct(formData: FormData) {
       // Manejo de imágenes
       const imageFile = formData.get("image") as File;
       let imageUrl = formData.get("imageUrl") as string | null;
+      // La galería llega ya como URLs desde el cliente (next-cloudinary)
+      // También aceptamos 'gallery' en formData si no vino por zod
+      if (!galleryUrls.length) {
+        const galleryForm = formData.get("gallery") as string | null;
+        if (galleryForm) {
+          try {
+            const parsed = JSON.parse(galleryForm);
+            if (Array.isArray(parsed)) {
+              galleryUrls = parsed.filter((u) => typeof u === "string");
+            }
+          } catch (_e) {}
+        }
+      }
 
       if (imageFile && imageFile.size > 0) {
         const uploaded = await uploadImages([imageFile]);
@@ -119,7 +145,7 @@ export async function createUpdateProduct(formData: FormData) {
         // ACTUALIZAR
         const existing = await tx.product.findUnique({
           where: { id },
-          select: { image: true },
+          select: { image: true, gallery: true },
         });
 
         // Eliminar imagen antigua si hay una nueva
@@ -144,6 +170,7 @@ export async function createUpdateProduct(formData: FormData) {
             price: priceNumber,
             description: product.description,
             image: imageUrl || existing?.image || "",
+            gallery: galleryUrls.length ? galleryUrls : (existing?.gallery ?? []),
             features: featuresArray,
             material: rest.material || null,
             dimensions: rest.dimensions || null,
@@ -166,6 +193,7 @@ export async function createUpdateProduct(formData: FormData) {
             price: priceNumber,
             description: product.description,
             image: imageUrl,
+            gallery: galleryUrls,
             features: featuresArray,
             material: rest.material || null,
             dimensions: rest.dimensions || null,
@@ -204,7 +232,7 @@ export async function deleteProduct(id: string) {
   // Obtener el producto para eliminar su imagen
   const product = await prisma.product.findUnique({
     where: { id },
-    select: { image: true },
+    select: { image: true, gallery: true },
   });
 
   if (product?.image) {
@@ -215,6 +243,19 @@ export async function deleteProduct(id: string) {
       }
     } catch (error) {
       console.error("Error deleting product image:", error);
+    }
+  }
+  // Eliminar imágenes de la galería
+  if (product?.gallery?.length) {
+    for (const url of product.gallery) {
+      try {
+        const publicId = getPublicIdFromUrl(url);
+        if (publicId) {
+          await cloudinary.uploader.destroy(publicId);
+        }
+      } catch (error) {
+        console.error("Error deleting gallery image:", error);
+      }
     }
   }
 
