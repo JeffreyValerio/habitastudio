@@ -26,7 +26,43 @@ interface Quote {
   createdAt: Date;
 }
 
-export function generateQuotePDF(quote: Quote) {
+// Función para convertir SVG a imagen base64
+async function svgToBase64(svgPath: string): Promise<string> {
+  try {
+    const response = await fetch(svgPath);
+    const svgText = await response.text();
+    
+    // Crear un canvas para renderizar el SVG
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
+    
+    // Configurar dimensiones del canvas (ajustar según el tamaño del logo)
+    canvas.width = 253;
+    canvas.height = 92;
+    
+    // Crear una imagen desde el SVG
+    const img = new Image();
+    const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    return new Promise((resolve, reject) => {
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+        const base64 = canvas.toDataURL('image/png');
+        URL.revokeObjectURL(url);
+        resolve(base64);
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  } catch (error) {
+    console.error('Error converting SVG to base64:', error);
+    return '';
+  }
+}
+
+export async function generateQuotePDF(quote: Quote) {
   const doc = new jsPDF();
   
   // Configuración de márgenes y dimensiones
@@ -37,73 +73,96 @@ export function generateQuotePDF(quote: Quote) {
   
   let yPosition = margin;
   
-  // Encabezado
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.text('HABITASTUDIO', margin, yPosition);
+  // Convertir logo SVG a base64 (con color)
+  const logoBase64 = await svgToBase64('/images/logo.svg');
   
-  yPosition += 10;
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Muebles y Remodelaciones de Calidad', margin, yPosition);
+  // === LOGO (100% a la izquierda, con color) ===
+  const logoWidth = 50;
+  const logoHeight = (logoWidth * 92) / 253; // ~18
+  const logoX = margin;
+  const logoY = yPosition;
   
-  yPosition += 5;
+  if (logoBase64) {
+    doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+  }
+  
+  // === INFORMACIÓN DE LA EMPRESA (debajo del logo) ===
+  const companyInfoX = margin;
+  let companyY = logoY + logoHeight + 8;
+  
   doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text('Costa Rica', margin, yPosition);
-  doc.text('Email: info@habitastudio.online', margin, yPosition + 5);
-  doc.text('Tel: +506 6364 4915', margin, yPosition + 10);
-  
-  // Título de la cotización
-  yPosition += 25;
-  doc.setFontSize(20);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.text('COTIZACIÓN', pageWidth - margin, yPosition, { align: 'right' });
-  
-  yPosition += 8;
-  doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Número: ${quote.quoteNumber}`, pageWidth - margin, yPosition, { align: 'right' });
+  doc.text('Muebles y Remodelaciones de Calidad', companyInfoX, companyY);
   
-  yPosition += 6;
+  companyY += 5;
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Costa Rica', companyInfoX, companyY);
+  doc.text('Email: info@habitastudio.online', companyInfoX, companyY + 4);
+  doc.text('Tel: +506 6364 4915', companyInfoX, companyY + 8);
+  
+  // Layout de grid de 2 columnas para cliente y cotización
+  const gridGap = 20;
+  const leftColWidth = (contentWidth - gridGap) / 2;
+  const rightColStart = margin + leftColWidth + gridGap;
+  const leftColStart = margin;
+  
+  // Ajustar yPosition para las secciones de cliente y cotización
+  yPosition = companyY + 12 + 10;
+  
+  // === COLUMNA IZQUIERDA - INFORMACIÓN DEL CLIENTE ===
+  let clientY = yPosition;
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text('CLIENTE', leftColStart, clientY);
+  
+  clientY += 8;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Nombre: ${quote.clientName}`, leftColStart, clientY);
+  clientY += 6;
+  doc.text(`Email: ${quote.clientEmail}`, leftColStart, clientY);
+  if (quote.clientPhone) {
+    clientY += 6;
+    doc.text(`Teléfono: ${quote.clientPhone}`, leftColStart, clientY);
+  }
+  if (quote.clientAddress) {
+    clientY += 6;
+    const addressLines = doc.splitTextToSize(`Dirección: ${quote.clientAddress}`, leftColWidth);
+    doc.text(addressLines, leftColStart, clientY);
+    clientY += (addressLines.length - 1) * 6;
+  }
+  
+  // === COLUMNA DERECHA - DATOS DE LA COTIZACIÓN ===
+  let quoteY = yPosition;
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('COTIZACIÓN', rightColStart + leftColWidth, quoteY, { align: 'right' });
+  
+  quoteY += 8;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Número: ${quote.quoteNumber}`, rightColStart + leftColWidth, quoteY, { align: 'right' });
+  
+  quoteY += 6;
   doc.text(`Fecha: ${new Date(quote.createdAt).toLocaleDateString('es-CR', { 
     year: 'numeric', 
     month: 'long', 
     day: 'numeric' 
-  })}`, pageWidth - margin, yPosition, { align: 'right' });
+  })}`, rightColStart + leftColWidth, quoteY, { align: 'right' });
   
   if (quote.validUntil) {
-    yPosition += 6;
+    quoteY += 6;
     doc.text(`Válida hasta: ${new Date(quote.validUntil).toLocaleDateString('es-CR', { 
       year: 'numeric', 
       month: 'long', 
       day: 'numeric' 
-    })}`, pageWidth - margin, yPosition, { align: 'right' });
+    })}`, rightColStart + leftColWidth, quoteY, { align: 'right' });
   }
   
-  // Información del cliente
-  yPosition += 20;
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('CLIENTE', margin, yPosition);
-  
-  yPosition += 8;
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Nombre: ${quote.clientName}`, margin, yPosition);
-  yPosition += 6;
-  doc.text(`Email: ${quote.clientEmail}`, margin, yPosition);
-  if (quote.clientPhone) {
-    yPosition += 6;
-    doc.text(`Teléfono: ${quote.clientPhone}`, margin, yPosition);
-  }
-  if (quote.clientAddress) {
-    yPosition += 6;
-    const addressLines = doc.splitTextToSize(`Dirección: ${quote.clientAddress}`, contentWidth);
-    doc.text(addressLines, margin, yPosition);
-    yPosition += (addressLines.length - 1) * 6;
-  }
+  // Ajustar yPosition para la siguiente sección (usar el máximo de ambas columnas)
+  yPosition = Math.max(clientY, quoteY) + 10;
   
   // Información del proyecto
   yPosition += 10;

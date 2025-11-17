@@ -149,9 +149,9 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
     }
   };
 
-  const handleDownloadPDF = (quote: Quote) => {
+  const handleDownloadPDF = async (quote: Quote) => {
     try {
-      generateQuotePDF(quote);
+      await generateQuotePDF(quote);
       toast({
         title: "Éxito",
         description: "PDF generado correctamente",

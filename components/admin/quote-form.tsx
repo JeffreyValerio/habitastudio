@@ -9,7 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createUpdateQuote } from "@/app/actions/quotes";
+import { getProductsForQuotes } from "@/app/actions/products";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
@@ -19,6 +27,14 @@ interface QuoteItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  productId?: string;
+}
+
+interface ProductForQuote {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
 }
 
 const quoteFormSchema = z.object({
@@ -67,6 +83,23 @@ export function QuoteForm({ quote }: QuoteFormProps) {
       { description: "", quantity: 1, unitPrice: 0, total: 0 },
     ]
   );
+  const [products, setProducts] = useState<ProductForQuote[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // Cargar productos al montar el componente
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const productsData = await getProductsForQuotes();
+        setProducts(productsData);
+      } catch (error) {
+        console.error("Error cargando productos:", error);
+      } finally {
+        setLoadingProducts(false);
+      }
+    }
+    loadProducts();
+  }, []);
 
   // Calcular porcentaje de impuesto desde el monto guardado
   const getTaxPercent = (quote: QuoteFormProps["quote"]) => {
@@ -123,9 +156,33 @@ export function QuoteForm({ quote }: QuoteFormProps) {
       item.quantity = parseFloat(value as string) || 0;
     } else if (field === "unitPrice") {
       item.unitPrice = parseFloat(value as string) || 0;
+    } else if (field === "productId") {
+      item.productId = value as string;
     }
     
     item.total = item.quantity * item.unitPrice;
+    newItems[index] = item;
+    setItems(newItems);
+  };
+
+  const handleProductSelect = (index: number, productId: string) => {
+    const newItems = [...items];
+    const item = { ...newItems[index] };
+    
+    if (productId === "manual") {
+      // Limpiar producto seleccionado para escribir manualmente
+      item.productId = undefined;
+    } else {
+      // Seleccionar producto y autocompletar
+      const product = products.find((p) => p.id === productId);
+      if (product) {
+        item.productId = productId;
+        item.description = product.name;
+        item.unitPrice = product.price;
+        item.total = item.quantity * item.unitPrice;
+      }
+    }
+    
     newItems[index] = item;
     setItems(newItems);
   };
@@ -364,9 +421,9 @@ export function QuoteForm({ quote }: QuoteFormProps) {
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full table-fixed">
+          <table className="w-full">
             <colgroup>
-              <col className="w-[50%]" />
+              <col className="w-[40%]" />
               <col className="w-[7.5rem]" />
               <col className="w-[9rem]" />
               <col className="w-[9rem]" />
@@ -374,7 +431,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
             </colgroup>
             <thead className="bg-muted">
               <tr>
-                <th className="text-left p-3 text-sm font-medium">Descripción</th>
+                <th className="text-left p-3 text-sm font-medium">Producto / Descripción</th>
                 <th className="text-left p-3 text-sm font-medium">Cantidad</th>
                 <th className="text-left p-3 text-sm font-medium">Precio Unitario</th>
                 <th className="text-right p-3 text-sm font-medium">Total</th>
@@ -385,12 +442,31 @@ export function QuoteForm({ quote }: QuoteFormProps) {
               {items.map((item, index) => (
                 <tr key={index} className="border-t">
                   <td className="p-3">
-                    <Input
-                      value={item.description}
-                      onChange={(e) => updateItem(index, "description", e.target.value)}
-                      placeholder="Descripción del item"
-                      className="w-full"
-                    />
+                    <div className="flex gap-2">
+                      <Select
+                        value={item.productId || "manual"}
+                        onValueChange={(value) => handleProductSelect(index, value)}
+                        disabled={loadingProducts}
+                      >
+                        <SelectTrigger className="w-[200px] shrink-0">
+                          <SelectValue placeholder="Producto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual">Producto manual</SelectItem>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} - {product.category} ({formatCRC(product.price)})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        value={item.description}
+                        onChange={(e) => updateItem(index, "description", e.target.value)}
+                        placeholder="Descripción del item"
+                        className="flex-1"
+                      />
+                    </div>
                   </td>
                   <td className="p-3">
                     <Input

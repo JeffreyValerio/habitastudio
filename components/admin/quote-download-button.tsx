@@ -36,9 +36,9 @@ interface Quote {
 export function QuoteDownloadButton({ quote }: { quote: Quote }) {
   const { toast } = useToast();
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     try {
-      generateQuotePDF(quote);
+      await generateQuotePDF(quote);
       toast({
         title: "Éxito",
         description: "PDF generado correctamente",

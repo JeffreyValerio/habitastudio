@@ -356,3 +356,23 @@ export async function getProduct(id: string) {
   };
 }
 
+// Obtener productos para selector en cotizaciones (con precio numérico)
+export async function getProductsForQuotes() {
+  const products = await prisma.product.findMany({
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      category: true,
+    },
+    orderBy: { name: "asc" },
+  });
+  
+  return products.map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: typeof p.price === 'number' ? p.price : parseFloat(String(p.price)) || 0,
+    category: p.category,
+  }));
+}
+
