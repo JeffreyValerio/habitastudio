@@ -28,13 +28,14 @@ export default async function ProjectsPage() {
         <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <Card key={project.id} className="group overflow-hidden transition-shadow hover:shadow-lg">
-              <div className="relative h-64 w-full overflow-hidden">
+              <div className="relative h-64 w-full overflow-hidden bg-muted flex items-center justify-center">
                 <Image
                   src={project.image}
                   alt={project.title}
-                  fill
+                  width={512}
+                  height={288}
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-cover transition-transform duration-300 group-hover:scale-110"
+                  className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-110"
                   unoptimized
                 />
                 <div className="absolute top-4 left-4">

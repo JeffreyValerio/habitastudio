@@ -108,6 +108,10 @@ export async function createUpdateProduct(formData: FormData) {
   const priceNumber = price || 0;
   const costNumber = cost || 0;
 
+  // Variables para tracking de subida de imágenes
+  let uploadedCount = 0;
+  let failedCount = 0;
+
   try {
     const prismaTx = await prisma.$transaction(async (tx) => {
       const featuresArray = features
@@ -123,26 +127,38 @@ export async function createUpdateProduct(formData: FormData) {
       const files = formData.getAll("images") as File[]; // múltiples
       const directUrls = formData.getAll("imageUrls") as string[]; // múltiples
 
-      // La galería también puede venir consolidada como JSON 'gallery'
-      if (!galleryUrls.length) {
-        const galleryForm = formData.get("gallery") as string | null;
-        if (galleryForm) {
-          try {
-            const parsed = JSON.parse(galleryForm);
-            if (Array.isArray(parsed)) {
-              galleryUrls = parsed.filter((u) => typeof u === "string");
-            }
-          } catch (_e) {}
-        }
+      // Priorizar el JSON del formulario que ya tiene las eliminaciones aplicadas
+      const galleryForm = formData.get("gallery") as string | null;
+      if (galleryForm) {
+        try {
+          const parsed = JSON.parse(galleryForm);
+          if (Array.isArray(parsed)) {
+            galleryUrls = parsed.filter((u) => typeof u === "string");
+          }
+        } catch (_e) {}
+      }
+      
+      // Si no hay JSON, usar imageUrls como fallback (compatibilidad)
+      if (galleryUrls.length === 0 && directUrls && directUrls.length > 0) {
+        galleryUrls = [...directUrls];
       }
 
-      // Subir archivos recibidos y combinar
+      // Agregar archivos nuevos subidos
       if (files && files.length > 0) {
-        const uploaded = await uploadMany(files, "habita-studio/products/gallery");
-        galleryUrls = [...galleryUrls, ...uploaded];
-      }
-      if (directUrls && directUrls.length > 0) {
-        galleryUrls = [...galleryUrls, ...directUrls];
+        try {
+          const uploaded = await uploadMany(files, "habita-studio/products/gallery");
+          uploadedCount = uploaded.length;
+          failedCount = files.length - uploaded.length;
+          galleryUrls = [...galleryUrls, ...uploaded];
+          
+          if (failedCount > 0) {
+            console.warn(`${failedCount} de ${files.length} imágenes no se pudieron subir`);
+          }
+        } catch (error) {
+          console.error("Error al subir imágenes:", error);
+          failedCount = files.length;
+          // Continuar con el proceso aunque algunas imágenes fallen
+        }
       }
 
       if (imageFile && imageFile.size > 0) {
@@ -171,12 +187,29 @@ export async function createUpdateProduct(formData: FormData) {
           }
         }
 
+        // Eliminar de Cloudinary imágenes removidas de la galería
+        const existingGallery = existing?.gallery ?? [];
+        const removedFromGallery = existingGallery.filter((url) => !galleryUrls.includes(url));
+        for (const url of removedFromGallery) {
+          try {
+            const publicId = getPublicIdFromUrl(url);
+            if (publicId) {
+              await cloudinary.uploader.destroy(publicId);
+            }
+          } catch (error) {
+            console.error("Error deleting removed gallery image:", error);
+          }
+        }
+
         // Definir imagen principal: priorizar nueva 'imageUrl', luego primera de nueva galería, luego existente
         const mainImage =
           imageUrl ||
           (galleryUrls.length ? galleryUrls[0] : undefined) ||
           existing?.image ||
           "";
+
+        // Usar la galería que viene del formulario (ya tiene las eliminaciones aplicadas)
+        const finalGallery = [...new Set(galleryUrls)];
 
         dbProduct = await tx.product.update({
           where: { id },
@@ -188,9 +221,7 @@ export async function createUpdateProduct(formData: FormData) {
             price: priceNumber,
             description: product.description,
             image: mainImage,
-            gallery: galleryUrls.length
-              ? [...new Set([...(existing?.gallery ?? []), ...galleryUrls])]
-              : (existing?.gallery ?? []),
+            gallery: finalGallery,
             features: featuresArray,
             material: rest.material || null,
             dimensions: rest.dimensions || null,
@@ -233,15 +264,26 @@ export async function createUpdateProduct(formData: FormData) {
     revalidatePath(`/catalogo/${prismaTx.slug}`);
     revalidatePath("/");
 
+    let message = id ? "Producto actualizado" : "Producto creado";
+    if (uploadedCount > 0 && failedCount > 0) {
+      message += `. ${uploadedCount} imagen(es) subida(s) exitosamente, ${failedCount} fallaron.`;
+    } else if (uploadedCount > 0) {
+      message += `. ${uploadedCount} imagen(es) subida(s) exitosamente.`;
+    } else if (failedCount > 0) {
+      message += `. Advertencia: ${failedCount} imagen(es) no se pudieron subir.`;
+    }
+
     return {
       ok: true,
       product: prismaTx,
-      message: id ? "Producto actualizado" : "Producto creado",
+      message,
     };
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Error completo en createUpdateProduct:", error);
+    const errorMessage = error?.message || String(error);
     return {
       ok: false,
-      message: "No se pudo guardar/actualizar el producto: " + error,
+      message: `No se pudo guardar/actualizar el producto: ${errorMessage}`,
     };
   }
 }

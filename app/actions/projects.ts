@@ -181,6 +181,7 @@ export async function createUpdateProject(formData: FormData) {
   const solutions = solutionsStr ? solutionsStr.split("\n").filter((s) => s.trim()) : [];
 
   // Galería existente (URLs) y nuevas entradas
+  // Priorizar el JSON del formulario que ya tiene las eliminaciones aplicadas
   let galleryUrls: string[] = [];
   const galleryJson = formData.get("gallery") as string | null;
   if (galleryJson) {
@@ -189,10 +190,14 @@ export async function createUpdateProject(formData: FormData) {
       if (Array.isArray(parsed)) galleryUrls = parsed.filter((u) => typeof u === "string");
     } catch {}
   }
+  
+  // Si no hay JSON, usar imageUrls como fallback (compatibilidad)
+  if (galleryUrls.length === 0) {
+    const directUrls = formData.getAll("imageUrls") as string[];
+    if (directUrls?.length) galleryUrls.push(...directUrls);
+  }
 
-  const directUrls = formData.getAll("imageUrls") as string[];
-  if (directUrls?.length) galleryUrls.push(...directUrls);
-
+  // Agregar archivos nuevos subidos
   const files = formData.getAll("images") as File[];
   if (files?.length) {
     const uploaded = await uploadMany(files, "habita-studio/projects");
