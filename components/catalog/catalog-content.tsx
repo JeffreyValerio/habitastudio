@@ -117,9 +117,8 @@ export function CatalogContent({ initialProducts }: { initialProducts: Product[]
                       <Image
                         src={product.image}
                         alt={product.name}
-                        width={256}
-                        height={256}
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        width={450}
+                        height={260}
                         className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-110"
                         unoptimized
                       />
