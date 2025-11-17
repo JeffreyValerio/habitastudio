@@ -31,9 +31,9 @@ export default async function ServicesPage() {
             return (
               <Card key={service.title} className="border-2">
                 {service.image && (
-                  <div className="relative w-full aspect-video overflow-hidden rounded-t-lg border-b">
+                  <div className="relative w-full aspect-video overflow-hidden rounded-t-lg border-b bg-muted flex items-center justify-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={service.image} alt={service.title} className="h-full w-full object-cover" />
+                    <img src={service.image} alt={service.title} className="max-h-full max-w-full object-contain" />
                   </div>
                 )}
                 <CardHeader>

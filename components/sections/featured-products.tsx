@@ -28,13 +28,14 @@ export async function FeaturedProducts() {
         <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {featuredProducts.map((product) => (
             <Card key={product.id} className="group overflow-hidden transition-shadow hover:shadow-lg">
-              <div className="relative h-64 w-full overflow-hidden">
+              <div className="relative h-64 w-full overflow-hidden bg-muted flex items-center justify-center">
                 <Image
                   src={product.image}
                   alt={product.name}
-                  fill
+                  width={256}
+                  height={256}
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                  className="object-cover transition-transform duration-300 group-hover:scale-110"
+                  className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-110"
                   unoptimized
                 />
               </div>

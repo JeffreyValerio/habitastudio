@@ -19,6 +19,12 @@ const nextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
   },
+  // Aumentar límite de tamaño del body para permitir subir múltiples imágenes
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+  },
 }
 
 module.exports = nextConfig

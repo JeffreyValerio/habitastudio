@@ -41,14 +41,42 @@ export async function uploadImage(
 
 /**
  * Sube múltiples imágenes a Cloudinary
+ * Maneja errores individualmente para que si una falla, las demás continúen
  */
 export async function uploadImages(
   filesOrURLs: (File | string)[],
   folder: string = "habita-studio"
 ): Promise<string[]> {
   try {
-    const uploadPromises = filesOrURLs.map((fileOrUrl) => uploadImage(fileOrUrl, folder));
-    return await Promise.all(uploadPromises);
+    const uploadPromises = filesOrURLs.map(async (fileOrUrl) => {
+      try {
+        // Validar tamaño si es un File (máximo 10MB por imagen)
+        if (fileOrUrl instanceof File) {
+          const maxSize = 10 * 1024 * 1024; // 10MB
+          if (fileOrUrl.size > maxSize) {
+            console.error(`Imagen ${fileOrUrl.name} excede el tamaño máximo de 10MB`);
+            return null;
+          }
+        }
+        return await uploadImage(fileOrUrl, folder);
+      } catch (error) {
+        console.error(`Error subiendo imagen individual:`, error);
+        return null; // Retorna null si falla, pero continúa con las demás
+      }
+    });
+    
+    const results = await Promise.allSettled(uploadPromises);
+    const uploadedUrls: string[] = [];
+    
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled" && result.value !== null) {
+        uploadedUrls.push(result.value);
+      } else {
+        console.error(`Error en imagen ${index + 1}:`, result.status === "rejected" ? result.reason : "Retornó null");
+      }
+    });
+    
+    return uploadedUrls;
   } catch (error) {
     console.error("Error uploading images to Cloudinary:", error);
     throw new Error("Failed to upload images");
