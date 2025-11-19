@@ -20,6 +20,7 @@ import { createUpdateQuote } from "@/app/actions/quotes";
 import { getProductsForQuotes } from "@/app/actions/products";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2 } from "lucide-react";
+import Image from "next/image";
 
 interface QuoteItem {
   id?: string;
@@ -70,6 +71,7 @@ interface QuoteFormProps {
     discount: number;
     total: number;
     notes?: string | null;
+    images?: string[];
     items: QuoteItem[];
   };
 }
@@ -85,6 +87,10 @@ export function QuoteForm({ quote }: QuoteFormProps) {
   );
   const [products, setProducts] = useState<ProductForQuote[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [gallery, setGallery] = useState<string[]>(quote?.images || []);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Cargar productos al montar el componente
   useEffect(() => {
@@ -100,6 +106,25 @@ export function QuoteForm({ quote }: QuoteFormProps) {
     }
     loadProducts();
   }, []);
+
+  const handleFilesChange = (filesList: FileList | File[] | null) => {
+    const files = filesList ? Array.from(filesList) : [];
+    const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+    if (imageFiles.length === 0) return;
+
+    setNewFiles((prev) => [...prev, ...imageFiles]);
+    const urls = imageFiles.map((f) => URL.createObjectURL(f));
+    setPreviews((prev) => [...prev, ...urls]);
+  };
+
+  const removeGalleryUrl = (url: string) => {
+    setGallery((prev) => prev.filter((u) => u !== url));
+  };
+
+  const removePreviewAt = (idx: number) => {
+    setPreviews((prev) => prev.filter((_, i) => i !== idx));
+    setNewFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   // Calcular porcentaje de impuesto desde el monto guardado
   const getTaxPercent = (quote: QuoteFormProps["quote"]) => {
@@ -247,6 +272,13 @@ export function QuoteForm({ quote }: QuoteFormProps) {
       formData.append("total", validTotal.toString());
       formData.append("notes", data.notes || "");
       
+      // Agregar galería como JSON y como lista de URLs (compat productos/proyectos)
+      formData.append("gallery", JSON.stringify(gallery));
+      gallery.forEach((url) => formData.append("imageUrls", url));
+      
+      // Agregar múltiples archivos nuevos para la galería
+      newFiles.forEach((f) => formData.append("images", f));
+      
       // Enviar solo items válidos
       const validItemsToSend = validItems.map(item => ({
         description: item.description.trim(),
@@ -293,7 +325,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
     }).format(value)}`;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} encType="multipart/form-data" className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="clientName">Nombre del Cliente *</Label>
@@ -523,6 +555,91 @@ export function QuoteForm({ quote }: QuoteFormProps) {
           placeholder="Notas adicionales para el cliente..."
           rows={4}
         />
+      </div>
+
+      <div className="space-y-3 rounded-lg border p-4">
+        <Label>Imágenes de Referencia</Label>
+        <div className="space-y-2">
+          <Input 
+            id="images" 
+            name="images" 
+            type="file" 
+            multiple 
+            accept="image/*" 
+            onChange={(e) => handleFilesChange(e.target.files)} 
+            className="hidden" 
+          />
+          <label
+            htmlFor="images"
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragging(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragging(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragging(false);
+              if (e.dataTransfer?.files?.length) {
+                handleFilesChange(e.dataTransfer.files);
+              }
+            }}
+            className={`flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary hover:bg-primary/5"}`}
+          >
+            <div className="text-center">
+              <p className="text-sm font-medium">Arrastra y suelta imágenes aquí</p>
+              <p className="text-xs text-muted-foreground mt-1">o haz clic para seleccionar</p>
+            </div>
+          </label>
+          {(gallery.length > 0 || previews.length > 0) && (
+            <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
+              {gallery.map((url, idx) => (
+                <div key={`existing-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                  <Image
+                    src={url}
+                    alt="Imagen existente"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeGalleryUrl(url)}
+                    className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              ))}
+              {previews.map((url, idx) => (
+                <div key={`new-${idx}`} className="relative aspect-video w-full overflow-hidden rounded-md border">
+                  <Image
+                    src={url}
+                    alt={`Nueva imagen ${idx + 1}`}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePreviewAt(idx)}
+                    className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Las imágenes se mostrarán al final del PDF después del resumen de precios. Selecciona varias imágenes; se cargarán al guardar.
+          </p>
+        </div>
       </div>
 
       <div className="border-t pt-4">
