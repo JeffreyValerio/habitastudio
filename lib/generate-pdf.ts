@@ -22,6 +22,7 @@ interface Quote {
   discount: number;
   total: number;
   notes?: string | null;
+  images?: string[];
   items: QuoteItem[];
   createdAt: Date;
 }
@@ -62,6 +63,43 @@ async function svgToBase64(svgPath: string): Promise<string> {
   }
 }
 
+// Función para convertir URL de imagen a base64
+async function imageUrlToBase64(imageUrl: string): Promise<string | null> {
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    
+    return new Promise((resolve) => {
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(null);
+            return;
+          }
+          ctx.drawImage(img, 0, 0);
+          const base64 = canvas.toDataURL('image/jpeg', 0.9);
+          resolve(base64);
+        } catch (error) {
+          console.error('Error converting image to base64:', error);
+          resolve(null);
+        }
+      };
+      img.onerror = () => {
+        console.error('Error loading image:', imageUrl);
+        resolve(null);
+      };
+      img.src = imageUrl;
+    });
+  } catch (error) {
+    console.error('Error processing image URL:', error);
+    return null;
+  }
+}
+
 export async function generateQuotePDF(quote: Quote) {
   const doc = new jsPDF();
   
@@ -74,7 +112,24 @@ export async function generateQuotePDF(quote: Quote) {
   let yPosition = margin;
   
   // Convertir logo SVG a base64 (con color)
-  const logoBase64 = await svgToBase64('/images/logo.svg');
+  let logoBase64 = await svgToBase64('/images/logo.svg');
+  
+  // Si falla la conversión, intentar con el logo webp como fallback
+  if (!logoBase64) {
+    try {
+      const response = await fetch('/images/logo.webp');
+      if (response.ok) {
+        const blob = await response.blob();
+        const reader = new FileReader();
+        logoBase64 = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch (error) {
+      console.error('Error cargando logo webp:', error);
+    }
+  }
   
   // === LOGO (100% a la izquierda, con color) ===
   const logoWidth = 50;
@@ -83,7 +138,13 @@ export async function generateQuotePDF(quote: Quote) {
   const logoY = yPosition;
   
   if (logoBase64) {
-    doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+    try {
+      doc.addImage(logoBase64, logoBase64.includes('data:image/png') ? 'PNG' : 'JPEG', logoX, logoY, logoWidth, logoHeight);
+    } catch (error) {
+      console.error('Error agregando logo al PDF:', error);
+    }
+  } else {
+    console.warn('No se pudo cargar el logo, continuando sin él');
   }
   
   // === INFORMACIÓN DE LA EMPRESA (debajo del logo) ===
@@ -299,6 +360,66 @@ export async function generateQuotePDF(quote: Quote) {
     doc.setFont('helvetica', 'normal');
     const notesLines = doc.splitTextToSize(quote.notes, contentWidth);
     doc.text(notesLines, margin, yPosition);
+    yPosition += (notesLines.length * 6) + 10;
+  }
+
+  // Imágenes de referencia
+  if (quote.images && quote.images.length > 0) {
+    yPosition += 20;
+    if (yPosition > pageHeight - 100) {
+      doc.addPage();
+      yPosition = margin;
+    }
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Diseño', margin, yPosition);
+    yPosition += 10;
+
+    // Configuración para las imágenes - una sola columna
+    const imageWidth = contentWidth; // Ancho completo del contenido
+    const imageHeight = 80; // Altura fija para mantener proporción
+    const imageSpacing = 10; // Espacio entre imágenes
+
+    for (let i = 0; i < quote.images.length; i++) {
+      const imageUrl = quote.images[i];
+      
+      // Verificar si necesitamos una nueva página
+      if (yPosition + imageHeight > pageHeight - margin) {
+        doc.addPage();
+        yPosition = margin;
+      }
+
+      // Posición de la imagen (centrada en el ancho disponible)
+      const imageX = margin;
+      const imageY = yPosition;
+
+      try {
+        // Convertir imagen a base64
+        const imageBase64 = await imageUrlToBase64(imageUrl);
+        
+        if (imageBase64) {
+          // Agregar imagen al PDF
+          doc.addImage(
+            imageBase64,
+            'JPEG',
+            imageX,
+            imageY,
+            imageWidth,
+            imageHeight
+          );
+        } else {
+          console.warn('No se pudo cargar la imagen:', imageUrl);
+        }
+      } catch (error) {
+        console.error('Error procesando imagen:', imageUrl, error);
+        // Continuar con la siguiente imagen aunque esta falle
+      }
+
+      // Avanzar posición para la siguiente imagen
+      yPosition += imageHeight + imageSpacing;
+    }
   }
   
   // Pie de página

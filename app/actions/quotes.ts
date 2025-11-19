@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { uploadImages as uploadMany } from "@/lib/cloudinary";
 
 const quoteItemSchema = z.object({
   id: z.string().optional(),
@@ -28,6 +29,7 @@ const quoteSchema = z.object({
   discount: z.number().min(0),
   total: z.number().min(0),
   notes: z.string().optional().nullable(),
+  images: z.array(z.string()).optional().default([]),
   items: z.array(quoteItemSchema).min(1, "Debe agregar al menos un item"),
 });
 
@@ -52,6 +54,40 @@ export async function createUpdateQuote(formData: FormData) {
       }
     }
 
+    // Manejo de imágenes (igual que productos/proyectos)
+    let images: string[] = [];
+    const files = formData.getAll("images") as File[]; // múltiples archivos nuevos
+    const directUrls = formData.getAll("imageUrls") as string[]; // múltiples URLs existentes
+
+    // Priorizar el JSON del formulario que ya tiene las eliminaciones aplicadas
+    const galleryForm = formData.get("gallery") as string | null;
+    if (galleryForm) {
+      try {
+        const parsed = JSON.parse(galleryForm);
+        if (Array.isArray(parsed)) {
+          images = parsed.filter((u) => typeof u === "string" && u.trim() !== "");
+        }
+      } catch (_e) {
+        // ignore parse error
+      }
+    }
+    
+    // Si no hay JSON, usar imageUrls como fallback (compatibilidad)
+    if (images.length === 0 && directUrls && directUrls.length > 0) {
+      images = [...directUrls];
+    }
+
+    // Agregar archivos nuevos subidos
+    if (files && files.length > 0) {
+      try {
+        const uploaded = await uploadMany(files, "habita-studio/quotes");
+        images = [...images, ...uploaded];
+      } catch (error) {
+        console.error("Error al subir imágenes:", error);
+        // Continuar con el proceso aunque algunas imágenes fallen
+      }
+    }
+
     // Limpiar campos opcionales vacíos
     const cleanData = {
       ...data,
@@ -69,6 +105,7 @@ export async function createUpdateQuote(formData: FormData) {
       discount: parseFloat(data.discount as string) || 0,
       total: parseFloat(data.total as string) || 0,
       items,
+      images,
     };
 
     const parsedData = quoteSchema.safeParse(quoteData);
@@ -83,7 +120,7 @@ export async function createUpdateQuote(formData: FormData) {
     }
 
     const quote = parsedData.data;
-    const { id, items: quoteItems, validUntil: validUntilStr, ...quoteFields } = quote;
+    const { id, items: quoteItems, validUntil: validUntilStr, images: quoteImages, ...quoteFields } = quote;
 
     // Convertir validUntil de string a Date o null
     const validUntilDate = validUntilStr && validUntilStr.trim() 
@@ -106,7 +143,8 @@ export async function createUpdateQuote(formData: FormData) {
           data: {
             ...quoteFields,
             validUntil: validUntilDate,
-          },
+            images: quoteImages || [],
+          } as any,
         });
       } else {
         // CREAR
@@ -128,7 +166,8 @@ export async function createUpdateQuote(formData: FormData) {
             ...quoteFields,
             quoteNumber,
             validUntil: validUntilDate,
-          },
+            images: quoteImages || [],
+          } as any,
         });
       }
 

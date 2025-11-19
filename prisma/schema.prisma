@@ -88,6 +88,7 @@ model Quote {
   discount        Float       @default(0)
   total           Float       @default(0)
   notes           String?     @db.Text
+  images          String[]    @default([])
   sentAt          DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

@@ -28,6 +28,7 @@ interface Quote {
   discount: number;
   total: number;
   notes?: string | null;
+  images?: string[];
   createdAt: Date;
   validUntil: Date | null;
   items: QuoteItem[];
