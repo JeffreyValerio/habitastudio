@@ -147,25 +147,25 @@ export function QuoteForm({ quote }: QuoteFormProps) {
     resolver: zodResolver(quoteFormSchema),
     defaultValues: quote
       ? {
-          clientName: quote.clientName,
-          clientEmail: quote.clientEmail,
-          clientPhone: quote.clientPhone || "",
-          clientAddress: quote.clientAddress || "",
-          projectName: quote.projectName,
-          projectDescription: quote.projectDescription || "",
-          status: quote.status as "draft" | "sent" | "accepted" | "rejected" | "expired",
-          validUntil: quote.validUntil
-            ? new Date(quote.validUntil).toISOString().split("T")[0]
-            : "",
-          tax: getTaxPercent(quote),
-          discount: getDiscountPercent(quote),
-          notes: quote.notes || "",
-        }
+        clientName: quote.clientName,
+        clientEmail: quote.clientEmail,
+        clientPhone: quote.clientPhone || "",
+        clientAddress: quote.clientAddress || "",
+        projectName: quote.projectName,
+        projectDescription: quote.projectDescription || "",
+        status: quote.status as "draft" | "sent" | "accepted" | "rejected" | "expired",
+        validUntil: quote.validUntil
+          ? new Date(quote.validUntil).toISOString().split("T")[0]
+          : "",
+        tax: getTaxPercent(quote),
+        discount: getDiscountPercent(quote),
+        notes: quote.notes || "",
+      }
       : {
-          status: "draft",
-          tax: "13",
-          discount: "0",
-        },
+        status: "draft",
+        tax: "13",
+        discount: "0",
+      },
   });
 
   const tax = parseFloat(watch("tax") || "0");
@@ -174,7 +174,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
   const updateItem = (index: number, field: keyof QuoteItem, value: string | number) => {
     const newItems = [...items];
     const item = { ...newItems[index] };
-    
+
     if (field === "description") {
       item.description = value as string;
     } else if (field === "quantity") {
@@ -184,7 +184,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
     } else if (field === "productId") {
       item.productId = value as string;
     }
-    
+
     item.total = item.quantity * item.unitPrice;
     newItems[index] = item;
     setItems(newItems);
@@ -193,7 +193,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
   const handleProductSelect = (index: number, productId: string) => {
     const newItems = [...items];
     const item = { ...newItems[index] };
-    
+
     if (productId === "manual") {
       // Limpiar producto seleccionado para escribir manualmente
       item.productId = undefined;
@@ -207,7 +207,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
         item.total = item.quantity * item.unitPrice;
       }
     }
-    
+
     newItems[index] = item;
     setItems(newItems);
   };
@@ -233,7 +233,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
   const onSubmit = async (data: QuoteFormData) => {
     // Filtrar items vacíos o sin descripción
     const validItems = items.filter((item) => item.description && item.description.trim() && item.quantity > 0 && item.unitPrice > 0);
-    
+
     if (validItems.length === 0) {
       toast({
         title: "Error",
@@ -271,14 +271,14 @@ export function QuoteForm({ quote }: QuoteFormProps) {
       formData.append("discount", validDiscountAmount.toString());
       formData.append("total", validTotal.toString());
       formData.append("notes", data.notes || "");
-      
+
       // Agregar galería como JSON y como lista de URLs (compat productos/proyectos)
       formData.append("gallery", JSON.stringify(gallery));
       gallery.forEach((url) => formData.append("imageUrls", url));
-      
+
       // Agregar múltiples archivos nuevos para la galería
       newFiles.forEach((f) => formData.append("images", f));
-      
+
       // Enviar solo items válidos
       const validItemsToSend = validItems.map(item => ({
         description: item.description.trim(),
@@ -286,7 +286,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
         unitPrice: item.unitPrice,
         total: item.quantity * item.unitPrice,
       }));
-      
+
       formData.append("items", JSON.stringify(validItemsToSend));
 
       const result = await createUpdateQuote(formData);
@@ -416,12 +416,13 @@ export function QuoteForm({ quote }: QuoteFormProps) {
           <Input
             id="validUntil"
             type="date"
+            className="date-input-white-icon"
             {...register("validUntil")}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="tax">Impuesto (%)</Label>
+          <Label htmlFor="tax">Impuesto (%)</Label> 
           <Input
             id="tax"
             type="number"
@@ -560,14 +561,14 @@ export function QuoteForm({ quote }: QuoteFormProps) {
       <div className="space-y-3 rounded-lg border p-4">
         <Label>Imágenes de Referencia</Label>
         <div className="space-y-2">
-          <Input 
-            id="images" 
-            name="images" 
-            type="file" 
-            multiple 
-            accept="image/*" 
-            onChange={(e) => handleFilesChange(e.target.files)} 
-            className="hidden" 
+          <Input
+            id="images"
+            name="images"
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={(e) => handleFilesChange(e.target.files)}
+            className="hidden"
           />
           <label
             htmlFor="images"
