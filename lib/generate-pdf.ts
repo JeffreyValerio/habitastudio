@@ -63,8 +63,10 @@ async function svgToBase64(svgPath: string): Promise<string> {
   }
 }
 
-// Función para convertir URL de imagen a base64
-async function imageUrlToBase64(imageUrl: string): Promise<string | null> {
+// Función para convertir URL de imagen a base64 y obtener dimensiones
+async function imageUrlToBase64(
+  imageUrl: string
+): Promise<{ base64: string; width: number; height: number } | null> {
   try {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -73,16 +75,20 @@ async function imageUrlToBase64(imageUrl: string): Promise<string | null> {
       img.onload = () => {
         try {
           const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
           const ctx = canvas.getContext('2d');
           if (!ctx) {
             resolve(null);
             return;
           }
-          ctx.drawImage(img, 0, 0);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           const base64 = canvas.toDataURL('image/jpeg', 0.9);
-          resolve(base64);
+          resolve({
+            base64,
+            width: canvas.width,
+            height: canvas.height,
+          });
         } catch (error) {
           console.error('Error converting image to base64:', error);
           resolve(null);
@@ -378,47 +384,66 @@ export async function generateQuotePDF(quote: Quote) {
     yPosition += 10;
 
     // Configuración para las imágenes - una sola columna
-    const imageWidth = contentWidth; // Ancho completo del contenido
-    const imageHeight = 80; // Altura fija para mantener proporción
+    const maxImageWidth = contentWidth; // Ancho máximo disponible
+    const maxImageHeight = 120; // Altura máxima por imagen
     const imageSpacing = 10; // Espacio entre imágenes
 
     for (let i = 0; i < quote.images.length; i++) {
       const imageUrl = quote.images[i];
-      
-      // Verificar si necesitamos una nueva página
-      if (yPosition + imageHeight > pageHeight - margin) {
-        doc.addPage();
-        yPosition = margin;
-      }
-
-      // Posición de la imagen (centrada en el ancho disponible)
-      const imageX = margin;
-      const imageY = yPosition;
 
       try {
-        // Convertir imagen a base64
-        const imageBase64 = await imageUrlToBase64(imageUrl);
+        // Convertir imagen a base64 y obtener dimensiones originales
+        const imageData = await imageUrlToBase64(imageUrl);
         
-        if (imageBase64) {
-          // Agregar imagen al PDF
-          doc.addImage(
-            imageBase64,
-            'JPEG',
-            imageX,
-            imageY,
-            imageWidth,
-            imageHeight
-          );
-        } else {
+        if (!imageData) {
           console.warn('No se pudo cargar la imagen:', imageUrl);
+          continue;
         }
+
+        // Obtener dimensiones originales
+        const originalWidth = imageData.width;
+        const originalHeight = imageData.height;
+        const aspectRatio = originalWidth / originalHeight;
+
+        // Calcular dimensiones escaladas manteniendo la proporción original
+        // Primero intentamos ajustar al ancho máximo
+        let scaledWidth = maxImageWidth;
+        let scaledHeight = maxImageWidth / aspectRatio;
+
+        // Si la altura escalada excede el máximo, ajustar por altura
+        if (scaledHeight > maxImageHeight) {
+          scaledHeight = maxImageHeight;
+          scaledWidth = maxImageHeight * aspectRatio;
+        }
+
+        // Verificar si necesitamos una nueva página
+        if (yPosition + scaledHeight > pageHeight - margin) {
+          doc.addPage();
+          yPosition = margin;
+        }
+
+        // Posición de la imagen (centrada horizontalmente si es necesario)
+        const imageX = margin;
+        const imageY = yPosition;
+
+        // Agregar imagen al PDF con dimensiones calculadas que mantienen la proporción original
+        doc.addImage(
+          imageData.base64,
+          'JPEG',
+          imageX,
+          imageY,
+          scaledWidth,
+          scaledHeight,
+          undefined, // nombre alternativo (opcional)
+          'FAST' // compresión rápida
+        );
+
+        // Avanzar posición para la siguiente imagen
+        yPosition += scaledHeight + imageSpacing;
       } catch (error) {
         console.error('Error procesando imagen:', imageUrl, error);
         // Continuar con la siguiente imagen aunque esta falle
       }
-
-      // Avanzar posición para la siguiente imagen
-      yPosition += imageHeight + imageSpacing;
     }
   }
   
