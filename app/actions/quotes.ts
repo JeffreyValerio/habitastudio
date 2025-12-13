@@ -5,6 +5,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { uploadImages as uploadMany } from "@/lib/cloudinary";
+import { Resend } from "resend";
+import { generateQuotePDFBuffer } from "@/lib/generate-pdf-server";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const quoteItemSchema = z.object({
   id: z.string().optional(),
@@ -254,8 +258,119 @@ export async function sendQuote(id: string) {
       return { ok: false, message: "Cotización no encontrada" };
     }
 
-    // Aquí puedes agregar lógica para enviar el email
-    // Por ahora solo actualizamos el estado
+    // Generar PDF
+    const pdfBuffer = await generateQuotePDFBuffer({
+      quoteNumber: quote.quoteNumber,
+      clientName: quote.clientName,
+      clientEmail: quote.clientEmail,
+      clientPhone: quote.clientPhone,
+      clientAddress: quote.clientAddress,
+      projectName: quote.projectName,
+      projectDescription: quote.projectDescription,
+      status: quote.status,
+      validUntil: quote.validUntil,
+      subtotal: quote.subtotal,
+      tax: quote.tax,
+      discount: quote.discount,
+      total: quote.total,
+      notes: quote.notes,
+      images: (quote.images as string[]) || [],
+      items: quote.items.map(item => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.total,
+      })),
+      createdAt: quote.createdAt,
+    });
+
+    // Convertir buffer a base64
+    const pdfBase64 = pdfBuffer.toString('base64');
+
+    // Enviar email con PDF adjunto
+    const { data, error } = await resend.emails.send({
+      from: "Habita Studio <info@habitastudio.online>",
+      to: [quote.clientEmail],
+      replyTo: "info@habitastudio.online",
+      subject: `Cotización ${quote.quoteNumber} - Habita Studio`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+          <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px;">
+            <tr>
+              <td align="center">
+                <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <tr>
+                    <td style="background-color: #4f46e5; padding: 30px 40px; text-align: center;">
+                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
+                        Cotización ${quote.quoteNumber}
+                      </h1>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 40px;">
+                      <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                        Estimado/a <strong>${quote.clientName}</strong>,
+                      </p>
+                      <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                        Adjunto encontrará la cotización <strong>${quote.quoteNumber}</strong> para su proyecto <strong>"${quote.projectName}"</strong>.
+                      </p>
+                      <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                        Esta cotización tiene un valor total de <strong style="color: #4f46e5;">${new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(quote.total)}</strong>.
+                      </p>
+                      ${quote.validUntil ? `
+                      <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                        Esta cotización es válida hasta el <strong>${new Date(quote.validUntil).toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.
+                      </p>
+                      ` : ''}
+                      <p style="margin: 0 0 30px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                        Si tiene alguna pregunta o necesita más información, no dude en contactarnos.
+                      </p>
+                      <div style="text-align: center; margin: 30px 0;">
+                        <a href="tel:+50663644915" style="display: inline-block; padding: 12px 24px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                          Contactarnos
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background-color: #f9fafb; padding: 20px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
+                      <p style="margin: 0; color: #6b7280; font-size: 12px; line-height: 1.5;">
+                        <strong style="color: #4f46e5;">Habita Studio</strong><br>
+                        Muebles y Remodelaciones de Calidad<br>
+                        Email: info@habitastudio.online | Tel: +506 6364 4915
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+      attachments: [
+        {
+          filename: `cotizacion-${quote.quoteNumber}.pdf`,
+          content: pdfBase64,
+        },
+      ],
+    });
+
+    if (error) {
+      console.error("Error de Resend:", error);
+      return {
+        ok: false,
+        message: "Error al enviar el email: " + (error as any).message,
+      };
+    }
+
+    // Actualizar estado de la cotización
     await prisma.quote.update({
       where: { id },
       data: {
@@ -267,11 +382,56 @@ export async function sendQuote(id: string) {
     revalidatePath("/admin/quotes");
     revalidatePath(`/admin/quotes/${id}`);
 
+    // Preparar datos para WhatsApp
+    const whatsappMessage = `Hola ${quote.clientName}, te envío la cotización ${quote.quoteNumber} para tu proyecto "${quote.projectName}".
+
+Total: ${new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(quote.total)}
+${quote.validUntil ? `Válida hasta: ${new Date(quote.validUntil).toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' })}` : ''}
+
+Adjunto encontrarás el PDF con todos los detalles. Si tienes alguna pregunta, no dudes en contactarnos.
+
+¡Saludos!
+Habita Studio`;
+
+    // Formatear teléfono para WhatsApp (eliminar espacios y caracteres especiales, asegurar prefijo +506)
+    let whatsappNumber = '';
+    if (quote.clientPhone) {
+      // Eliminar todos los caracteres no numéricos
+      const cleanPhone = quote.clientPhone.replace(/\D/g, '');
+      
+      // Si empieza con 506, usar tal cual
+      if (cleanPhone.startsWith('506')) {
+        whatsappNumber = cleanPhone;
+      } 
+      // Si tiene 8 dígitos, agregar 506 (formato Costa Rica)
+      else if (cleanPhone.length === 8) {
+        whatsappNumber = `506${cleanPhone}`;
+      }
+      // Si tiene más de 8 dígitos, tomar los últimos 8 y agregar 506
+      else if (cleanPhone.length > 8) {
+        whatsappNumber = `506${cleanPhone.slice(-8)}`;
+      }
+      // Si tiene menos de 8, agregar 506
+      else {
+        whatsappNumber = `506${cleanPhone}`;
+      }
+    }
+    
+    const whatsappUrl = whatsappNumber 
+      ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
+      : null;
+
     return {
       ok: true,
-      message: "Cotización enviada correctamente",
+      message: whatsappUrl 
+        ? "Cotización enviada por email. Abriendo WhatsApp..." 
+        : "Cotización enviada por email correctamente",
+      whatsappUrl: whatsappUrl || undefined,
+      pdfBase64,
+      quoteNumber: quote.quoteNumber,
     };
   } catch (error) {
+    console.error("Error enviando cotización:", error);
     return {
       ok: false,
       message: "Error al enviar la cotización: " + (error as Error).message,

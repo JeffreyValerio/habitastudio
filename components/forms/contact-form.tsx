@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const contactFormSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
@@ -23,6 +24,7 @@ type ContactFormValues = z.infer<typeof contactFormSchema>;
 export function ContactForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const { toast } = useToast();
 
   const {
     register,
@@ -37,15 +39,37 @@ export function ContactForm() {
     setIsSubmitting(true);
     setSubmitSuccess(false);
 
-    // Simular envío del formulario
-    // En producción, aquí harías una llamada a tu API
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Form data:", data);
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Error al enviar el mensaje");
+      }
+
       setSubmitSuccess(true);
       reset();
+      toast({
+        title: "Mensaje enviado",
+        description: "Gracias por contactarnos. Nos pondremos en contacto contigo pronto.",
+      });
     } catch (error) {
       console.error("Error submitting form:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Error al enviar el mensaje. Por favor intenta nuevamente.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }

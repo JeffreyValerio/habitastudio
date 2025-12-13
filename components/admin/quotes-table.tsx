@@ -97,6 +97,18 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
   };
 
   const handleSend = async (id: string) => {
+    // Buscar la cotización para mostrar información en la confirmación
+    const quote = quotes.find((q) => q.id === id);
+    
+    // Mensaje de confirmación
+    const confirmMessage = quote
+      ? `¿Estás seguro de que deseas enviar la cotización ${quote.quoteNumber} a ${quote.clientName} (${quote.clientEmail})?\n\nSe enviará por email y se abrirá WhatsApp para compartir el PDF.`
+      : '¿Estás seguro de que deseas enviar esta cotización?\n\nSe enviará por email y se abrirá WhatsApp para compartir el PDF.';
+    
+    if (!confirm(confirmMessage)) {
+      return; // El usuario canceló
+    }
+
     setSending(id);
     try {
       const result = await sendQuote(id);
@@ -105,7 +117,54 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
           title: "Éxito",
           description: result.message,
         });
-        window.location.reload();
+
+        // Si hay URL de WhatsApp, descargar PDF y abrir WhatsApp
+        if (result.whatsappUrl && result.pdfBase64 && result.quoteNumber) {
+          // Descargar PDF primero
+          try {
+            const pdfBlob = new Blob(
+              [Uint8Array.from(atob(result.pdfBase64), (c) => c.charCodeAt(0))],
+              { type: 'application/pdf' }
+            );
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            link.download = `cotizacion-${result.quoteNumber}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(pdfUrl);
+
+            // Esperar un momento para que se complete la descarga y luego abrir WhatsApp
+            setTimeout(() => {
+              window.open(result.whatsappUrl, '_blank');
+              toast({
+                title: "WhatsApp abierto",
+                description: "El PDF se ha descargado. Por favor adjúntalo manualmente en WhatsApp (botón 📎).",
+                duration: 5000,
+              });
+            }, 800);
+          } catch (error) {
+            console.error('Error descargando PDF:', error);
+            // Abrir WhatsApp de todas formas
+            window.open(result.whatsappUrl, '_blank');
+            toast({
+              title: "WhatsApp abierto",
+              description: "Error al descargar PDF. Por favor genera el PDF manualmente y envíalo por WhatsApp.",
+              variant: "destructive",
+            });
+          }
+          
+          // Recargar después de un delay mayor para dar tiempo a descargar
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        } else {
+          // Si no hay WhatsApp, recargar normalmente
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
       } else {
         toast({
           title: "Error",
