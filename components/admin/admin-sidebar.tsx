@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, LogOut, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,8 +28,17 @@ export function AdminSidebar() {
   return (
     <div className="w-64 border-r bg-muted/40 flex flex-col relative">
       <div className="p-6 border-b">
-        <h2 className="text-xl font-bold">HabitaStudio</h2>
-        <p className="text-sm text-muted-foreground">Admin Panel</p>
+        <Link href="/admin" className="flex items-center justify-center rounded-lg p-4 border border-border/50">
+          <Image
+            src="/images/logo.svg"
+            alt="Habita Studio"
+            width={600}
+            height={280}
+            className="h-full w-auto object-scale-down"
+            priority
+          />
+        </Link>
+        <p className="text-xs text-muted-foreground mt-3 text-center">Admin Panel</p>
       </div>
       <div className="px-3 pt-3 pb-2">
         <Button

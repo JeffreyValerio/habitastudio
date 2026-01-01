@@ -31,7 +31,7 @@ interface Quote {
   id: string;
   quoteNumber: string;
   clientName: string;
-  clientEmail: string;
+  clientEmail?: string | null;
   clientPhone?: string | null;
   clientAddress?: string | null;
   projectName: string;
@@ -244,7 +244,7 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
       (quote) =>
         quote.quoteNumber.toLowerCase().includes(query) ||
         quote.clientName.toLowerCase().includes(query) ||
-        quote.clientEmail.toLowerCase().includes(query) ||
+        (quote.clientEmail ?? "").toLowerCase().includes(query) ||
         quote.projectName.toLowerCase().includes(query) ||
         quote.status.toLowerCase().includes(query)
     );

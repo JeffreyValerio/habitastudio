@@ -17,7 +17,7 @@ interface Quote {
   id: string;
   quoteNumber: string;
   clientName: string;
-  clientEmail: string;
+  clientEmail?: string | null;
   clientPhone?: string | null;
   clientAddress?: string | null;
   projectName: string;

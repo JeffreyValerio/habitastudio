@@ -7,92 +7,91 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  password      String
-  role          String    @default("admin")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Product {
-  id            String    @id @default(cuid())
-  name          String
-  slug          String    @unique
-  category      String
-  cost          Float     @default(0)
-  price         Float
-  image         String
-  gallery       String[]  @default([])
-  description   String    @db.Text
-  features      String[]  @default([])
-  material      String?
-  dimensions     String?
-  color          String?
-  warranty       String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  category    String
+  cost        Float    @default(0)
+  price       Float
+  image       String
+  gallery     String[] @default([])
+  description String   @db.Text
+  features    String[] @default([])
+  material    String?
+  dimensions  String?
+  color       String?
+  warranty    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Service {
-  id              String    @id @default(cuid())
-  slug            String    @unique
+  id              String   @id @default(cuid())
+  slug            String   @unique
   title           String
-  description     String    @db.Text
-  longDescription String    @db.Text
+  description     String   @db.Text
+  longDescription String   @db.Text
   image           String?
-  features        String[]  @default([])
-  process         String[]  @default([])
-  benefits        String[]  @default([])
-  icon            String    @default("Home")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  features        String[] @default([])
+  process         String[] @default([])
+  benefits        String[] @default([])
+  icon            String   @default("Home")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Project {
-  id            String    @id @default(cuid())
-  slug          String    @unique
-  title         String
-  description   String    @db.Text
-  longDescription String  @db.Text
-  image         String
-  category      String
-  year          String
-  location      String?
-  duration      String?
-  challenges    String[]  @default([])
-  solutions     String[]  @default([])
-  gallery       String[]  @default([])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  description     String   @db.Text
+  longDescription String   @db.Text
+  image           String
+  category        String
+  year            String
+  location        String?
+  duration        String?
+  challenges      String[] @default([])
+  solutions       String[] @default([])
+  gallery         String[] @default([])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Quote {
-  id              String      @id @default(cuid())
-  quoteNumber     String      @unique
-  clientName      String
-  clientEmail     String
-  clientPhone     String?
-  clientAddress   String?     @db.Text
-  projectName     String
-  projectDescription String?  @db.Text
-  status          String      @default("draft") // draft, sent, accepted, rejected, expired
-  validUntil      DateTime?
-  subtotal        Float       @default(0)
-  tax             Float       @default(0)
-  discount        Float       @default(0)
-  total           Float       @default(0)
-  notes           String?     @db.Text
-  images          String[]    @default([])
-  sentAt          DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  items           QuoteItem[]
+  id                 String      @id @default(cuid())
+  quoteNumber        String      @unique
+  clientName         String
+  clientEmail        String?
+  clientPhone        String?
+  clientAddress      String?     @db.Text
+  projectName        String
+  projectDescription String?     @db.Text
+  status             String      @default("draft") // draft, sent, accepted, rejected, expired
+  validUntil         DateTime?
+  subtotal           Float       @default(0)
+  tax                Float       @default(0)
+  discount           Float       @default(0)
+  total              Float       @default(0)
+  notes              String?     @db.Text
+  images             String[]    @default([])
+  sentAt             DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  items              QuoteItem[]
 }
 
 model QuoteItem {
@@ -110,9 +109,8 @@ model QuoteItem {
 }
 
 model QuoteSequence {
-  year        Int      @id
-  lastNumber  Int      @default(0)
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  year       Int      @id
+  lastNumber Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
 }
-
