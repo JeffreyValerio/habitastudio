@@ -40,7 +40,14 @@ interface ProductForQuote {
 
 const quoteFormSchema = z.object({
   clientName: z.string().min(1, "El nombre del cliente es requerido"),
-  clientEmail: z.string().email("Email inválido"),
+  clientEmail: z
+    .preprocess(
+      (val) => {
+        if (val === null || val === "" || val === undefined) return undefined;
+        return val;
+      },
+      z.string().email("Email inválido").optional()
+    ),
   clientPhone: z.string().optional(),
   clientAddress: z.string().optional(),
   projectName: z.string().min(1, "El nombre del proyecto es requerido"),
@@ -59,7 +66,7 @@ interface QuoteFormProps {
     id: string;
     quoteNumber: string;
     clientName: string;
-    clientEmail: string;
+    clientEmail?: string | null;
     clientPhone?: string | null;
     clientAddress?: string | null;
     projectName: string;
@@ -148,7 +155,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
     defaultValues: quote
       ? {
         clientName: quote.clientName,
-        clientEmail: quote.clientEmail,
+        clientEmail: quote.clientEmail || "",
         clientPhone: quote.clientPhone || "",
         clientAddress: quote.clientAddress || "",
         projectName: quote.projectName,
@@ -259,7 +266,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
       }
 
       formData.append("clientName", data.clientName);
-      formData.append("clientEmail", data.clientEmail);
+      formData.append("clientEmail", data.clientEmail ?? "");
       formData.append("clientPhone", data.clientPhone || "");
       formData.append("clientAddress", data.clientAddress || "");
       formData.append("projectName", data.projectName);
@@ -340,7 +347,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="clientEmail">Email del Cliente *</Label>
+          <Label htmlFor="clientEmail">Email del Cliente (opcional)</Label>
           <Input
             id="clientEmail"
             type="email"

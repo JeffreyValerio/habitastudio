@@ -1,8 +1,8 @@
 import { jsPDF } from 'jspdf';
 import sizeOf from 'image-size';
-import sharp from 'sharp';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import sharp from 'sharp';
 
 interface QuoteItem {
   description: string;
@@ -14,7 +14,7 @@ interface QuoteItem {
 interface Quote {
   quoteNumber: string;
   clientName: string;
-  clientEmail: string;
+  clientEmail?: string | null;
   clientPhone?: string | null;
   clientAddress?: string | null;
   projectName: string;
@@ -29,65 +29,6 @@ interface Quote {
   images?: string[];
   items: QuoteItem[];
   createdAt: Date;
-}
-
-// Función para cargar el logo en el servidor
-async function loadLogo(): Promise<string | null> {
-  try {
-    // Intentar leer el logo directamente desde el sistema de archivos
-    try {
-      const publicPath = join(process.cwd(), 'public', 'images', 'logo.svg');
-      const svgBuffer = await readFile(publicPath);
-      
-      // Convertir SVG a PNG usando sharp
-      const pngBuffer = await sharp(svgBuffer)
-        .resize(253, 92, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
-        .png()
-        .toBuffer();
-      
-      const base64 = pngBuffer.toString('base64');
-      return `data:image/png;base64,${base64}`;
-    } catch (fsError) {
-      console.warn('No se pudo leer el logo del sistema de archivos, intentando desde URL:', fsError);
-    }
-
-    // Fallback: Intentar cargar desde URL pública
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-                    'https://habitastudio.online';
-    
-    // Intentar cargar el logo SVG y convertirlo
-    const svgUrl = `${baseUrl}/images/logo.svg`;
-    const svgResponse = await fetch(svgUrl);
-    if (svgResponse.ok) {
-      const svgBuffer = Buffer.from(await svgResponse.arrayBuffer());
-      
-      // Convertir SVG a PNG usando sharp
-      const pngBuffer = await sharp(svgBuffer)
-        .resize(253, 92, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
-        .png()
-        .toBuffer();
-      
-      const base64 = pngBuffer.toString('base64');
-      return `data:image/png;base64,${base64}`;
-    }
-
-    // Intentar PNG directamente
-    const pngUrl = `${baseUrl}/images/logo.png`;
-    const pngResponse = await fetch(pngUrl);
-    if (pngResponse.ok) {
-      const arrayBuffer = await pngResponse.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64 = buffer.toString('base64');
-      return `data:image/png;base64,${base64}`;
-    }
-
-    console.warn('No se pudo cargar el logo desde ninguna fuente');
-    return null;
-  } catch (error) {
-    console.error('Error cargando logo:', error);
-    return null;
-  }
 }
 
 // Función para convertir URL de imagen a base64 en el servidor
@@ -155,31 +96,150 @@ export async function generateQuotePDFBuffer(quote: Quote): Promise<Buffer> {
   
   let yPosition = margin;
   
-  // Convertir logo SVG a base64
-  let logoBase64 = await loadLogo();
+  // === LOGO ===
+  // Intentar cargar el logo (PNG o SVG) desde varias ubicaciones posibles
+  let logoBase64: string | null = null;
+  const logoPaths = [
+    { name: 'logo.png', type: 'png' },
+    { name: 'logo-png.png', type: 'png' },
+    { name: 'logo-pdf.png', type: 'png' },
+    { name: 'logo-pdf.svg', type: 'svg' },
+    { name: 'logo.svg', type: 'svg' },
+  ];
   
-  // === LOGO (100% a la izquierda, con color) ===
-  const logoWidth = 50;
-  const logoHeight = (logoWidth * 92) / 253; // ~18
+  for (const logoInfo of logoPaths) {
+    try {
+      const logoPath = join(process.cwd(), 'public', 'images', logoInfo.name);
+      const fileBuffer = await readFile(logoPath);
+      
+      if (logoInfo.type === 'svg') {
+        // Convertir SVG a PNG usando sharp
+        const svgContent = fileBuffer.toString('utf-8');
+        const pngBuffer = await sharp(Buffer.from(svgContent, 'utf-8'), {
+          density: 300,
+        })
+          .resize({
+            width: 1200,
+            height: 560,
+            fit: 'contain',
+            background: { r: 255, g: 255, b: 255, alpha: 1 }, // Fondo blanco
+          })
+          .flatten({ background: { r: 255, g: 255, b: 255 } }) // Asegurar fondo blanco sólido
+          .png({
+            quality: 100,
+            compressionLevel: 6,
+          })
+          .toBuffer();
+        
+        const base64 = pngBuffer.toString('base64');
+        logoBase64 = `data:image/png;base64,${base64}`;
+        console.log(`Logo SVG convertido a PNG desde: ${logoPath}`);
+        break;
+      } else {
+        // Si es PNG, usarlo directamente
+        const base64 = fileBuffer.toString('base64');
+        logoBase64 = `data:image/png;base64,${base64}`;
+        console.log(`Logo PNG cargado desde: ${logoPath}`);
+        break;
+      }
+    } catch (error) {
+      // Intentar desde URL pública
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+                        'https://habitastudio.online';
+        const logoUrl = `${baseUrl}/images/${logoInfo.name}`;
+        const response = await fetch(logoUrl);
+        if (response.ok) {
+          if (logoInfo.type === 'svg') {
+            const svgText = await response.text();
+            const pngBuffer = await sharp(Buffer.from(svgText, 'utf-8'), {
+              density: 300,
+            })
+              .resize({
+                width: 1200,
+                height: 560,
+                fit: 'contain',
+                background: { r: 255, g: 255, b: 255, alpha: 1 },
+              })
+              .flatten({ background: { r: 255, g: 255, b: 255 } })
+              .png({
+                quality: 100,
+                compressionLevel: 6,
+              })
+              .toBuffer();
+            
+            const base64 = pngBuffer.toString('base64');
+            logoBase64 = `data:image/png;base64,${base64}`;
+            console.log(`Logo SVG convertido a PNG desde URL: ${logoUrl}`);
+          } else {
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const base64 = buffer.toString('base64');
+            logoBase64 = `data:image/png;base64,${base64}`;
+            console.log(`Logo PNG cargado desde URL: ${logoUrl}`);
+          }
+          break;
+        }
+      } catch (urlError) {
+        console.log(`No se encontró logo en: ${logoInfo.name}`);
+      }
+    }
+  }
+  
+  const logoWidth = 60;
+  let logoHeight = 25; // Altura por defecto
   const logoX = margin;
   const logoY = yPosition;
   
   if (logoBase64) {
     try {
-      // El logo ya está convertido a PNG, así que usamos PNG directamente
-      doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+      // Obtener dimensiones de la imagen para mantener proporción
+      const base64Data = logoBase64.includes(',') ? logoBase64.split(',')[1] : logoBase64;
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+      const dimensions = sizeOf(imageBuffer);
+      
+      if (dimensions.width && dimensions.height) {
+        // Calcular altura proporcional basada en el ancho deseado
+        const aspectRatio = dimensions.width / dimensions.height;
+        logoHeight = logoWidth / aspectRatio; // Usar la altura real calculada
+        
+        doc.addImage(base64Data, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        console.log(`Logo agregado al PDF: ${logoWidth}x${logoHeight}mm (${dimensions.width}x${dimensions.height}px)`);
+      } else {
+        doc.addImage(base64Data, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        console.log(`Logo agregado al PDF con dimensiones por defecto: ${logoWidth}x${logoHeight}mm`);
+      }
     } catch (error) {
-      console.error('Error agregando logo al PDF:', error);
+      console.error('Error agregando logo PNG:', error);
+      // Fallback: rectángulo de prueba
+      doc.setFillColor(242, 242, 242);
+      doc.rect(logoX, logoY, logoWidth, logoHeight, 'F');
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(logoX, logoY, logoWidth, logoHeight, 'S');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('LOGO ERROR', logoX + logoWidth / 2, logoY + logoHeight / 2, { align: 'center' });
     }
   } else {
-    console.warn('No se pudo cargar el logo, continuando sin él');
+    // Si no se encuentra el logo, mostrar rectángulo de prueba
+    doc.setFillColor(242, 242, 242);
+    doc.rect(logoX, logoY, logoWidth, logoHeight, 'F');
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.rect(logoX, logoY, logoWidth, logoHeight, 'S');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('NO LOGO', logoX + logoWidth / 2, logoY + logoHeight / 2, { align: 'center' });
+    console.warn('No se encontró ningún logo PNG en las rutas esperadas');
   }
-  
-  yPosition = logoY + logoHeight + 8;
   
   // Información de la empresa
   const companyInfoX = margin;
-  let companyY = yPosition;
+  let companyY = logoY + logoHeight + 8;
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -211,8 +271,10 @@ export async function generateQuotePDFBuffer(quote: Quote): Promise<Buffer> {
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.text(`Nombre: ${quote.clientName}`, leftColStart, clientY);
-  clientY += 6;
-  doc.text(`Email: ${quote.clientEmail}`, leftColStart, clientY);
+  if (quote.clientEmail) {
+    clientY += 6;
+    doc.text(`Email: ${quote.clientEmail}`, leftColStart, clientY);
+  }
   if (quote.clientPhone) {
     clientY += 6;
     doc.text(`Teléfono: ${quote.clientPhone}`, leftColStart, clientY);

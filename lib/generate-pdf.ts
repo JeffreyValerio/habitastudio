@@ -10,7 +10,7 @@ interface QuoteItem {
 interface Quote {
   quoteNumber: string;
   clientName: string;
-  clientEmail: string;
+  clientEmail?: string | null;
   clientPhone?: string | null;
   clientAddress?: string | null;
   projectName: string;
@@ -25,42 +25,6 @@ interface Quote {
   images?: string[];
   items: QuoteItem[];
   createdAt: Date;
-}
-
-// Función para convertir SVG a imagen base64
-async function svgToBase64(svgPath: string): Promise<string> {
-  try {
-    const response = await fetch(svgPath);
-    const svgText = await response.text();
-    
-    // Crear un canvas para renderizar el SVG
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Could not get canvas context');
-    
-    // Configurar dimensiones del canvas (ajustar según el tamaño del logo)
-    canvas.width = 253;
-    canvas.height = 92;
-    
-    // Crear una imagen desde el SVG
-    const img = new Image();
-    const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-    
-    return new Promise((resolve, reject) => {
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0);
-        const base64 = canvas.toDataURL('image/png');
-        URL.revokeObjectURL(url);
-        resolve(base64);
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
-  } catch (error) {
-    console.error('Error converting SVG to base64:', error);
-    return '';
-  }
 }
 
 // Función para convertir URL de imagen a base64 y obtener dimensiones
@@ -117,43 +81,111 @@ export async function generateQuotePDF(quote: Quote) {
   
   let yPosition = margin;
   
-  // Convertir logo SVG a base64 (con color)
-  let logoBase64 = await svgToBase64('/images/logo.svg');
+  // === LOGO ===
+  // Intentar cargar el logo (PNG o SVG) desde varias ubicaciones posibles
+  let logoBase64: string | null = null;
+  const logoPaths = ['/images/logo.png', '/images/logo-png.png', '/images/logo-pdf.png', '/images/logo-pdf.svg', '/images/logo.svg'];
   
-  // Si falla la conversión, intentar con el logo webp como fallback
-  if (!logoBase64) {
+  for (const logoPath of logoPaths) {
     try {
-      const response = await fetch('/images/logo.webp');
+      const response = await fetch(logoPath);
       if (response.ok) {
         const blob = await response.blob();
-        const reader = new FileReader();
-        logoBase64 = await new Promise<string>((resolve) => {
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
+        
+        // Si es SVG, necesitamos convertirlo a imagen
+        if (logoPath.endsWith('.svg')) {
+          const svgText = await response.text();
+          const img = new Image();
+          const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(svgBlob);
+          
+          logoBase64 = await new Promise<string>((resolve, reject) => {
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width || 600;
+              canvas.height = img.height || 280;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) {
+                reject(new Error('No se pudo obtener contexto del canvas'));
+                return;
+              }
+              ctx.drawImage(img, 0, 0);
+              const base64 = canvas.toDataURL('image/png');
+              URL.revokeObjectURL(url);
+              resolve(base64);
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(url);
+              reject(new Error('Error cargando SVG'));
+            };
+            img.src = url;
+          });
+        } else {
+          // Si es PNG, leerlo directamente
+          const reader = new FileReader();
+          logoBase64 = await new Promise<string>((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+        console.log(`Logo cargado desde: ${logoPath}`);
+        break;
       }
     } catch (error) {
-      console.error('Error cargando logo webp:', error);
+      console.log(`No se encontró logo en: ${logoPath}`);
     }
   }
   
-  // === LOGO (100% a la izquierda, con color) ===
-  const logoWidth = 50;
-  const logoHeight = (logoWidth * 92) / 253; // ~18
+  const logoWidth = 60;
+  let logoHeight = 25; // Altura por defecto
   const logoX = margin;
   const logoY = yPosition;
   
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, logoBase64.includes('data:image/png') ? 'PNG' : 'JPEG', logoX, logoY, logoWidth, logoHeight);
+      // Obtener dimensiones de la imagen para mantener proporción
+      const img = new Image();
+      img.src = logoBase64;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      
+      // Calcular altura proporcional basada en el ancho deseado
+      const aspectRatio = img.width / img.height;
+      logoHeight = logoWidth / aspectRatio; // Usar la altura real calculada
+      
+      doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+      console.log(`Logo agregado al PDF: ${logoWidth}x${logoHeight}mm`);
     } catch (error) {
-      console.error('Error agregando logo al PDF:', error);
+      console.error('Error agregando logo PNG:', error);
+      // Fallback: rectángulo de prueba
+      doc.setFillColor(242, 242, 242);
+      doc.rect(logoX, logoY, logoWidth, logoHeight, 'F');
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(logoX, logoY, logoWidth, logoHeight, 'S');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('LOGO ERROR', logoX + logoWidth / 2, logoY + logoHeight / 2, { align: 'center' });
     }
   } else {
-    console.warn('No se pudo cargar el logo, continuando sin él');
+    // Si no se encuentra el logo, mostrar rectángulo de prueba
+    doc.setFillColor(242, 242, 242);
+    doc.rect(logoX, logoY, logoWidth, logoHeight, 'F');
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.rect(logoX, logoY, logoWidth, logoHeight, 'S');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('NO LOGO', logoX + logoWidth / 2, logoY + logoHeight / 2, { align: 'center' });
+    console.warn('No se encontró ningún logo PNG en las rutas esperadas');
   }
   
-  // === INFORMACIÓN DE LA EMPRESA (debajo del logo) ===
+  // === INFORMACIÓN DE LA EMPRESA ===
   const companyInfoX = margin;
   let companyY = logoY + logoHeight + 8;
   
@@ -189,13 +221,15 @@ export async function generateQuotePDF(quote: Quote) {
   doc.setFont('helvetica', 'normal');
   doc.text(`Nombre: ${quote.clientName}`, leftColStart, clientY);
   clientY += 6;
-  doc.text(`Email: ${quote.clientEmail}`, leftColStart, clientY);
-  if (quote.clientPhone) {
+  if (quote.clientEmail) {
+    doc.text(`Email: ${quote.clientEmail}`, leftColStart, clientY);
     clientY += 6;
+  }
+  if (quote.clientPhone) {
     doc.text(`Teléfono: ${quote.clientPhone}`, leftColStart, clientY);
+    clientY += 6;
   }
   if (quote.clientAddress) {
-    clientY += 6;
     const addressLines = doc.splitTextToSize(`Dirección: ${quote.clientAddress}`, leftColWidth);
     doc.text(addressLines, leftColStart, clientY);
     clientY += (addressLines.length - 1) * 6;
@@ -472,4 +506,3 @@ function formatCurrency(amount: number): string {
   // Usar "CRC" o simplemente el símbolo de colón si está disponible
   return `CRC ${formatted}`;
 }
-

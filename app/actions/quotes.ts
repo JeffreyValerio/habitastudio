@@ -21,7 +21,14 @@ const quoteItemSchema = z.object({
 const quoteSchema = z.object({
   id: z.string().optional(),
   clientName: z.string().min(1, "El nombre del cliente es requerido"),
-  clientEmail: z.string().email("Email inválido"),
+  clientEmail: z
+    .preprocess(
+      (val) => {
+        if (val === null || val === "" || val === undefined) return null;
+        return val;
+      },
+      z.union([z.string().email("Email inválido"), z.null()]).optional()
+    ),
   clientPhone: z.string().optional().nullable(),
   clientAddress: z.string().optional().nullable(),
   projectName: z.string().min(1, "El nombre del proyecto es requerido"),
@@ -95,6 +102,9 @@ export async function createUpdateQuote(formData: FormData) {
     // Limpiar campos opcionales vacíos
     const cleanData = {
       ...data,
+      clientEmail: data.clientEmail && typeof data.clientEmail === 'string' && data.clientEmail.trim() 
+        ? data.clientEmail.trim() 
+        : null,
       clientPhone: (data.clientPhone as string)?.trim() || null,
       clientAddress: (data.clientAddress as string)?.trim() || null,
       projectDescription: (data.projectDescription as string)?.trim() || null,
@@ -131,6 +141,39 @@ export async function createUpdateQuote(formData: FormData) {
       ? new Date(validUntilStr) 
       : null;
 
+    // Construir objeto de datos para Prisma, manejando campos opcionales null
+    // Para campos opcionales, si son null/undefined, los omitimos del objeto
+    const prismaData: any = {
+      clientName: quoteFields.clientName,
+      projectName: quoteFields.projectName,
+      status: quoteFields.status,
+      subtotal: quoteFields.subtotal,
+      tax: quoteFields.tax,
+      discount: quoteFields.discount,
+      total: quoteFields.total,
+      validUntil: validUntilDate,
+      images: quoteImages || [],
+    };
+
+    // Agregar campos opcionales
+    // Para campos opcionales: incluir solo si tienen un valor válido (no string vacío)
+    // Si es null o undefined, simplemente no lo incluimos (Prisma usará null por defecto para campos opcionales)
+    if (quoteFields.clientEmail !== undefined && quoteFields.clientEmail !== null && quoteFields.clientEmail !== "") {
+      prismaData.clientEmail = quoteFields.clientEmail;
+    }
+    if (quoteFields.clientPhone !== undefined && quoteFields.clientPhone !== null && quoteFields.clientPhone !== "") {
+      prismaData.clientPhone = quoteFields.clientPhone;
+    }
+    if (quoteFields.clientAddress !== undefined && quoteFields.clientAddress !== null && quoteFields.clientAddress !== "") {
+      prismaData.clientAddress = quoteFields.clientAddress;
+    }
+    if (quoteFields.projectDescription !== undefined && quoteFields.projectDescription !== null && quoteFields.projectDescription !== "") {
+      prismaData.projectDescription = quoteFields.projectDescription;
+    }
+    if (quoteFields.notes !== undefined && quoteFields.notes !== null && quoteFields.notes !== "") {
+      prismaData.notes = quoteFields.notes;
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       let dbQuote;
 
@@ -144,11 +187,7 @@ export async function createUpdateQuote(formData: FormData) {
         // Actualizar cotización
         dbQuote = await tx.quote.update({
           where: { id },
-          data: {
-            ...quoteFields,
-            validUntil: validUntilDate,
-            images: quoteImages || [],
-          } as any,
+          data: prismaData,
         });
       } else {
         // CREAR
@@ -167,11 +206,9 @@ export async function createUpdateQuote(formData: FormData) {
         const quoteNumber = `COT-${currentYear}-${padded}`;
         dbQuote = await tx.quote.create({
           data: {
-            ...quoteFields,
+            ...prismaData,
             quoteNumber,
-            validUntil: validUntilDate,
-            images: quoteImages || [],
-          } as any,
+          },
         });
       }
 
@@ -287,6 +324,16 @@ export async function sendQuote(id: string) {
     // Convertir buffer a base64
     const pdfBase64 = pdfBuffer.toString('base64');
 
+    // Verificar que el email del cliente existe
+    if (!quote.clientEmail) {
+      return { ok: false, message: "El cliente no tiene un email registrado" };
+    }
+
+    // Preparar URL de WhatsApp para el botón del correo
+    const companyWhatsappNumber = "50663644915";
+    const whatsappMessageEmail = `Hola, tengo una pregunta sobre la cotización ${quote.quoteNumber}.`;
+    const whatsappUrlEmail = `https://wa.me/${companyWhatsappNumber}?text=${encodeURIComponent(whatsappMessageEmail)}`;
+
     // Enviar email con PDF adjunto
     const { data, error } = await resend.emails.send({
       from: "Habita Studio <info@habitastudio.online>",
@@ -305,6 +352,11 @@ export async function sendQuote(id: string) {
             <tr>
               <td align="center">
                 <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <tr>
+                    <td style="background-color: #ffffff; padding: 30px 40px 20px 40px; text-align: center;">
+                      <img src="https://habitastudio.online/images/logo.png" alt="Habita Studio" style="max-width: 200px; height: auto; margin-bottom: 20px;" />
+                    </td>
+                  </tr>
                   <tr>
                     <td style="background-color: #4f46e5; padding: 30px 40px; text-align: center;">
                       <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
@@ -332,8 +384,8 @@ export async function sendQuote(id: string) {
                         Si tiene alguna pregunta o necesita más información, no dude en contactarnos.
                       </p>
                       <div style="text-align: center; margin: 30px 0;">
-                        <a href="tel:+50663644915" style="display: inline-block; padding: 12px 24px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                          Contactarnos
+                        <a href="${whatsappUrlEmail}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                          Contactarnos por WhatsApp
                         </a>
                       </div>
                     </td>
