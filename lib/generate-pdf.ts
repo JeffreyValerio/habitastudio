@@ -383,25 +383,6 @@ export async function generateQuotePDF(quote: Quote) {
   doc.setTextColor(0, 0, 0);
   doc.text('TOTAL:', totalsX, yPosition, { align: 'right' });
   doc.text(formatCurrency(quote.total), pageWidth - margin - 2, yPosition, { align: 'right' });
-  
-  // Notas
-  if (quote.notes) {
-    yPosition += 20;
-    if (yPosition > pageHeight - 40) {
-      doc.addPage();
-      yPosition = margin;
-    }
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('NOTAS ADICIONALES', margin, yPosition);
-    
-    yPosition += 8;
-    doc.setFont('helvetica', 'normal');
-    const notesLines = doc.splitTextToSize(quote.notes, contentWidth);
-    doc.text(notesLines, margin, yPosition);
-    yPosition += (notesLines.length * 6) + 10;
-  }
 
   // Imágenes de referencia
   if (quote.images && quote.images.length > 0) {
@@ -480,6 +461,49 @@ export async function generateQuotePDF(quote: Quote) {
       }
     }
   }
+  
+  // Información de garantía, pago y entrega
+  yPosition += 20;
+  if (yPosition > pageHeight - 80) {
+    doc.addPage();
+    yPosition = margin;
+  }
+  
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text('CONDICIONES DE PAGO Y ENTREGA', margin, yPosition);
+  
+  yPosition += 8;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('• Garantía: 12 meses por defecto de fabricación', margin + 3, yPosition);
+  yPosition += 6;
+  doc.text('• Forma de pago: Adelanto del 50% y 50% al finalizar', margin + 3, yPosition);
+  yPosition += 6;
+  doc.text('• Tiempo de entrega: 12 días hábiles luego de realizado el adelanto', margin + 3, yPosition);
+  
+  // Datos bancarios
+  yPosition += 12;
+  if (yPosition > pageHeight - 60) {
+    doc.addPage();
+    yPosition = margin;
+  }
+  
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DATOS BANCARIOS', margin, yPosition);
+  
+  yPosition += 8;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Sinpe Móvil: 63644915', margin + 3, yPosition);
+  yPosition += 6;
+  doc.text('Cliente: MICHAEL ANDRES VALERIO ANGULO', margin + 3, yPosition);
+  yPosition += 6;
+  doc.text('Número de cuenta BAC: 944908482', margin + 3, yPosition);
+  yPosition += 6;
+  doc.text('Número de cuenta IBAN: CR47010200009449084829', margin + 3, yPosition);
   
   // Pie de página
   const footerY = pageHeight - 15;
