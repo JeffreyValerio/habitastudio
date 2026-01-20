@@ -92,6 +92,7 @@ model Quote {
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
   items              QuoteItem[]
+  receipts           Receipt[]
 }
 
 model QuoteItem {
@@ -109,6 +110,32 @@ model QuoteItem {
 }
 
 model QuoteSequence {
+  year       Int      @id
+  lastNumber Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+}
+
+model Receipt {
+  id            String    @id @default(cuid())
+  receiptNumber String    @unique
+  quoteId       String
+  quote         Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  clientName    String
+  clientEmail   String?
+  amount        Float
+  paymentMethod String    // efectivo, transferencia, sinpe, cheque, otro
+  receiptDate   DateTime  @default(now())
+  concept       String    @db.Text
+  notes         String?   @db.Text
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([quoteId])
+}
+
+model ReceiptSequence {
   year       Int      @id
   lastNumber Int      @default(0)
   updatedAt  DateTime @updatedAt
