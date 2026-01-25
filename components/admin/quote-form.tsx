@@ -149,6 +149,7 @@ export function QuoteForm({ quote }: QuoteFormProps) {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<QuoteFormData>({
     resolver: zodResolver(quoteFormSchema),
@@ -174,6 +175,17 @@ export function QuoteForm({ quote }: QuoteFormProps) {
         discount: "0",
       },
   });
+
+  // Establecer fecha de vencimiento automáticamente a 15 días cuando se crea una nueva cotización
+  useEffect(() => {
+    if (!quote) {
+      const today = new Date();
+      const validUntilDate = new Date(today);
+      validUntilDate.setDate(today.getDate() + 15);
+      const formattedDate = validUntilDate.toISOString().split("T")[0];
+      setValue("validUntil", formattedDate);
+    }
+  }, [quote, setValue]);
 
   const tax = parseFloat(watch("tax") || "0");
   const discount = parseFloat(watch("discount") || "0");
