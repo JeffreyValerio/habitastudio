@@ -295,6 +295,23 @@ export async function sendQuote(id: string) {
       return { ok: false, message: "Cotización no encontrada" };
     }
 
+    // Si la cotización no tiene fecha de vencimiento, establecerla a 15 días desde hoy
+    let validUntilDate = quote.validUntil;
+    if (!validUntilDate) {
+      const today = new Date();
+      const validUntil = new Date(today);
+      validUntil.setDate(today.getDate() + 15);
+      validUntilDate = validUntil;
+      
+      // Actualizar la cotización con la fecha de vencimiento
+      await prisma.quote.update({
+        where: { id },
+        data: {
+          validUntil: validUntilDate,
+        },
+      });
+    }
+
     // Generar PDF
     const pdfBuffer = await generateQuotePDFBuffer({
       quoteNumber: quote.quoteNumber,
@@ -305,7 +322,7 @@ export async function sendQuote(id: string) {
       projectName: quote.projectName,
       projectDescription: quote.projectDescription,
       status: quote.status,
-      validUntil: quote.validUntil,
+      validUntil: validUntilDate,
       subtotal: quote.subtotal,
       tax: quote.tax,
       discount: quote.discount,
@@ -375,9 +392,9 @@ export async function sendQuote(id: string) {
                       <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
                         Esta cotización tiene un valor total de <strong style="color: #4f46e5;">${new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(quote.total)}</strong>.
                       </p>
-                      ${quote.validUntil ? `
+                      ${validUntilDate ? `
                       <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                        Esta cotización es válida hasta el <strong>${new Date(quote.validUntil).toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.
+                        Esta cotización es válida hasta el <strong>${new Date(validUntilDate).toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.
                       </p>
                       ` : ''}
                       <p style="margin: 0 0 30px 0; color: #374151; font-size: 16px; line-height: 1.6;">
@@ -438,7 +455,7 @@ export async function sendQuote(id: string) {
     const whatsappMessage = `Hola ${quote.clientName}, te envío la cotización ${quote.quoteNumber} para tu proyecto "${quote.projectName}".
 
 Total: ${new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(quote.total)}
-${quote.validUntil ? `Válida hasta: ${new Date(quote.validUntil).toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' })}` : ''}
+${validUntilDate ? `Válida hasta: ${new Date(validUntilDate).toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' })}` : ''}
 
 Adjunto encontrarás el PDF con todos los detalles. Si tienes alguna pregunta, no dudes en contactarnos.
 
