@@ -481,7 +481,7 @@ export async function generateQuotePDF(quote: Quote) {
   yPosition += 6;
   doc.text('• Forma de pago: Adelanto del 50% y 50% al finalizar', margin + 3, yPosition);
   yPosition += 6;
-  doc.text('• Tiempo de entrega: 12 días hábiles luego de realizado el adelanto', margin + 3, yPosition);
+  doc.text('• Tiempo de entrega: 15 días hábiles luego de realizado el adelanto', margin + 3, yPosition);
   
   // Datos bancarios
   yPosition += 12;
