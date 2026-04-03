@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { formatCRC } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -181,11 +182,6 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
     return filteredReceipts.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredReceipts, currentPage]);
 
-  const formatCRC = (value: number) =>
-    `₡${new Intl.NumberFormat("es-CR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value)}`;
 
   return (
     <div className="space-y-4">

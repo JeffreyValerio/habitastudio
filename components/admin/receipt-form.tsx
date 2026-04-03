@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { formatCRC } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -233,11 +234,6 @@ export function ReceiptForm({ receipt }: ReceiptFormProps) {
     }
   };
 
-  const formatCRC = (value: number) =>
-    `₡${new Intl.NumberFormat("es-CR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value)}`;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { formatCRC } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -337,11 +338,6 @@ export function QuoteForm({ quote }: QuoteFormProps) {
 
   const { subtotal, taxAmount, discountAmount, total } = calculateTotals();
 
-  const formatCRC = (value: number) =>
-    `CRC ${new Intl.NumberFormat("es-CR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value)}`;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} encType="multipart/form-data" className="space-y-6">

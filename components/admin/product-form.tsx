@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { formatCRC } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -252,23 +253,13 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
             <div>
               <p className="text-sm text-muted-foreground">Costo</p>
               <p className="text-lg font-semibold">
-                {new Intl.NumberFormat("es-CR", {
-                  style: "currency",
-                  currency: "CRC",
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                }).format(parseCurrency(cost || "0"))}
+                {formatCRC(parseCurrency(cost || "0"), 0)}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Precio de Venta</p>
               <p className="text-lg font-semibold">
-                {new Intl.NumberFormat("es-CR", {
-                  style: "currency",
-                  currency: "CRC",
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                }).format(parseCurrency(price || "0"))}
+                {formatCRC(parseCurrency(price || "0"), 0)}
               </p>
             </div>
             <div>
@@ -277,12 +268,7 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
                 {margin.toFixed(2)}%
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Ganancia: {new Intl.NumberFormat("es-CR", {
-                  style: "currency",
-                  currency: "CRC",
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                }).format(parseCurrency(price || "0") - parseCurrency(cost || "0"))}
+                Ganancia: {formatCRC(parseCurrency(price || "0") - parseCurrency(cost || "0"), 0)}
               </p>
             </div>
           </div>

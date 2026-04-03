@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { formatCRC } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,14 +30,6 @@ interface Product {
 
 const ITEMS_PER_PAGE = 10;
 
-const formatPriceCRC = (price: number): string => {
-  return new Intl.NumberFormat("es-CR", {
-    style: "currency",
-    currency: "CRC",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price);
-};
 
 export function ProductsTable({ products }: { products: Product[] }) {
   const { toast } = useToast();
@@ -76,7 +69,7 @@ export function ProductsTable({ products }: { products: Product[] }) {
       (product) =>
         product.name.toLowerCase().includes(query) ||
         product.category.toLowerCase().includes(query) ||
-        formatPriceCRC(product.price).toLowerCase().includes(query)
+        formatCRC(product.price, 0).toLowerCase().includes(query)
     );
   }, [products, searchQuery]);
 
@@ -159,7 +152,7 @@ export function ProductsTable({ products }: { products: Product[] }) {
               </TableCell>
               <TableCell className="font-medium">{product.name}</TableCell>
               <TableCell>{product.category}</TableCell>
-              <TableCell>{formatPriceCRC(product.price)}</TableCell>
+              <TableCell>{formatCRC(product.price, 0)}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" size="icon" asChild>

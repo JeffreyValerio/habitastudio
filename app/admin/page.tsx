@@ -1,3 +1,4 @@
+import { formatCRC } from "@/lib/utils";
 import { getProducts } from "@/app/actions/products";
 import { getServices } from "@/app/actions/services";
 import { getProjects } from "@/app/actions/projects";
@@ -49,11 +50,7 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-blue-600 mb-2">
-                {new Intl.NumberFormat("es-CR", {
-                  style: "currency",
-                  currency: "CRC",
-                  maximumFractionDigits: 0,
-                }).format(totalValue)}
+                {formatCRC(totalValue, 0)}
               </div>
               <p className="text-sm text-muted-foreground">
                 {totalQuotes} cotizaciones en total
@@ -77,11 +74,7 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-green-600 mb-2">
-                {new Intl.NumberFormat("es-CR", {
-                  style: "currency",
-                  currency: "CRC",
-                  maximumFractionDigits: 0,
-                }).format(totalReceived)}
+                {formatCRC(totalReceived, 0)}
               </div>
               <p className="text-sm text-muted-foreground">
                 {totalReceipts} recibos registrados
@@ -105,11 +98,7 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className={`text-3xl font-bold mb-2 ${pendingBalance > 0 ? 'text-orange-600' : 'text-gray-600'}`}>
-                {new Intl.NumberFormat("es-CR", {
-                  style: "currency",
-                  currency: "CRC",
-                  maximumFractionDigits: 0,
-                }).format(pendingBalance)}
+                {formatCRC(pendingBalance, 0)}
               </div>
               <p className="text-sm text-muted-foreground">
                 Por recibir de cotizaciones aceptadas
@@ -215,11 +204,7 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {new Intl.NumberFormat("es-CR", {
-                  style: "currency",
-                  currency: "CRC",
-                  maximumFractionDigits: 0,
-                }).format(acceptedValue)}
+                {formatCRC(acceptedValue, 0)}
               </div>
               <p className="text-sm text-muted-foreground mt-1">
                 {acceptedQuotes} cotizaciones aceptadas
@@ -311,11 +296,7 @@ export default async function AdminDashboard() {
                     </div>
                     <div className="text-right">
                       <div className="font-bold">
-                        {new Intl.NumberFormat("es-CR", {
-                          style: "currency",
-                          currency: "CRC",
-                          maximumFractionDigits: 0,
-                        }).format(quote.total)}
+                        {formatCRC(quote.total, 0)}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {new Date(quote.createdAt).toLocaleDateString("es-CR")}

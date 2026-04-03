@@ -7,6 +7,7 @@ import { z } from "zod";
 import { uploadImages as uploadMany } from "@/lib/cloudinary";
 import { Resend } from "resend";
 import { generateQuotePDFBuffer } from "@/lib/generate-pdf-server";
+import { formatCRC } from "@/lib/utils";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -390,7 +391,7 @@ export async function sendQuote(id: string) {
                         Adjunto encontrará la cotización <strong>${quote.quoteNumber}</strong> para su proyecto <strong>"${quote.projectName}"</strong>.
                       </p>
                       <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                        Esta cotización tiene un valor total de <strong style="color: #4f46e5;">${new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(quote.total)}</strong>.
+                        Esta cotización tiene un valor total de <strong style="color: #4f46e5;">${formatCRC(quote.total)}</strong>.
                       </p>
                       ${validUntilDate ? `
                       <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
@@ -454,7 +455,7 @@ export async function sendQuote(id: string) {
     // Preparar datos para WhatsApp
     const whatsappMessage = `Hola ${quote.clientName}, te envío la cotización ${quote.quoteNumber} para tu proyecto "${quote.projectName}".
 
-Total: ${new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(quote.total)}
+Total: ${formatCRC(quote.total)}
 ${validUntilDate ? `Válida hasta: ${new Date(validUntilDate).toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' })}` : ''}
 
 Adjunto encontrarás el PDF con todos los detalles. Si tienes alguna pregunta, no dudes en contactarnos.

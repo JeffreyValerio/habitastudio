@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { Resend } from "resend";
 import { generateReceiptPDFBuffer } from "@/lib/generate-receipt-pdf-server";
+import { formatCRC } from "@/lib/utils";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -74,10 +75,7 @@ export async function createUpdateReceipt(formData: FormData) {
     if (validated.amount > availableAmount) {
       return {
         ok: false,
-        message: `El monto no puede ser mayor al disponible (${availableAmount.toLocaleString("es-CR", {
-          style: "currency",
-          currency: "CRC",
-        })})`,
+        message: `El monto no puede ser mayor al disponible (${formatCRC(availableAmount)})`,
       };
     }
 
@@ -367,7 +365,7 @@ export async function sendReceipt(id: string) {
     // Preparar datos para WhatsApp
     const whatsappMessage = `Hola ${receipt.clientName}, te envío el recibo de pago ${receipt.receiptNumber} correspondiente a la cotización ${receipt.quote.quoteNumber}.
 
-Monto: ${new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(receipt.amount)}
+Monto: ${formatCRC(receipt.amount)}
 Método de pago: ${receipt.paymentMethod}
 Fecha: ${new Date(receipt.receiptDate).toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' })}
 

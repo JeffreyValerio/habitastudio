@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { formatCRC } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -224,12 +225,6 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CR", {
-      style: "currency",
-      currency: "CRC",
-    }).format(amount);
-  };
 
   const formatDate = (date: Date | null) => {
     if (!date) return "-";
@@ -333,7 +328,7 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
                   {statusLabels[quote.status] || quote.status}
                 </Badge>
               </TableCell>
-              <TableCell className="font-medium">{formatCurrency(quote.total)}</TableCell>
+              <TableCell className="font-medium">{formatCRC(quote.total)}</TableCell>
               <TableCell>{formatDate(quote.validUntil)}</TableCell>
               <TableCell>{formatDate(quote.createdAt)}</TableCell>
               <TableCell className="text-right">
