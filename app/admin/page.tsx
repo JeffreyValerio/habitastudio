@@ -7,10 +7,7 @@ import { getReceipts } from "@/app/actions/receipts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, Wrench, FolderKanban, FileText, TrendingUp, DollarSign, Receipt, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import Link from "next/link";
-import { RevenueChart } from "@/components/admin/charts/revenue-chart";
-import { SalesFunnelChart } from "@/components/admin/charts/sales-funnel-chart";
-import { TopProductsChart } from "@/components/admin/charts/top-products-chart";
-import { PendingBalanceChart } from "@/components/admin/charts/pending-balance-chart";
+import { DashboardCharts } from "@/components/admin/dashboard-charts";
 
 export default async function AdminDashboard() {
   const [products, services, projects, quotes, receipts] = await Promise.all([
@@ -120,17 +117,9 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* Gráficos de análisis */}
+      {/* Gráficos de análisis con filtros */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Análisis y Tendencias</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <RevenueChart receipts={receipts} />
-          <SalesFunnelChart quotes={quotes} />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TopProductsChart quotes={quotes} />
-          <PendingBalanceChart quotes={quotes} receipts={receipts} />
-        </div>
+        <DashboardCharts quotes={quotes} receipts={receipts} />
       </div>
 
       {/* KPIs de recursos */}
