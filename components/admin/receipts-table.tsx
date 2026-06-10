@@ -36,6 +36,12 @@ interface Receipt {
   };
 }
 
+interface ReceiptWithBalance extends Receipt {
+  totalPaid?: number;
+  balance?: number;
+  isPaid?: boolean;
+}
+
 const paymentMethodLabels: Record<string, string> = {
   efectivo: "Efectivo",
   transferencia: "Transferencia",
@@ -52,6 +58,31 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
   const [sending, setSending] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Calcular el total pagado por cotización
+  const receiptsByQuote = useMemo(() => {
+    const map = new Map<string, number>();
+    receipts.forEach((receipt) => {
+      const current = map.get(receipt.quote.id) || 0;
+      map.set(receipt.quote.id, current + receipt.amount);
+    });
+    return map;
+  }, [receipts]);
+
+  // Enriquecer recibos con información de saldo
+  const enrichedReceipts = useMemo(() => {
+    return receipts.map((receipt) => {
+      const totalPaid = receiptsByQuote.get(receipt.quote.id) || 0;
+      const balance = receipt.quote.total - totalPaid;
+      const isPaid = balance <= 0;
+      return {
+        ...receipt,
+        totalPaid,
+        balance: Math.max(0, balance),
+        isPaid,
+      };
+    });
+  }, [receipts, receiptsByQuote]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de que quieres eliminar este recibo?")) {
@@ -163,10 +194,10 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
   };
 
   const filteredReceipts = useMemo(() => {
-    if (!searchQuery.trim()) return receipts;
+    if (!searchQuery.trim()) return enrichedReceipts;
 
     const query = searchQuery.toLowerCase();
-    return receipts.filter(
+    return enrichedReceipts.filter(
       (receipt) =>
         receipt.receiptNumber.toLowerCase().includes(query) ||
         receipt.clientName.toLowerCase().includes(query) ||
@@ -174,7 +205,7 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
         receipt.quote.quoteNumber.toLowerCase().includes(query) ||
         receipt.concept.toLowerCase().includes(query)
     );
-  }, [receipts, searchQuery]);
+  }, [enrichedReceipts, searchQuery]);
 
   const totalPages = Math.ceil(filteredReceipts.length / ITEMS_PER_PAGE);
   const paginatedReceipts = useMemo(() => {
@@ -217,6 +248,7 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
               <TableHead>Cotización</TableHead>
               <TableHead>Monto</TableHead>
               <TableHead>Método de Pago</TableHead>
+              <TableHead>Estado de Pago</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -257,6 +289,17 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
                   </TableCell>
                   <TableCell>
                     {paymentMethodLabels[receipt.paymentMethod] || receipt.paymentMethod}
+                  </TableCell>
+                  <TableCell>
+                    {receipt.isPaid ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                        ✓ Pagado Completo
+                      </span>
+                    ) : (
+                      <span className="text-sm text-amber-600 font-medium">
+                        Saldo: {formatCRC(receipt.balance || 0)}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {new Date(receipt.receiptDate).toLocaleDateString("es-CR")}
