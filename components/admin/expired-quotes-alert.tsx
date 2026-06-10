@@ -42,27 +42,27 @@ export function ExpiredQuotesAlert({ quotes }: ExpiredQuotesAlertProps) {
   };
 
   return (
-    <Card className="border-2 border-red-500 bg-red-50">
+    <Card className="border-2 border-red-600 bg-slate-900">
       <CardHeader
-        className="cursor-pointer hover:bg-red-100 transition-colors"
+        className="cursor-pointer hover:bg-slate-800 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertCircle className="h-6 w-6 text-red-600" />
+            <AlertCircle className="h-6 w-6 text-red-500" />
             <div>
-              <CardTitle className="text-red-700">
+              <CardTitle className="text-red-400">
                 ⚠️ {expiredQuotes.length} Cotización{expiredQuotes.length !== 1 ? "es" : ""} Vencida{expiredQuotes.length !== 1 ? "s" : ""}
               </CardTitle>
-              <p className="text-sm text-red-600 mt-1">
+              <p className="text-sm text-red-400 mt-1">
                 Requieren seguimiento urgente
               </p>
             </div>
           </div>
           {expanded ? (
-            <ChevronUp className="h-5 w-5 text-red-600" />
+            <ChevronUp className="h-5 w-5 text-red-500" />
           ) : (
-            <ChevronDown className="h-5 w-5 text-red-600" />
+            <ChevronDown className="h-5 w-5 text-red-500" />
           )}
         </div>
       </CardHeader>
@@ -73,7 +73,7 @@ export function ExpiredQuotesAlert({ quotes }: ExpiredQuotesAlertProps) {
             {expiredQuotes.map((quote) => (
               <div
                 key={quote.id}
-                className="flex items-center justify-between p-3 bg-white rounded-lg border border-red-200"
+                className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-red-600"
               >
                 <div className="flex-1">
                   <Link
