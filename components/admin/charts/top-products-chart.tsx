@@ -49,16 +49,16 @@ export function TopProductsChart({ quotes }: TopProductsChartProps) {
         {topProducts.length > 0 ? (
           <div className="space-y-3">
             {topProducts.map((product, index) => (
-              <div key={product.name} className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-sm font-bold text-purple-600">
+              <div key={product.name} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
+                <div className="flex-shrink-0 w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-sm font-bold text-white">
                   {index + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
+                  <p className="text-sm font-semibold text-white truncate">{product.name}</p>
                 </div>
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-6 bg-purple-200 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-bold text-purple-700">{product.count}</span>
+                  <div className="px-3 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-bold text-white">{product.count}</span>
                   </div>
                 </div>
               </div>
