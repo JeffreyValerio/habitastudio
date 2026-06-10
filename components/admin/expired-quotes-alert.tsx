@@ -12,6 +12,7 @@ interface Quote {
   clientName: string;
   projectName: string;
   total: number;
+  status: string;
   validUntil: Date | null;
 }
 
