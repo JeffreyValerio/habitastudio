@@ -24,7 +24,7 @@ interface Customer {
   quotesCount: number;
   acceptedCount: number;
   receiptsCount: number;
-  lastQuoteDate: Date;
+  lastQuoteDate: string;
 }
 
 interface CustomersTableProps {
@@ -103,8 +103,8 @@ export function CustomersTable({ customers }: CustomersTableProps) {
             b.totalQuoted > 0 ? b.totalPaid / b.totalQuoted : 0;
           break;
         case "lastQuote":
-          aVal = new Date(a.lastQuoteDate).getTime();
-          bVal = new Date(b.lastQuoteDate).getTime();
+          aVal = new Date(a.lastQuoteDate as string).getTime();
+          bVal = new Date(b.lastQuoteDate as string).getTime();
           break;
       }
 
@@ -305,7 +305,7 @@ export function CustomersTable({ customers }: CustomersTableProps) {
                         {customer.quotesCount}
                       </td>
                       <td className="py-3 px-4 text-xs text-muted-foreground">
-                        {new Date(customer.lastQuoteDate).toLocaleDateString(
+                        {new Date(customer.lastQuoteDate as string).toLocaleDateString(
                           "es-CR"
                         )}
                       </td>

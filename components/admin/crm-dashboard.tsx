@@ -34,7 +34,7 @@ interface CRMDashboardProps {
     customersWithExpiredQuotes: number;
     inactiveCustomers: Array<{
       clientName: string;
-      lastQuoteDate: Date;
+      lastQuoteDate: string;
     }>;
   };
 }

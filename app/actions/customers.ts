@@ -48,9 +48,14 @@ export async function getCustomers() {
   });
 
   const customerMap = buildCustomerMap(quotes);
-  return Array.from(customerMap.values()).sort(
-    (a, b) => b.lastQuoteDate.getTime() - a.lastQuoteDate.getTime()
-  );
+  return Array.from(customerMap.values())
+    .sort(
+      (a, b) => b.lastQuoteDate.getTime() - a.lastQuoteDate.getTime()
+    )
+    .map((c) => ({
+      ...c,
+      lastQuoteDate: c.lastQuoteDate.toISOString(),
+    }));
 }
 
 // Obtener CRM Dashboard KPIs
@@ -112,7 +117,10 @@ export async function getCRMDashboard() {
     pipeline: pipelineByStatus,
     topCustomers,
     customersWithExpiredQuotes: customersWithExpiredQuotes.size,
-    inactiveCustomers: inactiveCustomers.slice(0, 5),
+    inactiveCustomers: inactiveCustomers.slice(0, 5).map((c) => ({
+      clientName: c.clientName,
+      lastQuoteDate: c.lastQuoteDate.toISOString(),
+    })),
     allCustomers: customers,
   };
 }
