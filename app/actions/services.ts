@@ -89,9 +89,14 @@ export async function deleteService(id: string) {
 }
 
 export async function getServices() {
-  return await prisma.service.findMany({
+  const services = await prisma.service.findMany({
     orderBy: { createdAt: "desc" },
   });
+  return services.map((s) => ({
+    ...s,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+  }));
 }
 
 export async function getService(id: string) {

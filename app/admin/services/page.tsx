@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { getServices } from "@/app/actions/services";
-import { ServicesTable } from "@/components/admin/services-table";
+import { ServicesGrid } from "@/components/admin/services-grid";
 
 export default async function ServicesPage() {
   const services = await getServices();
@@ -18,7 +18,7 @@ export default async function ServicesPage() {
           </Link>
         </Button>
       </div>
-      <ServicesTable services={services} />
+      <ServicesGrid services={services} />
     </div>
   );
 }
