@@ -45,11 +45,7 @@ export function DashboardCharts({ quotes, receipts }: DashboardChartsProps) {
 
   return (
     <div className="space-y-8">
-      {/* Filtro de fechas */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Análisis y Tendencias</h2>
-        <DateFilter onDateRangeChange={setDateRange} />
-      </div>
+      <h2 className="text-2xl font-bold">Análisis y Tendencias</h2>
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
