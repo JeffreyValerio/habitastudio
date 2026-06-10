@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, FileText, Receipt } from "lucide-react";
 import { DateFilter, DateRange } from "./charts/date-filter";
 import { DashboardCharts } from "./dashboard-charts";
+import { ExpiredQuotesAlert } from "./expired-quotes-alert";
 
 interface DashboardContentProps {
   products: any[];
@@ -71,6 +72,11 @@ export function DashboardContent({
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Panel de Administración</h1>
         <DateFilter onDateRangeChange={setDateRange} />
+      </div>
+
+      {/* Alerta de cotizaciones vencidas */}
+      <div className="mb-6">
+        <ExpiredQuotesAlert quotes={quotes} />
       </div>
 
       {/* KPIs principales de finanzas - Destacados */}
