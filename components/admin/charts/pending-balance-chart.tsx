@@ -1,6 +1,5 @@
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCRC } from "@/lib/utils";
 
@@ -40,21 +39,7 @@ export function PendingBalanceChart({ quotes, receipts }: PendingBalanceChartPro
     })
     .filter((item) => item.balance > 0) // Solo con deuda
     .sort((a, b) => b.balance - a.balance)
-    .slice(0, 8); // Top 8 deudores
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
-          <p className="text-sm font-semibold">{payload[0].payload.client}</p>
-          <p className="text-sm font-bold text-orange-600">
-            Debe: {formatCRC(payload[0].value, 0)}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+    .slice(0, 5); // Top 5 deudores
 
   const totalPending = clientBalances.reduce((sum, item) => sum + item.balance, 0);
 
@@ -65,19 +50,30 @@ export function PendingBalanceChart({ quotes, receipts }: PendingBalanceChartPro
       </CardHeader>
       <CardContent>
         {clientBalances.length > 0 ? (
-          <div>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={clientBalances} margin={{ left: 120 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="client" type="category" width={115} tick={{ fontSize: 11 }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="balance" fill="#f97316" radius={[0, 8, 8, 0]} name="Saldo Pendiente" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              {clientBalances.map((item, index) => (
+                <div key={item.client} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-sm font-bold text-orange-600">
+                      {index + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{item.client}</p>
+                      <p className="text-xs text-gray-500">De {formatCRC(item.total, 0)}</p>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    <p className="text-lg font-bold text-orange-600">
+                      {formatCRC(item.balance, 0)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Total pendiente */}
-            <div className="mt-4 p-4 bg-orange-50 rounded border border-orange-200">
+            <div className="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
               <p className="text-sm text-gray-600">Total Pendiente por Cobrar</p>
               <p className="text-3xl font-bold text-orange-600">
                 {formatCRC(totalPending, 0)}
@@ -85,7 +81,7 @@ export function PendingBalanceChart({ quotes, receipts }: PendingBalanceChartPro
             </div>
           </div>
         ) : (
-          <div className="h-[300px] flex items-center justify-center text-gray-500">
+          <div className="py-8 text-center text-gray-500">
             No hay saldo pendiente
           </div>
         )}
