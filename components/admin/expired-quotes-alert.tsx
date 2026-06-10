@@ -78,19 +78,19 @@ export function ExpiredQuotesAlert({ quotes }: ExpiredQuotesAlertProps) {
                 <div className="flex-1">
                   <Link
                     href={`/admin/quotes/${quote.id}`}
-                    className="font-semibold text-red-700 hover:underline"
+                    className="font-semibold text-red-400 hover:text-red-300"
                   >
                     {quote.quoteNumber}
                   </Link>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-300 mt-1">
                     {quote.clientName} - {quote.projectName}
                   </p>
-                  <p className="text-xs text-red-600 mt-1">
+                  <p className="text-xs text-red-400 mt-1">
                     Vencida hace {daysSinceExpired(quote.validUntil)} días
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-gray-900">
+                  <p className="text-sm font-bold text-gray-200">
                     {formatCRC(quote.total, 0)}
                   </p>
                   <Link
