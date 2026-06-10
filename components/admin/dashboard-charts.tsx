@@ -10,6 +10,8 @@ import { DateFilter, DateRange } from "./charts/date-filter";
 interface DashboardChartsProps {
   quotes: Array<{
     id: string;
+    clientName: string;
+    total: number;
     status: string;
     createdAt: Date;
     items: Array<{
