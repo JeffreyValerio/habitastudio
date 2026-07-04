@@ -206,7 +206,7 @@ export async function acceptInvitation(
 export async function getPendingInvitations() {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden ver invitaciones");
+    return null;
   }
 
   return await prisma.userInvitation.findMany({
