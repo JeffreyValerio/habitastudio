@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { ChevronRight, CheckCircle2, Ruler, Palette, ShieldCheck, Layers } from "lucide-react";
 import { getProductBySlug } from "@/lib/data/products";
 import { ProductGallery } from "@/components/catalog/product-gallery";
-import { Icons } from "@/components/icons";
 
 const WHATSAPP_NUMBER = "50663644915";
 
@@ -104,7 +103,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 asChild
               >
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                  <Icons.whatsapp className="mr-2 h-5 w-5" />
                   Cotizar por WhatsApp
                 </a>
               </Button>
@@ -162,7 +160,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
           asChild
         >
           <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-            <Icons.whatsapp className="mr-2 h-5 w-5" />
             Cotizar por WhatsApp
           </a>
         </Button>
