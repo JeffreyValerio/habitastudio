@@ -3,6 +3,9 @@ export default function LoginLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto">{children}</div>
+    </div>
+  );
 }
-

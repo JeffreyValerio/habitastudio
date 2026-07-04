@@ -4,17 +4,13 @@ import type { NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Agregar header con la ruta actual
-  const response = NextResponse.next();
-  response.headers.set("x-pathname", pathname);
-
   // Permitir acceso a la página de login sin verificación
-  if (pathname === "/admin/login" || pathname === "/admin/login/") {
-    return response;
+  if (pathname.startsWith("/admin/login")) {
+    return NextResponse.next();
   }
 
-  // Para todas las rutas de admin (incluyendo /admin exacto), verificar la cookie de sesión
-  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+  // Para todas las otras rutas de admin, verificar la cookie de sesión
+  if (pathname.startsWith("/admin")) {
     const session = request.cookies.get("session");
 
     if (!session) {
@@ -22,7 +18,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {
