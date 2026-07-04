@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, Receipt, LogOut, Home, Users, Settings } from "lucide-react";
+import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, Receipt, LogOut, Home, Users, Settings, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,7 @@ const navigation = [
   { name: "Productos", href: "/admin/products", icon: Package },
   { name: "Servicios", href: "/admin/services", icon: Wrench },
   { name: "Proyectos", href: "/admin/projects", icon: FolderKanban },
+  { name: "Tiempo", href: "/admin/time-management", icon: Clock },
 ];
 
 export function AdminSidebar() {
