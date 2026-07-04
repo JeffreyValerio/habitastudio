@@ -4,8 +4,9 @@ import type { NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Permitir acceso a la página de login sin verificación
-  if (pathname.startsWith("/admin/login")) {
+  // Rutas públicas sin verificación
+  const publicRoutes = ["/admin/login", "/accept-invitation"];
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
@@ -24,6 +25,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/admin/:path*",
+    "/accept-invitation",
   ],
 };
-
