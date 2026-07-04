@@ -1,5 +1,6 @@
 import { getQuotes } from "@/app/actions/quotes";
 import { getCRMAnalytics } from "@/app/actions/crm";
+import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   TrendingUp,
@@ -14,8 +15,25 @@ import {
 import { formatCRC } from "@/lib/utils";
 import Link from "next/link";
 import { QuotesRevenueChart } from "@/components/admin/quotes-revenue-chart";
+import { RestrictedAccess } from "@/components/admin/restricted-access";
 
 export default async function AdminDashboard() {
+  const user = await getCurrentUser();
+
+  if (!user || user.role !== "admin") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Resumen de métricas clave y actividad
+          </p>
+        </div>
+        <RestrictedAccess message="Solo los administradores pueden ver el dashboard con métricas." />
+      </div>
+    );
+  }
+
   const [quotes, crmData] = await Promise.all([
     getQuotes(),
     getCRMAnalytics(),
