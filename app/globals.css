@@ -68,17 +68,9 @@
 }
 
 /* Estilos fuera de layer para mayor especificidad - Íconos blancos en modo oscuro */
-html.dark input[type="date"]::-webkit-calendar-picker-indicator,
-html.dark input[type="time"]::-webkit-calendar-picker-indicator,
-html.dark .date-input-white-icon::-webkit-calendar-picker-indicator,
-.dark input[type="date"]::-webkit-calendar-picker-indicator,
-.dark input[type="time"]::-webkit-calendar-picker-indicator,
-.dark .date-input-white-icon::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(200%) contrast(1) !important;
-  cursor: pointer !important;
-  opacity: 1 !important;
-}
-
+/* color-scheme: dark hace que el navegador dibuje el ícono nativo ya en un tono
+   claro; NO combinar con filter:invert porque se cancelan mutuamente y el
+   ícono vuelve a quedar oscuro/invisible sobre fondo oscuro. */
 html.dark input[type="date"],
 html.dark input[type="time"],
 html.dark .date-input-white-icon,
@@ -86,5 +78,15 @@ html.dark .date-input-white-icon,
 .dark input[type="time"],
 .dark .date-input-white-icon {
   color-scheme: dark;
+}
+
+html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+html.dark input[type="time"]::-webkit-calendar-picker-indicator,
+html.dark .date-input-white-icon::-webkit-calendar-picker-indicator,
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator,
+.dark .date-input-white-icon::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+  opacity: 1 !important;
 }
 
