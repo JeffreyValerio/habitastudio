@@ -3,6 +3,95 @@
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+async function getWorkshopManager() {
+  return await prisma.user.findFirst({
+    where: { role: "taller-manager" },
+  });
+}
+
+async function sendApprovalEmail(
+  workshopManager: any,
+  user: any,
+  timeEntry: any,
+  type: "entry" | "exit"
+) {
+  if (!workshopManager?.email) return;
+
+  const approvalLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/taller-manager/approvals`;
+  const typeLabel = type === "entry" ? "Entrada" : "Salida";
+  const timeLabel = type === "entry" ? "entrada" : "salida";
+
+  await resend.emails.send({
+    from: "Habita Studio <info@habitastudio.online>",
+    to: [workshopManager.email],
+    replyTo: "info@habitastudio.online",
+    subject: `Solicitud de aprobación de ${timeLabel} - ${user.name || user.email}`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background-color: #ffffff; padding: 30px 40px 20px 40px; text-align: center;">
+                    <img src="https://habitastudio.online/images/logo.png" alt="Habita Studio" style="max-width: 200px; height: auto; margin-bottom: 20px;" />
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 40px;">
+                    <h2 style="margin: 20px 0; font-size: 24px; color: #333;">Solicitud de Aprobación</h2>
+                    <p style="margin: 15px 0; color: #666; line-height: 1.6;">
+                      <strong>${user.name || user.email}</strong> ha registrado una <strong>${typeLabel}</strong>.
+                    </p>
+
+                    <div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
+                      <p style="margin: 10px 0;"><strong>Colaborador:</strong> ${user.name || "Sin nombre"}</p>
+                      <p style="margin: 10px 0;"><strong>Email:</strong> ${user.email}</p>
+                      <p style="margin: 10px 0;"><strong>Tipo:</strong> ${typeLabel}</p>
+                      <p style="margin: 10px 0;"><strong>Hora:</strong> ${new Date(type === "entry" ? timeEntry.entryTime : timeEntry.exitTime).toLocaleTimeString("es-CR")}</p>
+                    </div>
+
+                    <p style="margin: 15px 0; color: #666; line-height: 1.6;">
+                      Por favor, revisa y aprueba o rechaza esta solicitud:
+                    </p>
+
+                    <table role="presentation" style="margin: 30px 0;">
+                      <tr>
+                        <td style="background-color: #000; border-radius: 5px; padding: 0; margin-right: 10px;">
+                          <a href="${approvalLink}" style="background-color: #000; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                            Ver Solicitudes
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f9f9f9; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;">
+                    <p style="margin: 0; color: #999; font-size: 12px;">
+                      © Habita Studio. Todos los derechos reservados.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  });
+}
 
 export async function clockIn(projectId?: string, description?: string) {
   const user = await getCurrentUser();
@@ -19,6 +108,21 @@ export async function clockIn(projectId?: string, description?: string) {
       description: description || null,
     },
   });
+
+  // Create approval request
+  await prisma.timeApproval.create({
+    data: {
+      timeEntryId: timeEntry.id,
+      type: "entry",
+      status: "pending",
+    },
+  });
+
+  // Send email to workshop manager
+  const workshopManager = await getWorkshopManager();
+  if (workshopManager) {
+    await sendApprovalEmail(workshopManager, user, timeEntry, "entry");
+  }
 
   revalidatePath("/dashboard");
   return timeEntry;
@@ -48,6 +152,21 @@ export async function clockOut(entryId: string) {
       exitTime: new Date(),
     },
   });
+
+  // Create approval request for exit
+  await prisma.timeApproval.create({
+    data: {
+      timeEntryId: updated.id,
+      type: "exit",
+      status: "pending",
+    },
+  });
+
+  // Send email to workshop manager
+  const workshopManager = await getWorkshopManager();
+  if (workshopManager) {
+    await sendApprovalEmail(workshopManager, user, updated, "exit");
+  }
 
   revalidatePath("/dashboard");
   return updated;
@@ -112,7 +231,14 @@ export async function getMyCurrentEntry() {
     },
   });
 
-  return entry;
+  if (!entry) return null;
+
+  return {
+    ...entry,
+    entryTime: entry.entryTime.toISOString(),
+    exitTime: entry.exitTime?.toISOString() || null,
+    entryDate: entry.entryDate.toISOString(),
+  };
 }
 
 export async function getCollaborators() {
@@ -130,6 +256,70 @@ export async function getCollaborators() {
       hourlyRate: true,
       createdAt: true,
     },
+  });
+}
+
+function getPeriodRange(year: number, month: number, quincena?: 1 | 2) {
+  const lastDay = new Date(year, month, 0).getDate();
+
+  if (quincena === 1) {
+    return {
+      start: new Date(year, month - 1, 1, 0, 0, 0),
+      end: new Date(year, month - 1, 15, 23, 59, 59, 999),
+    };
+  }
+  if (quincena === 2) {
+    return {
+      start: new Date(year, month - 1, 16, 0, 0, 0),
+      end: new Date(year, month - 1, lastDay, 23, 59, 59, 999),
+    };
+  }
+  return {
+    start: new Date(year, month - 1, 1, 0, 0, 0),
+    end: new Date(year, month - 1, lastDay, 23, 59, 59, 999),
+  };
+}
+
+export async function getCollaboratorsWithEarnings(params: {
+  year: number;
+  month: number;
+  quincena?: 1 | 2;
+}) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("Solo administradores pueden ver colaboradores");
+  }
+
+  const collaborators = await prisma.user.findMany({
+    where: { isCollaborator: true },
+    select: { id: true, name: true, email: true, hourlyRate: true, createdAt: true },
+  });
+
+  const { start, end } = getPeriodRange(params.year, params.month, params.quincena);
+
+  const entries = await prisma.timeEntry.findMany({
+    where: {
+      userId: { in: collaborators.map((c) => c.id) },
+      entryDate: { gte: start, lte: end },
+      exitTime: { not: null },
+    },
+    select: { userId: true, entryTime: true, exitTime: true },
+  });
+
+  const hoursByUser = new Map<string, number>();
+  entries.forEach((entry) => {
+    const hours = (entry.exitTime!.getTime() - entry.entryTime.getTime()) / (1000 * 60 * 60);
+    hoursByUser.set(entry.userId, (hoursByUser.get(entry.userId) || 0) + hours);
+  });
+
+  return collaborators.map((c) => {
+    const hours = hoursByUser.get(c.id) || 0;
+    const earned = hours * (c.hourlyRate || 0);
+    return {
+      ...c,
+      hours: parseFloat(hours.toFixed(2)),
+      earned: parseFloat(earned.toFixed(2)),
+    };
   });
 }
 
@@ -185,4 +375,191 @@ export async function calculatePayroll(userId: string, year: number, month: numb
       netPay,
     },
   });
+}
+
+export async function getCollaboratorDetails(userId: string) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("Solo administradores pueden ver detalles");
+  }
+
+  return await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      hourlyRate: true,
+      createdAt: true,
+    },
+  });
+}
+
+export async function getCollaboratorTimeEntries(userId: string) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("Solo administradores pueden ver registros");
+  }
+
+  return await prisma.timeEntry.findMany({
+    where: { userId },
+    include: {
+      project: { select: { id: true, title: true } },
+    },
+    orderBy: { entryDate: "desc" },
+  });
+}
+
+export async function updateCollaboratorRate(userId: string, hourlyRate: number) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("Solo administradores pueden actualizar la tarifa");
+  }
+
+  if (hourlyRate < 0) {
+    throw new Error("La tarifa no puede ser negativa");
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { hourlyRate },
+    select: { id: true, name: true, email: true, hourlyRate: true },
+  });
+
+  revalidatePath("/admin/time-management");
+  revalidatePath(`/admin/time-management/${userId}`);
+  return updated;
+}
+
+export async function createManualTimeEntry(input: {
+  userId: string;
+  projectId?: string;
+  entryDate: string;
+  entryTime: string;
+  exitTime?: string;
+  description?: string;
+}) {
+  const admin = await getCurrentUser();
+  if (!admin || admin.role !== "admin") {
+    throw new Error("Solo administradores pueden registrar horas manualmente");
+  }
+
+  const collaborator = await prisma.user.findUnique({ where: { id: input.userId } });
+  if (!collaborator) {
+    throw new Error("Colaborador no encontrado");
+  }
+
+  const entryDateTime = new Date(`${input.entryDate}T${input.entryTime}`);
+  const exitDateTime = input.exitTime
+    ? new Date(`${input.entryDate}T${input.exitTime}`)
+    : null;
+
+  if (exitDateTime && exitDateTime <= entryDateTime) {
+    throw new Error("La hora de salida debe ser posterior a la hora de entrada");
+  }
+
+  const timeEntry = await prisma.timeEntry.create({
+    data: {
+      userId: input.userId,
+      projectId: input.projectId || null,
+      entryDate: new Date(input.entryDate),
+      entryTime: entryDateTime,
+      exitTime: exitDateTime,
+      description: input.description || null,
+    },
+  });
+
+  // Registrado directamente por un admin: se marca como ya aprobado, sin pasar por el flujo de aprobación del taller-manager
+  await prisma.timeApproval.create({
+    data: {
+      timeEntryId: timeEntry.id,
+      type: "entry",
+      status: "approved",
+      approvedBy: admin.id,
+    },
+  });
+
+  if (exitDateTime) {
+    await prisma.timeApproval.create({
+      data: {
+        timeEntryId: timeEntry.id,
+        type: "exit",
+        status: "approved",
+        approvedBy: admin.id,
+      },
+    });
+  }
+
+  revalidatePath(`/admin/time-management/${input.userId}`);
+  revalidatePath("/admin/time-management");
+  return timeEntry;
+}
+
+export async function deleteManualTimeEntry(entryId: string) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("Solo administradores pueden eliminar registros");
+  }
+
+  const entry = await prisma.timeEntry.delete({
+    where: { id: entryId },
+  });
+
+  revalidatePath(`/admin/time-management/${entry.userId}`);
+  revalidatePath("/admin/time-management");
+  return entry;
+}
+
+export async function getPendingApprovals() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "taller-manager") {
+    throw new Error("Solo jefes de taller pueden ver aprobaciones");
+  }
+
+  return await prisma.timeApproval.findMany({
+    where: { status: "pending" },
+    include: {
+      timeEntry: {
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          project: { select: { id: true, title: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function approveTimeEntry(approvalId: string, approve: boolean, reason?: string) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "taller-manager") {
+    throw new Error("Solo jefes de taller pueden aprobar");
+  }
+
+  const approval = await prisma.timeApproval.findUnique({
+    where: { id: approvalId },
+  });
+
+  if (!approval) {
+    throw new Error("Aprobación no encontrada");
+  }
+
+  const updated = await prisma.timeApproval.update({
+    where: { id: approvalId },
+    data: {
+      status: approve ? "approved" : "rejected",
+      approvedBy: user.id,
+      rejectionReason: !approve ? reason : null,
+    },
+    include: {
+      timeEntry: {
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+        },
+      },
+    },
+  });
+
+  revalidatePath("/taller-manager/approvals");
+  return updated;
 }

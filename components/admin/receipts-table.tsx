@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { deleteReceipt, sendReceipt } from "@/app/actions/receipts";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { Trash2, Edit, Send, Download, Search, X as XIcon } from "lucide-react";
 import { ReceiptDownloadButton } from "./receipt-download-button";
 import { Pagination } from "@/components/ui/pagination";
@@ -84,11 +85,7 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
     });
   }, [receipts, receiptsByQuote]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este recibo?")) {
-      return;
-    }
-
+  const confirmDeleteReceipt = async (id: string) => {
     setDeleting(id);
     try {
       await deleteReceipt(id);
@@ -108,17 +105,37 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
     }
   };
 
-  const handleSend = async (id: string) => {
-    const receipt = receipts.find((r) => r.id === id);
-    
-    const confirmMessage = receipt
-      ? `¿Estás seguro de que deseas enviar el recibo ${receipt.receiptNumber} a ${receipt.clientName} (${receipt.clientEmail})?\n\nSe enviará por email y se abrirá WhatsApp para compartir el PDF.`
-      : '¿Estás seguro de que deseas enviar este recibo?\n\nSe enviará por email y se abrirá WhatsApp para compartir el PDF.';
-    
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+  const handleDelete = (id: string) => {
+    toast({
+      title: "¿Eliminar recibo?",
+      description: "Esta acción no se puede deshacer.",
+      variant: "destructive",
+      action: (
+        <ToastAction altText="Confirmar eliminación" onClick={() => confirmDeleteReceipt(id)}>
+          Eliminar
+        </ToastAction>
+      ),
+    });
+  };
 
+  const handleSend = (id: string) => {
+    const receipt = receipts.find((r) => r.id === id);
+    const description = receipt
+      ? `Enviar recibo ${receipt.receiptNumber} a ${receipt.clientName} (${receipt.clientEmail}) por email y WhatsApp.`
+      : "Se enviará por email y se abrirá WhatsApp para compartir el PDF.";
+
+    toast({
+      title: "¿Enviar recibo?",
+      description,
+      action: (
+        <ToastAction altText="Confirmar envío" onClick={() => confirmSend(id)}>
+          Enviar
+        </ToastAction>
+      ),
+    });
+  };
+
+  const confirmSend = async (id: string) => {
     setSending(id);
     try {
       const result = await sendReceipt(id);

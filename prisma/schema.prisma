@@ -24,17 +24,20 @@ model User {
   timeEntries     TimeEntry[]
   assignments     ProjectAssignment[]
   payrolls        Payroll[]
+  approvals       TimeApproval[]
 }
 
 model UserInvitation {
-  id        String   @id @default(cuid())
-  email     String
-  role      String   @default("moderator")
-  token     String   @unique
-  accepted  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-  updatedAt DateTime @updatedAt
+  id             String    @id @default(cuid())
+  email          String
+  role           String    @default("moderator")
+  token          String    @unique
+  accepted       Boolean   @default(false)
+  isCollaborator Boolean   @default(false)
+  hourlyRate     Float?
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime
+  updatedAt      DateTime  @updatedAt
 
   @@unique([email, token])
 }
@@ -52,9 +55,29 @@ model TimeEntry {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  // Relación con aprobación
+  approvals    TimeApproval[]
+
   @@index([userId])
   @@index([projectId])
   @@index([entryDate])
+}
+
+model TimeApproval {
+  id           String    @id @default(cuid())
+  timeEntryId  String
+  timeEntry    TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  type         String    // "entry" o "exit"
+  status       String    @default("pending") // pending, approved, rejected
+  approvedBy   String?
+  approver     User?     @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
+  rejectionReason String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([timeEntryId, type])
+  @@index([status])
+  @@index([approvedBy])
 }
 
 model ProjectAssignment {
@@ -92,6 +115,217 @@ model Payroll {
   @@index([userId])
 }
 
+// ============ CRM MODELS ============
+
+model Customer {
+  id               String    @id @default(cuid())
+  name             String
+  email            String    @unique
+  phone            String?
+  company          String?
+  position         String?
+  address          String?   @db.Text
+  city             String?
+  country          String?
+
+  // CRM Fields
+  status           String    @default("prospect") // prospect, qualified, negotiation, customer, inactive
+  source           String?   // website, referral, cold-call, social, event, etc
+  totalSpent       Float     @default(0)
+  estimatedValue   Float     @default(0)
+  lastInteraction  DateTime?
+  nextFollowUp     DateTime?
+  score            Int       @default(0) // 0-100 scoring
+
+  // Relationships
+  quotes           Quote[]
+  interactions     CustomerInteraction[]
+  notes            CustomerNote[]
+  tags             CustomerTag[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status])
+  @@index([email])
+  @@index([company])
+}
+
+model CustomerInteraction {
+  id               String    @id @default(cuid())
+  customerId       String
+  customer         Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  type             String    // email, call, meeting, proposal, demo, etc
+  subject          String
+  notes            String?   @db.Text
+  outcome          String?   // interested, not-interested, follow-up-needed, closed
+
+  duration         Int?      // minutes (for calls/meetings)
+  participants     String[]  @default([]) // emails of participants
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([customerId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model CustomerNote {
+  id               String    @id @default(cuid())
+  customerId       String
+  customer         Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  title            String
+  content          String    @db.Text
+  priority         String    @default("normal") // low, normal, high
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([customerId])
+  @@index([priority])
+}
+
+model CustomerTag {
+  id               String    @id @default(cuid())
+  name             String    @unique
+  color            String    @default("#3b82f6")
+  customers        Customer[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+// ============ END CRM MODELS ============
+
+// ============ ERP MODELS ============
+
+model Supplier {
+  id               String    @id @default(cuid())
+  name             String
+  email            String?
+  phone            String?
+  address          String?   @db.Text
+  city             String?
+  country          String?
+  paymentTerms     String?   // net30, net60, etc
+  isActive         Boolean   @default(true)
+
+  // Relationships
+  purchaseOrders   PurchaseOrder[]
+  products         SupplierProduct[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([isActive])
+}
+
+model SupplierProduct {
+  id               String    @id @default(cuid())
+  supplierId       String
+  supplier         Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  supplierSKU      String?
+  costPrice        Float
+  minimumOrder     Int       @default(1)
+  leadTime         Int?      // days
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([supplierId, productId])
+  @@index([productId])
+}
+
+model PurchaseOrder {
+  id               String    @id @default(cuid())
+  poNumber         String    @unique
+  supplierId       String
+  supplier         Supplier  @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+
+  status           String    @default("draft") // draft, sent, received, cancelled
+  orderDate        DateTime  @default(now())
+  expectedDate     DateTime?
+  receivedDate     DateTime?
+
+  subtotal         Float     @default(0)
+  tax              Float     @default(0)
+  total            Float     @default(0)
+  notes            String?   @db.Text
+
+  items            PurchaseOrderItem[]
+  movements        InventoryMovement[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([supplierId])
+  @@index([status])
+}
+
+model PurchaseOrderItem {
+  id               String    @id @default(cuid())
+  poId             String
+  po               PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  quantity         Int
+  costPrice        Float
+  total            Float
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([poId])
+  @@index([productId])
+}
+
+model ProductStock {
+  id               String    @id @default(cuid())
+  productId        String    @unique
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity         Int       @default(0)
+  minimumStock     Int       @default(10)
+  maximumStock     Int?
+  warehouseLocation String?
+
+  lastRestockDate  DateTime?
+  lastMovementDate DateTime?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model InventoryMovement {
+  id               String    @id @default(cuid())
+  productId        String
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  type             String    // in (compra), out (venta), adjustment (ajuste), transfer (transferencia)
+  quantity         Int
+  reference        String?   // PO number, Quote number, etc
+  notes            String?   @db.Text
+
+  poId             String?
+  purchaseOrder    PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: SetNull)
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([productId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ============ END ERP MODELS ============
+
 model Product {
   id          String   @id @default(cuid())
   name        String
@@ -109,6 +343,12 @@ model Product {
   warranty    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // ERP Relationships
+  suppliers        SupplierProduct[]
+  stock            ProductStock?
+  movements        InventoryMovement[]
+  poItems          PurchaseOrderItem[]
 }
 
 model Service {
@@ -151,6 +391,12 @@ model Project {
 model Quote {
   id                 String      @id @default(cuid())
   quoteNumber        String      @unique
+
+  // Customer relationship
+  customerId         String?
+  customer           Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  // Legacy fields (for backward compatibility)
   clientName         String
   clientEmail        String?
   clientPhone        String?
@@ -170,6 +416,8 @@ model Quote {
   updatedAt          DateTime    @updatedAt
   items              QuoteItem[]
   receipts           Receipt[]
+
+  @@index([customerId])
 }
 
 model QuoteItem {

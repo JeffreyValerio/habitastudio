@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
-import { InviteUserForm } from "@/components/admin/invite-user-form";
+import { UserCreationPanel } from "@/components/admin/user-creation-panel";
 import { PendingInvitationsList } from "@/components/admin/pending-invitations-list";
 import { getPendingInvitations } from "@/app/actions/invitations";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,7 +50,7 @@ export default async function UsersPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
-          <InviteUserForm />
+          <UserCreationPanel />
         </div>
 
         <div className="lg:col-span-2">

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { deleteQuote, updateQuoteStatus, sendQuote } from "@/app/actions/quotes";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { Trash2, Edit, Send, Check, X, Clock, Download, Search, X as XIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generateQuotePDF } from "@/lib/generate-pdf";
@@ -73,11 +74,7 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta cotización?")) {
-      return;
-    }
-
+  const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
       await deleteQuote(id);
@@ -97,19 +94,37 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
     }
   };
 
-  const handleSend = async (id: string) => {
-    // Buscar la cotización para mostrar información en la confirmación
-    const quote = quotes.find((q) => q.id === id);
-    
-    // Mensaje de confirmación
-    const confirmMessage = quote
-      ? `¿Estás seguro de que deseas enviar la cotización ${quote.quoteNumber} a ${quote.clientName} (${quote.clientEmail})?\n\nSe enviará por email y se abrirá WhatsApp para compartir el PDF.`
-      : '¿Estás seguro de que deseas enviar esta cotización?\n\nSe enviará por email y se abrirá WhatsApp para compartir el PDF.';
-    
-    if (!confirm(confirmMessage)) {
-      return; // El usuario canceló
-    }
+  const handleDelete = (id: string) => {
+    toast({
+      title: "¿Eliminar cotización?",
+      description: "Esta acción no se puede deshacer.",
+      variant: "destructive",
+      action: (
+        <ToastAction altText="Confirmar eliminación" onClick={() => confirmDelete(id)}>
+          Eliminar
+        </ToastAction>
+      ),
+    });
+  };
 
+  const handleSend = (id: string) => {
+    const quote = quotes.find((q) => q.id === id);
+    const description = quote
+      ? `Enviar cotización ${quote.quoteNumber} a ${quote.clientName} (${quote.clientEmail}) por email y WhatsApp.`
+      : "Se enviará por email y se abrirá WhatsApp para compartir el PDF.";
+
+    toast({
+      title: "¿Enviar cotización?",
+      description,
+      action: (
+        <ToastAction altText="Confirmar envío" onClick={() => confirmSend(id)}>
+          Enviar
+        </ToastAction>
+      ),
+    });
+  };
+
+  const confirmSend = async (id: string) => {
     setSending(id);
     try {
       const result = await sendQuote(id);

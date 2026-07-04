@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { deleteInvitation } from "@/app/actions/invitations";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,9 +26,7 @@ export function PendingInvitationsList({
   const { toast } = useToast();
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar esta invitación?")) return;
-
+  const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
       await deleteInvitation(id);
@@ -45,6 +44,18 @@ export function PendingInvitationsList({
     } finally {
       setDeleting(null);
     }
+  };
+
+  const handleDelete = (id: string) => {
+    toast({
+      title: "¿Eliminar invitación?",
+      variant: "destructive",
+      action: (
+        <ToastAction altText="Confirmar eliminación" onClick={() => confirmDelete(id)}>
+          Eliminar
+        </ToastAction>
+      ),
+    });
   };
 
   if (invitations.length === 0) {

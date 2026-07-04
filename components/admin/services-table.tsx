@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { deleteService } from "@/app/actions/services";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { Trash2, Edit, Search, X as XIcon } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -31,11 +32,7 @@ export function ServicesTable({ services }: { services: Service[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este servicio?")) {
-      return;
-    }
-
+  const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
       await deleteService(id);
@@ -53,6 +50,19 @@ export function ServicesTable({ services }: { services: Service[] }) {
     } finally {
       setDeleting(null);
     }
+  };
+
+  const handleDelete = (id: string) => {
+    toast({
+      title: "¿Eliminar servicio?",
+      description: "Esta acción no se puede deshacer.",
+      variant: "destructive",
+      action: (
+        <ToastAction altText="Confirmar eliminación" onClick={() => confirmDelete(id)}>
+          Eliminar
+        </ToastAction>
+      ),
+    });
   };
 
   const filteredServices = useMemo(() => {

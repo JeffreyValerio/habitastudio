@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { formatCRC } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { updateCollaboratorRate } from "@/app/actions/timesheet";
+import { Eye, Pencil, Check, X, Plus, Loader2 } from "lucide-react";
 
 interface Collaborator {
   id: string;
@@ -12,6 +16,8 @@ interface Collaborator {
   email: string;
   hourlyRate: number | null;
   createdAt: Date;
+  hours?: number;
+  earned?: number;
 }
 
 export function CollaboratorsTable({
@@ -19,6 +25,43 @@ export function CollaboratorsTable({
 }: {
   collaborators: Collaborator[];
 }) {
+  const { toast } = useToast();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [rateValue, setRateValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const showEarnings = collaborators.some((c) => c.hours !== undefined);
+
+  const startEdit = (collab: Collaborator) => {
+    setEditingId(collab.id);
+    setRateValue(collab.hourlyRate ? String(collab.hourlyRate) : "");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setRateValue("");
+  };
+
+  const saveRate = async (userId: string) => {
+    const rate = parseFloat(rateValue);
+    if (isNaN(rate) || rate < 0) {
+      toast({ title: "Error", description: "Ingresa una tarifa válida", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateCollaboratorRate(userId, rate);
+      toast({ title: "Éxito", description: "Tarifa actualizada" });
+      setEditingId(null);
+      window.location.reload();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (collaborators.length === 0) {
     return (
       <Card>
@@ -38,6 +81,12 @@ export function CollaboratorsTable({
               <th className="text-left py-3 px-4 font-semibold">Nombre</th>
               <th className="text-left py-3 px-4 font-semibold">Email</th>
               <th className="text-right py-3 px-4 font-semibold">Tarifa/Hora</th>
+              {showEarnings && (
+                <>
+                  <th className="text-right py-3 px-4 font-semibold">Horas</th>
+                  <th className="text-right py-3 px-4 font-semibold">Ganado</th>
+                </>
+              )}
               <th className="text-right py-3 px-4 font-semibold">Unido</th>
               <th className="text-right py-3 px-4 font-semibold">Acciones</th>
             </tr>
@@ -50,27 +99,82 @@ export function CollaboratorsTable({
                   {collab.email}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  {collab.hourlyRate ? (
-                    <span className="font-semibold">
-                      ₡{collab.hourlyRate.toFixed(0)}/h
-                    </span>
+                  {editingId === collab.id ? (
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="text-sm text-muted-foreground">₡</span>
+                      <Input
+                        type="number"
+                        value={rateValue}
+                        onChange={(e) => setRateValue(e.target.value)}
+                        className="w-24 h-8 text-right"
+                        autoFocus
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => saveRate(collab.id)}
+                        disabled={saving}
+                      >
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 text-green-600" />}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={cancelEdit}
+                        disabled={saving}
+                      >
+                        <X className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
                   ) : (
-                    <span className="text-muted-foreground">No asignada</span>
+                    <div className="flex items-center justify-end gap-2">
+                      {collab.hourlyRate ? (
+                        <span className="font-semibold">
+                          ₡{collab.hourlyRate.toFixed(0)}/h
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">No asignada</span>
+                      )}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => startEdit(collab)}
+                        title="Editar tarifa"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   )}
                 </td>
+                {showEarnings && (
+                  <>
+                    <td className="py-3 px-4 text-right font-mono">
+                      {(collab.hours ?? 0).toFixed(1)}h
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono font-semibold text-green-600 dark:text-green-400">
+                      {formatCRC(collab.earned ?? 0)}
+                    </td>
+                  </>
+                )}
                 <td className="py-3 px-4 text-right text-sm text-muted-foreground">
                   {new Date(collab.createdAt).toLocaleDateString("es-CR")}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    asChild
-                  >
-                    <Link href={`/admin/time-management/${collab.id}`}>
-                      <Eye className="h-4 w-4" />
-                    </Link>
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="sm" asChild title="Registrar horas">
+                      <Link href={`/admin/time-management/new?userId=${collab.id}`}>
+                        <Plus className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild title="Ver detalle">
+                      <Link href={`/admin/time-management/${collab.id}`}>
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

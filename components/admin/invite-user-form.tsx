@@ -21,12 +21,14 @@ import { Loader2, Mail } from "lucide-react";
 
 const inviteSchema = z.object({
   email: z.string().email("Email inválido"),
-  role: z.enum(["admin", "moderator"]),
+  role: z.enum(["admin", "moderator", "collaborator", "taller-manager"]),
+  isCollaborator: z.boolean().default(false),
+  hourlyRate: z.string().optional(),
 });
 
 type InviteFormData = z.infer<typeof inviteSchema>;
 
-export function InviteUserForm() {
+export function InviteUserForm({ hideCard = false }: { hideCard?: boolean } = {}) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -48,7 +50,12 @@ export function InviteUserForm() {
   const onSubmit = async (data: InviteFormData) => {
     setLoading(true);
     try {
-      await inviteUser(data);
+      const payload = {
+        ...data,
+        isCollaborator: selectedRole === "collaborator" || selectedRole === "taller-manager",
+        hourlyRate: data.hourlyRate ? parseFloat(data.hourlyRate) : undefined,
+      };
+      await inviteUser(payload);
       toast({
         title: "Éxito",
         description: `Invitación enviada a ${data.email}`,
@@ -56,6 +63,7 @@ export function InviteUserForm() {
       // Reset form
       setValue("email", "");
       setValue("role", "moderator");
+      setValue("hourlyRate", "");
       window.location.reload();
     } catch (error: any) {
       toast({
@@ -68,16 +76,8 @@ export function InviteUserForm() {
     }
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5" />
-          Invitar Usuario
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+  const form = (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Email */}
           <div>
             <Label htmlFor="email">Correo Electrónico</Label>
@@ -113,12 +113,44 @@ export function InviteUserForm() {
                     <p className="text-xs text-muted-foreground">Acceso limitado</p>
                   </div>
                 </SelectItem>
+                <SelectItem value="collaborator">
+                  <div>
+                    <p className="font-medium">Colaborador</p>
+                    <p className="text-xs text-muted-foreground">Registro de horas</p>
+                  </div>
+                </SelectItem>
+                <SelectItem value="taller-manager">
+                  <div>
+                    <p className="font-medium">Jefe de Taller</p>
+                    <p className="text-xs text-muted-foreground">Aprobación de horas</p>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
             {errors.role && (
               <p className="text-sm text-red-500 mt-1">{errors.role.message}</p>
             )}
           </div>
+
+          {/* Tarifa por Hora - mostrar para colaborador y jefe de taller */}
+          {(selectedRole === "collaborator" || selectedRole === "taller-manager") && (
+            <>
+              <div>
+                <Label htmlFor="hourlyRate">Tarifa por Hora (₡)</Label>
+                <Input
+                  id="hourlyRate"
+                  type="number"
+                  placeholder="5000"
+                  step="100"
+                  {...register("hourlyRate")}
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tarifa para cálculo automático de nómina
+                </p>
+              </div>
+            </>
+          )}
 
           {/* Info */}
           <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950 text-sm text-blue-900 dark:text-blue-100">
@@ -146,8 +178,20 @@ export function InviteUserForm() {
               </>
             )}
           </Button>
-        </form>
-      </CardContent>
+    </form>
+  );
+
+  if (hideCard) return form;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Mail className="h-5 w-5" />
+          Invitar Usuario
+        </CardTitle>
+      </CardHeader>
+      <CardContent>{form}</CardContent>
     </Card>
   );
 }

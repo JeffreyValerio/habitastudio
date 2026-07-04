@@ -56,7 +56,13 @@ export default function LoginPage() {
         description: "Sesión iniciada correctamente",
       });
 
-      router.push("/admin");
+      let redirectUrl = "/admin";
+      if (result.user.role === "collaborator") {
+        redirectUrl = "/collaborator";
+      } else if (result.user.role === "taller-manager") {
+        redirectUrl = "/taller-manager";
+      }
+      router.push(redirectUrl);
       router.refresh();
     } catch (error) {
       toast({

@@ -17,11 +17,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
 import { createUpdateQuote } from "@/app/actions/quotes";
 import { getProductsForQuotes } from "@/app/actions/products";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
+import { QuoteClientSelector } from "./quote-client-selector";
+import { QuoteTemplateSelector } from "./quote-template-selector";
+import { QuotePreviewPanel } from "./quote-preview-panel";
 
 interface QuoteItem {
   id?: string;
@@ -37,6 +41,26 @@ interface ProductForQuote {
   name: string;
   price: number;
   category: string;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+}
+
+interface QuoteTemplate {
+  id: string;
+  quoteNumber: string;
+  clientName: string;
+  projectName: string;
+  total: number;
+  items: any[];
+  tax: number;
+  discount: number;
+  notes?: string;
 }
 
 const quoteFormSchema = z.object({
@@ -82,12 +106,19 @@ interface QuoteFormProps {
     images?: string[];
     items: QuoteItem[];
   };
+  recentCustomersData?: Customer[];
+  recentQuotesData?: QuoteTemplate[];
 }
 
-export function QuoteForm({ quote }: QuoteFormProps) {
+export function QuoteForm({
+  quote,
+  recentCustomersData = [],
+  recentQuotesData = [],
+}: QuoteFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"client" | "items" | "notes">("client");
   const [items, setItems] = useState<QuoteItem[]>(
     quote?.items || [
       { description: "", quantity: 1, unitPrice: 0, total: 0 },

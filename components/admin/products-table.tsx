@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { deleteProduct } from "@/app/actions/products";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { Trash2, Edit, Search, X as XIcon } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -37,11 +38,7 @@ export function ProductsTable({ products }: { products: Product[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este producto? Esta acción eliminará también la imagen asociada.")) {
-      return;
-    }
-
+  const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
       await deleteProduct(id);
@@ -60,6 +57,20 @@ export function ProductsTable({ products }: { products: Product[] }) {
       setDeleting(null);
     }
   };
+
+  const handleDelete = (id: string) => {
+    toast({
+      title: "¿Eliminar producto?",
+      description: "Esta acción eliminará también la imagen asociada.",
+      variant: "destructive",
+      action: (
+        <ToastAction altText="Confirmar eliminación" onClick={() => confirmDelete(id)}>
+          Eliminar
+        </ToastAction>
+      ),
+    });
+  };
+
 
   const filteredProducts = useMemo(() => {
     if (!searchQuery.trim()) return products;

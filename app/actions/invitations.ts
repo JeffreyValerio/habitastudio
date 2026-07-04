@@ -12,7 +12,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const inviteSchema = z.object({
   email: z.string().email("Email inválido"),
-  role: z.enum(["admin", "moderator"]).default("moderator"),
+  role: z.enum(["admin", "moderator", "collaborator", "taller-manager"]).default("moderator"),
+  isCollaborator: z.boolean().default(false),
+  hourlyRate: z.number().optional(),
 });
 
 export async function inviteUser(data: z.infer<typeof inviteSchema>) {
@@ -57,6 +59,8 @@ export async function inviteUser(data: z.infer<typeof inviteSchema>) {
       role: validated.role,
       token,
       expiresAt,
+      isCollaborator: validated.isCollaborator,
+      hourlyRate: validated.hourlyRate || null,
     },
   });
 
@@ -68,7 +72,15 @@ export async function inviteUser(data: z.infer<typeof inviteSchema>) {
       from: "Habita Studio <info@habitastudio.online>",
       to: [validated.email],
       replyTo: "info@habitastudio.online",
-      subject: `Invitación a Habita Studio - ${validated.role === "admin" ? "Administrador" : "Moderador"}`,
+      subject: `Invitación a Habita Studio - ${
+        validated.role === "admin"
+          ? "Administrador"
+          : validated.role === "collaborator"
+          ? "Colaborador"
+          : validated.role === "taller-manager"
+          ? "Jefe de Taller"
+          : "Moderador"
+      }`,
       html: `
         <!DOCTYPE html>
         <html lang="es">
@@ -90,7 +102,15 @@ export async function inviteUser(data: z.infer<typeof inviteSchema>) {
                     <td style="padding: 0 40px;">
                       <h2 style="margin: 20px 0; font-size: 24px; color: #333;">¡Bienvenido a Habita Studio!</h2>
                       <p style="margin: 15px 0; color: #666; line-height: 1.6;">
-                        Has sido invitado a unirte a nuestro equipo como <strong>${validated.role === "admin" ? "Administrador" : "Moderador"}</strong>.
+                        Has sido invitado a unirte a nuestro equipo como <strong>${
+                          validated.role === "admin"
+                            ? "Administrador"
+                            : validated.role === "collaborator"
+                            ? "Colaborador"
+                            : validated.role === "taller-manager"
+                            ? "Jefe de Taller"
+                            : "Moderador"
+                        }</strong>.
                       </p>
                       <p style="margin: 15px 0; color: #666; line-height: 1.6;">
                         Haz clic en el botón de abajo para completar tu registro:
@@ -190,6 +210,8 @@ export async function acceptInvitation(
       name: validated.name,
       password: hashedPassword,
       role: invitation.role,
+      isCollaborator: invitation.isCollaborator,
+      hourlyRate: invitation.hourlyRate || null,
     },
   });
 
@@ -200,6 +222,50 @@ export async function acceptInvitation(
   });
 
   revalidatePath("/admin");
+  return newUser;
+}
+
+const createUserSchema = z.object({
+  name: z.string().min(1, "El nombre es requerido"),
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+  role: z.enum(["admin", "moderator", "collaborator", "taller-manager"]).default("moderator"),
+  isCollaborator: z.boolean().default(false),
+  hourlyRate: z.number().optional(),
+});
+
+export async function createUserDirectly(data: z.infer<typeof createUserSchema>) {
+  const admin = await getCurrentUser();
+  if (!admin || admin.role !== "admin") {
+    throw new Error("Solo administradores pueden crear usuarios");
+  }
+
+  const validated = createUserSchema.parse(data);
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: validated.email },
+  });
+
+  if (existingUser) {
+    throw new Error("Ya existe un usuario con este correo");
+  }
+
+  const hashedPassword = await bcrypt.hash(validated.password, 10);
+
+  const newUser = await prisma.user.create({
+    data: {
+      email: validated.email,
+      name: validated.name,
+      password: hashedPassword,
+      role: validated.role,
+      isCollaborator: validated.isCollaborator,
+      hourlyRate: validated.hourlyRate || null,
+    },
+    select: { id: true, name: true, email: true, role: true, hourlyRate: true },
+  });
+
+  revalidatePath("/admin/settings/users");
+  revalidatePath("/admin/time-management");
   return newUser;
 }
 

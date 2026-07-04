@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { deleteProject } from "@/app/actions/projects";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { Trash2, Edit, Search, X as XIcon } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -35,11 +36,7 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este proyecto? Esta acción eliminará también todas las imágenes asociadas.")) {
-      return;
-    }
-
+  const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
       await deleteProject(id);
@@ -57,6 +54,19 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
     } finally {
       setDeleting(null);
     }
+  };
+
+  const handleDelete = (id: string) => {
+    toast({
+      title: "¿Eliminar proyecto?",
+      description: "Esta acción eliminará también todas las imágenes asociadas.",
+      variant: "destructive",
+      action: (
+        <ToastAction altText="Confirmar eliminación" onClick={() => confirmDelete(id)}>
+          Eliminar
+        </ToastAction>
+      ),
+    });
   };
 
   const filteredProjects = useMemo(() => {

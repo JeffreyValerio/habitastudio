@@ -516,13 +516,68 @@ export async function updateQuoteStatus(id: string, status: string) {
   }
 
   try {
-    await prisma.quote.update({
+    // Get the quote first to check if we need to create a customer
+    const quote = await prisma.quote.findUnique({
       where: { id },
-      data: { status },
     });
+
+    if (!quote) {
+      return { ok: false, message: "Cotización no encontrada" };
+    }
+
+    // If status is "accepted" and there's no customer yet, create one
+    if (status === "accepted" && !quote.customerId) {
+      let customer = null;
+
+      // Check if customer with this email already exists
+      if (quote.clientEmail) {
+        customer = await prisma.customer.findUnique({
+          where: { email: quote.clientEmail },
+        });
+      }
+
+      // If customer doesn't exist, create it
+      if (!customer) {
+        customer = await prisma.customer.create({
+          data: {
+            name: quote.clientName,
+            email: quote.clientEmail || `customer-${quote.id}@habitastudio.local`,
+            phone: quote.clientPhone || undefined,
+            address: quote.clientAddress || undefined,
+            status: "customer",
+            source: "converted_from_quote",
+            totalSpent: quote.total,
+          },
+        });
+      } else {
+        // Update existing customer
+        await prisma.customer.update({
+          where: { id: customer.id },
+          data: {
+            totalSpent: {
+              increment: quote.total,
+            },
+            status: "customer",
+          },
+        });
+      }
+
+      // Update quote with customer ID
+      await prisma.quote.update({
+        where: { id },
+        data: { status, customerId: customer.id },
+      });
+    } else {
+      // Just update status
+      await prisma.quote.update({
+        where: { id },
+        data: { status },
+      });
+    }
 
     revalidatePath("/admin/quotes");
     revalidatePath(`/admin/quotes/${id}`);
+    revalidatePath("/admin/crm");
 
     return { ok: true, message: "Estado actualizado" };
   } catch (error) {
@@ -531,5 +586,66 @@ export async function updateQuoteStatus(id: string, status: string) {
       message: "Error al actualizar el estado: " + (error as Error).message,
     };
   }
+}
+
+export async function getQuotesRevenueTrend(months: number = 12) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("No autorizado");
+  }
+
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - months);
+  startDate.setDate(1);
+
+  const quotes = await prisma.quote.findMany({
+    where: {
+      createdAt: { gte: startDate },
+    },
+    select: {
+      total: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  // Agrupar por mes
+  const monthlyData = new Map<string, { quoted: number; accepted: number }>();
+
+  quotes.forEach((quote) => {
+    const date = new Date(quote.createdAt);
+    const monthKey = date.toISOString().slice(0, 7); // YYYY-MM
+
+    if (!monthlyData.has(monthKey)) {
+      monthlyData.set(monthKey, { quoted: 0, accepted: 0 });
+    }
+
+    const data = monthlyData.get(monthKey)!;
+    data.quoted += quote.total;
+    if (quote.status === "accepted") {
+      data.accepted += quote.total;
+    }
+  });
+
+  // Convertir a array y asegurar todos los meses
+  const result = [];
+  const current = new Date(startDate);
+
+  while (current <= new Date()) {
+    const monthKey = current.toISOString().slice(0, 7);
+    const monthName = current.toLocaleString("es-CR", { month: "short", year: "2-digit" });
+    const data = monthlyData.get(monthKey);
+
+    result.push({
+      month: monthName,
+      monthKey,
+      quoted: data?.quoted || 0,
+      accepted: data?.accepted || 0,
+    });
+
+    current.setMonth(current.getMonth() + 1);
+  }
+
+  return result;
 }
 

@@ -1,5 +1,5 @@
 import { getQuote } from "@/app/actions/quotes";
-import { QuoteForm } from "@/components/admin/quote-form";
+import { QuoteFormImproved } from "@/components/admin/quote-form-improved";
 import { QuoteDownloadButton } from "@/components/admin/quote-download-button";
 import { notFound } from "next/navigation";
 
@@ -23,7 +23,7 @@ export default async function EditQuotePage({
         </h1>
         <QuoteDownloadButton quote={quote} />
       </div>
-      <QuoteForm quote={quote} />
+      <QuoteFormImproved quote={quote} />
     </div>
   );
 }
