@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -179,8 +180,8 @@ export async function acceptInvitation(
     throw new Error("Este usuario ya existe");
   }
 
-  // Hash password (usar bcrypt en producción)
-  const hashedPassword = Buffer.from(validated.password).toString("base64");
+  // Hash password con bcrypt
+  const hashedPassword = await bcrypt.hash(validated.password, 10);
 
   // Crear usuario
   const newUser = await prisma.user.create({
