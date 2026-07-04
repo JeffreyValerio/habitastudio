@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, Receipt, LogOut, Home, Users } from "lucide-react";
+import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, Receipt, LogOut, Home, Users, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -76,6 +76,28 @@ export function AdminSidebar() {
             </Link>
           );
         })}
+
+        {/* Separator */}
+        <div className="my-2 h-px bg-border" />
+
+        {/* Settings */}
+        <div className="space-y-1">
+          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
+            Configuración
+          </div>
+          <Link
+            href="/admin/settings/users"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ml-2",
+              pathname.startsWith("/admin/settings/users")
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+          >
+            <Users className="h-4 w-4" />
+            Usuarios
+          </Link>
+        </div>
       </nav>
       <div className="mt-auto p-4 border-t">
         <Button

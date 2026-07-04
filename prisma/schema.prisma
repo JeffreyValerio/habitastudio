@@ -14,9 +14,22 @@ model User {
   email     String   @unique
   name      String?
   password  String
-  role      String   @default("admin")
+  role      String   @default("moderator")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model UserInvitation {
+  id        String   @id @default(cuid())
+  email     String
+  role      String   @default("moderator")
+  token     String   @unique
+  accepted  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  updatedAt DateTime @updatedAt
+
+  @@unique([email, token])
 }
 
 model Product {
