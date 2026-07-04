@@ -64,7 +64,7 @@ export async function inviteUser(data: z.infer<typeof inviteSchema>) {
 
   try {
     await resend.emails.send({
-      from: "noreply@habitastudio.com",
+      from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
       to: validated.email,
       subject: "Invitación a Habita Studio",
       html: `
@@ -81,7 +81,7 @@ export async function inviteUser(data: z.infer<typeof inviteSchema>) {
     });
   } catch (error) {
     console.error("Error enviando email:", error);
-    // No fallar si hay error en email, pero avisar al usuario
+    throw new Error("Error al enviar el email de invitación. Verifica la configuración de Resend.");
   }
 
   revalidatePath("/admin/settings/users");
