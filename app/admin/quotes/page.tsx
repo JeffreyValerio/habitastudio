@@ -22,8 +22,8 @@ export default function QuotesPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [monthFilter, setMonthFilter] = useState(String(now.getMonth()));
-  const [yearFilter, setYearFilter] = useState(String(now.getFullYear()));
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"date" | "amount" | "number">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
