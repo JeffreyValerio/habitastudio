@@ -1,10 +1,8 @@
-import { requireAdmin } from "@/lib/auth";
 import { InviteUserForm } from "@/components/admin/invite-user-form";
 import { PendingInvitationsList } from "@/components/admin/pending-invitations-list";
 import { getPendingInvitations } from "@/app/actions/invitations";
 
 export default async function UsersPage() {
-  await requireAdmin();
   const invitations = await getPendingInvitations();
 
   return (
