@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
+import { redirect } from "next/navigation";
 
 const secretKey = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 const key = new TextEncoder().encode(secretKey);
@@ -69,6 +70,14 @@ export async function getCurrentUser() {
     select: { id: true, email: true, name: true, role: true },
   });
 
+  return user;
+}
+
+export async function requireAdmin() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    redirect("/admin/login");
+  }
   return user;
 }
 
