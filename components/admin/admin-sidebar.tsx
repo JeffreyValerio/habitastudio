@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, Receipt, LogOut, Home, Users, Settings, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, Receipt, LogOut, Home, Users, Settings, Clock, ChevronLeft, ChevronRight, FileSpreadsheet, ClipboardList, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -20,17 +20,19 @@ const navigation = [
     { name: "Clientes", href: "/admin/crm/customers", icon: Users },
   ]},
 
-  // Operaciones
-  { group: "Operaciones", items: [
+  // Ventas: cotizaciones, recibos, facturas, órdenes de trabajo
+  { group: "Ventas", items: [
     { name: "Cotizaciones", href: "/admin/quotes", icon: FileText },
     { name: "Recibos", href: "/admin/receipts", icon: Receipt },
-    { name: "Proyectos", href: "/admin/projects", icon: FolderKanban },
+    { name: "Facturas", href: "/admin/invoices", icon: FileSpreadsheet },
+    { name: "Órdenes de Trabajo", href: "/admin/work-orders", icon: ClipboardList },
   ]},
 
-  // Inventario & ERP
-  { group: "Inventario", items: [
-    { name: "Productos", href: "/admin/products", icon: Package },
+  // Página Web: lo que se muestra en el sitio público
+  { group: "Página Web", items: [
+    { name: "Proyectos", href: "/admin/projects", icon: FolderKanban },
     { name: "Servicios", href: "/admin/services", icon: Wrench },
+    { name: "Productos", href: "/admin/products", icon: Package },
   ]},
 
   // Recursos Humanos
