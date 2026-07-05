@@ -28,6 +28,24 @@ model User {
   workOrderAssignments WorkOrderAssignment[]
   workOrderExpenses    WorkOrderExpense[]
   materialMovements    MaterialMovement[]
+  rateHistory          CollaboratorRate[]
+}
+
+// Tarifa por hora vigente a partir de un mes específico (y hasta que se
+// fije una nueva). Permite variaciones de tarifa a lo largo del tiempo
+// sin perder el cálculo correcto de pagos ya generados en meses pasados.
+model CollaboratorRate {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year       Int
+  month      Int      // 1-12
+  hourlyRate Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, year, month])
+  @@index([userId])
 }
 
 model UserInvitation {

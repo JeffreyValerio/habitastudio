@@ -20,23 +20,22 @@ import { RestrictedAccess } from "@/components/admin/restricted-access";
 export default async function AdminDashboard() {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "admin") {
+  if (!user) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Resumen de métricas clave y actividad
-          </p>
         </div>
-        <RestrictedAccess message="Solo los administradores pueden ver el dashboard con métricas." />
+        <RestrictedAccess message="Inicia sesión para ver el dashboard." />
       </div>
     );
   }
 
+  const isAdmin = user.role === "admin";
+
   const [quotes, crmData] = await Promise.all([
     getQuotes(),
-    getCRMAnalytics(),
+    isAdmin ? getCRMAnalytics() : Promise.resolve(null),
   ]);
 
   // Calculate metrics
@@ -60,37 +59,41 @@ export default async function AdminDashboard() {
 
       {/* Main KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-600" />
-              Clientes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{crmData.totalCustomers}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {crmData.activeCustomers} activos
-            </p>
-          </CardContent>
-        </Card>
+        {crmData && (
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-600" />
+                  Clientes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{crmData.totalCustomers}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {crmData.activeCustomers} activos
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-green-600" />
-              Valor Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {formatCRC(crmData.totalValue)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Valor acumulado de clientes
-            </p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                  Valor Total
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {formatCRC(crmData.totalValue)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Valor acumulado de clientes
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         <Card>
           <CardHeader className="pb-2">
@@ -161,22 +164,24 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Activity className="h-4 w-4 text-blue-600" />
-              Interacciones
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {crmData.thisMonthInteractions}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Este mes
-            </p>
-          </CardContent>
-        </Card>
+        {crmData && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Activity className="h-4 w-4 text-blue-600" />
+                Interacciones
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {crmData.thisMonthInteractions}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Este mes
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Revenue Trend Chart */}
@@ -262,24 +267,26 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Stats by Source */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Clientes por Fuente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.entries(crmData.bySource).map(([source, count]) => (
-              <div
-                key={source}
-                className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg p-4 text-center"
-              >
-                <p className="text-2xl font-bold">{count}</p>
-                <p className="text-xs text-muted-foreground mt-1">{source}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {crmData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Clientes por Fuente</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(crmData.bySource).map(([source, count]) => (
+                <div
+                  key={source}
+                  className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg p-4 text-center"
+                >
+                  <p className="text-2xl font-bold">{count}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{source}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

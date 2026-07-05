@@ -15,17 +15,17 @@ const navigation = [
 
   { group: "CRM", items: [
     { name: "Clientes", href: "/admin/crm/customers", icon: Users },
-  ]},
+  ], hiddenForRoles: ["moderator"] },
 
   // Ventas: solo la etapa de cotizar
   { group: "Ventas", items: [
     { name: "Cotizaciones", href: "/admin/quotes", icon: FileText },
   ]},
 
-  // Producción: lo que usa el taller para fabricar
+  // Producción: lo que usa el taller para fabricar. Los moderadores no gestionan producción.
   { group: "Producción", items: [
     { name: "Órdenes de Trabajo", href: "/admin/work-orders", icon: ClipboardList },
-  ]},
+  ], hiddenForRoles: ["moderator"] },
 
   // Facturación: cobro, separado de vender y de fabricar
   { group: "Facturación", items: [
@@ -33,10 +33,10 @@ const navigation = [
     { name: "Facturas", href: "/admin/invoices", icon: FileSpreadsheet },
   ]},
 
-  // Inventario: materia prima y compras a proveedores
+  // Inventario: materia prima y compras a proveedores. Los moderadores no gestionan inventario.
   { group: "Inventario", items: [
     { name: "Materiales", href: "/admin/inventory", icon: Boxes },
-  ]},
+  ], hiddenForRoles: ["moderator"] },
 
   // Página Web: lo que se muestra en el sitio público
   { group: "Página Web", items: [
@@ -47,11 +47,11 @@ const navigation = [
 
   { group: "Recursos Humanos", items: [
     { name: "Tiempo & Asistencia", href: "/admin/time-management", icon: Clock },
-  ]},
+  ], hiddenForRoles: ["moderator"] },
 
   { group: "Configuración", items: [
     { name: "Usuarios", href: "/admin/settings/users", icon: Users },
-  ]},
+  ], hiddenForRoles: ["moderator"] },
 ];
 
 function isItemActive(pathname: string, item: { href: string; exact?: boolean }) {
@@ -61,17 +61,22 @@ function isItemActive(pathname: string, item: { href: string; exact?: boolean })
 }
 
 interface AdminSidebarProps {
+  role?: string | null;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }
 
-export function AdminSidebar({ collapsed = false, onToggleCollapse }: AdminSidebarProps) {
+export function AdminSidebar({ role, collapsed = false, onToggleCollapse }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
+  const visibleNavigation = navigation.filter(
+    (g) => !g.hiddenForRoles || !role || !g.hiddenForRoles.includes(role)
+  );
+
   useEffect(() => {
-    const activeGroup = navigation.find((g) =>
+    const activeGroup = visibleNavigation.find((g) =>
       g.items.some((item) => isItemActive(pathname, item))
     );
     if (activeGroup) setExpandedGroup(activeGroup.group);
@@ -117,7 +122,7 @@ export function AdminSidebar({ collapsed = false, onToggleCollapse }: AdminSideb
 
       {/* Navigation */}
       <nav className={`${collapsed ? "px-2" : "px-3"} space-y-1 flex-1 overflow-hidden py-2`}>
-        {navigation.map((group) => {
+        {visibleNavigation.map((group) => {
           const isMultiItem = group.items.length > 1;
           const isExpanded = collapsed || !isMultiItem || expandedGroup === group.group;
 

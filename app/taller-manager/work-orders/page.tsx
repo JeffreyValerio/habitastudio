@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { getActiveWorkOrders } from "@/app/actions/work-orders";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Eye, Users } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   pending: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
@@ -65,6 +67,12 @@ export default async function TallerManagerWorkOrdersPage() {
                     ))}
                   </div>
                 </div>
+                <Button variant="outline" size="sm" className="w-full" asChild>
+                  <Link href={`/taller-manager/work-orders/${wo.id}`}>
+                    <Eye className="mr-2 h-3 w-3" />
+                    Ver Detalle
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           ))}

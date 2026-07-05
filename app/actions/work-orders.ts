@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-costs";
 
 async function generateWorkOrderNumber() {
   const currentYear = new Date().getFullYear();
@@ -70,7 +71,7 @@ export async function getWorkOrders() {
     throw new Error("Solo administradores pueden ver las órdenes de trabajo");
   }
 
-  return await prisma.workOrder.findMany({
+  const workOrders = await prisma.workOrder.findMany({
     include: {
       quote: {
         select: {
@@ -86,9 +87,10 @@ export async function getWorkOrders() {
       },
       timeEntries: {
         select: {
+          entryDate: true,
           entryTime: true,
           exitTime: true,
-          user: { select: { hourlyRate: true } },
+          user: { select: { id: true, hourlyRate: true } },
         },
       },
       expenses: { select: { amount: true } },
@@ -96,6 +98,18 @@ export async function getWorkOrders() {
     },
     orderBy: { createdAt: "desc" },
   });
+
+  // Costeo de mano de obra según la tarifa vigente en el mes de cada entrada,
+  // calculado aquí porque requiere acceso a la base de datos (no se puede hacer en el cliente).
+  return await Promise.all(
+    workOrders.map(async (wo) => {
+      const laborCost = await calculateLaborCost(wo.timeEntries);
+      const expensesCost = calculateExpensesCost(wo.expenses);
+      const spent = laborCost + expensesCost;
+      const percentUsed = wo.quote.total > 0 ? Math.min((spent / wo.quote.total) * 100, 100) : 0;
+      return { ...wo, spent, percentUsed };
+    })
+  );
 }
 
 export async function getWorkOrder(id: string) {
@@ -140,9 +154,14 @@ export async function getWorkOrder(id: string) {
     throw new Error("No autorizado");
   }
 
-  // Ocultar información financiera sensible (tarifas y gastos) a roles no-admin
+  // Ocultar información financiera sensible (precios, tarifas y gastos) a roles no-admin
   return {
     ...workOrder,
+    quote: {
+      ...workOrder.quote,
+      total: 0,
+      items: workOrder.quote.items.map((item) => ({ ...item, unitPrice: 0, total: 0 })),
+    },
     expenses: [],
     timeEntries: workOrder.timeEntries.map((entry) => ({
       ...entry,
@@ -278,6 +297,21 @@ export async function getActiveWorkOrders() {
   }
 
   return [];
+}
+
+// Lista liviana de colaboradores (sin tarifas) para asignar a órdenes de trabajo.
+// Accesible también para el jefe de taller, que puede asignar equipo pero no ve precios.
+export async function getCollaboratorsForAssignment() {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
+    throw new Error("No autorizado");
+  }
+
+  return await prisma.user.findMany({
+    where: { isCollaborator: true },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: "asc" },
+  });
 }
 
 // Para el selector de "Registrar Horas" del admin: órdenes no completadas

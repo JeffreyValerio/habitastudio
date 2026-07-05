@@ -1,8 +1,10 @@
 import { getCustomer } from "@/app/actions/crm";
+import { getCurrentUser } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RestrictedAccess } from "@/components/admin/restricted-access";
 import Link from "next/link";
 import { Mail, Phone, MapPin, Building2, Briefcase, TrendingUp, MessageCircle, FileText } from "lucide-react";
 import { formatCRC } from "@/lib/utils";
@@ -14,6 +16,12 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const user = await getCurrentUser();
+
+  if (!user || user.role !== "admin") {
+    return <RestrictedAccess message="Solo los administradores pueden ver clientes." />;
+  }
+
   const customer = await getCustomer(id);
 
   if (!customer) {

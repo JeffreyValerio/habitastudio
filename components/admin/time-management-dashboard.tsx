@@ -180,7 +180,7 @@ export function TimeManagementDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <CollaboratorsTable collaborators={data} />
+          <CollaboratorsTable collaborators={data} rateYear={year} rateMonth={month} />
         )}
       </div>
     </div>

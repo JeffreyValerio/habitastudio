@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCRC } from "@/lib/utils";
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
-import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-costs";
 import { setWorkOrderDeliveryDate } from "@/app/actions/work-orders";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Eye, Users } from "lucide-react";
@@ -30,12 +29,8 @@ interface WorkOrder {
     workType: string;
     user: { id: string; name: string | null; email: string };
   }[];
-  timeEntries: {
-    entryTime: Date;
-    exitTime: Date | null;
-    user: { hourlyRate: number | null };
-  }[];
-  expenses: { amount: number }[];
+  spent: number;
+  percentUsed: number;
   _count: { timeEntries: number };
 }
 
@@ -102,9 +97,7 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
 
           <CardContent className="space-y-3">
             {(() => {
-              const spent = calculateLaborCost(wo.timeEntries) + calculateExpensesCost(wo.expenses);
-              const percent = wo.quote.total > 0 ? Math.min((spent / wo.quote.total) * 100, 100) : 0;
-              const over = spent > wo.quote.total;
+              const over = wo.spent > wo.quote.total;
               return (
                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg p-3 space-y-2">
                   <div className="flex justify-between items-baseline">
@@ -115,13 +108,13 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
                   </div>
                   <div>
                     <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>Gastado: {formatCRC(spent)}</span>
-                      <span>{percent.toFixed(0)}%</span>
+                      <span>Gastado: {formatCRC(wo.spent)}</span>
+                      <span>{wo.percentUsed.toFixed(0)}%</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-white/50 dark:bg-black/20 overflow-hidden">
                       <div
                         className={`h-full rounded-full ${over ? "bg-red-600" : "bg-blue-600"}`}
-                        style={{ width: `${percent}%` }}
+                        style={{ width: `${wo.percentUsed}%` }}
                       />
                     </div>
                   </div>

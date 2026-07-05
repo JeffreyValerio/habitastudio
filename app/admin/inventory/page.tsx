@@ -1,10 +1,25 @@
 import Link from "next/link";
 import { getMaterials } from "@/app/actions/inventory";
+import { getCurrentUser } from "@/lib/auth";
 import { MaterialsTable } from "@/components/admin/materials-table";
+import { RestrictedAccess } from "@/components/admin/restricted-access";
 import { Button } from "@/components/ui/button";
 import { Plus, Truck } from "lucide-react";
 
 export default async function InventoryPage() {
+  const user = await getCurrentUser();
+
+  if (!user || user.role !== "admin") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Materiales</h1>
+        </div>
+        <RestrictedAccess message="Solo los administradores pueden gestionar el inventario." />
+      </div>
+    );
+  }
+
   const materials = await getMaterials();
   const lowStockCount = materials.filter((m) => m.quantity <= m.minimumStock).length;
 

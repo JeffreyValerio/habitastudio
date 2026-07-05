@@ -255,6 +255,29 @@ export async function getReceiptsByQuote(quoteId: string) {
   });
 }
 
+// Cotizaciones con saldo pendiente, para el selector de "Nuevo Recibo".
+// excludeReceiptId se usa al editar un recibo, para no contar su propio
+// monto como ya pagado (si no, la cotización desaparecería de la lista).
+export async function getQuotesWithBalance(excludeReceiptId?: string) {
+  const quotes = await prisma.quote.findMany({
+    where: { status: "accepted" },
+    include: {
+      items: true,
+      receipts: { select: { id: true, amount: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return quotes
+    .map((q) => {
+      const totalPaid = q.receipts
+        .filter((r) => r.id !== excludeReceiptId)
+        .reduce((sum, r) => sum + r.amount, 0);
+      return { ...q, balance: q.total - totalPaid };
+    })
+    .filter((q) => q.balance > 0.01);
+}
+
 export async function sendReceipt(id: string) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {

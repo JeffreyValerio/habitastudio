@@ -598,7 +598,7 @@ export async function updateQuoteStatus(id: string, status: string) {
 
 export async function getQuotesRevenueTrend(months: number = 12) {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  if (!user) {
     throw new Error("No autorizado");
   }
 

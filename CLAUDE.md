@@ -27,7 +27,7 @@ There is no test runner configured.
 
 **Server Actions over API routes for mutations.** All admin CRUD (create/update/delete products, quotes, receipts, etc.) uses Next.js Server Actions (`"use server"`), not API routes. API routes only exist for auth (`/api/auth/*`), image upload (`/api/upload`), and the public contact form (`/api/contact`).
 
-**Authentication.** JWT stored in an httpOnly cookie. `lib/auth.ts` exposes `getCurrentUser()` (reads cookie + verifies JWT) and `requireAdmin()` (redirects to login if not authenticated). The admin layout (`app/admin/layout.tsx`) calls `requireAdmin()` on every render.
+**Authentication.** JWT stored in an httpOnly cookie. `lib/auth.ts` exposes `getCurrentUser()` (reads cookie + verifies JWT) and `requireAdmin()` (redirects to login if not authenticated). `app/admin/layout.tsx` only reads the current user's role (to filter the sidebar) — it does not gate access. Access control happens per-page/per-action: pages render `RestrictedAccess` for the wrong role, and Server Actions throw if the role isn't allowed. `app/taller-manager/layout.tsx` and `app/collaborator/layout.tsx` do redirect via `requireAdmin`-style role checks, since those are single-role portals.
 
 **Image management.** Images are uploaded to Cloudinary via `/api/upload`. `lib/cloudinary.ts` handles uploads and deletions. Products and projects can have a main image plus a gallery array stored as Cloudinary URLs.
 
@@ -73,4 +73,5 @@ CLOUDINARY_URL
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
 RESEND_API_KEY
 JWT_SECRET
+NEXT_PUBLIC_APP_URL   # e.g. https://habitastudio.online — required in production; email links (invitations, approvals) fall back to localhost without it
 ```

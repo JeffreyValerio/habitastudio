@@ -7,11 +7,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { updateCollaboratorRate } from "@/app/actions/timesheet";
+import { setCollaboratorRate } from "@/app/actions/collaborator-rates";
 import { Eye, Pencil, Check, X, Plus, Loader2 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 
 const ITEMS_PER_PAGE = 15;
+
+const MONTH_NAMES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
 
 interface Collaborator {
   id: string;
@@ -25,8 +30,12 @@ interface Collaborator {
 
 export function CollaboratorsTable({
   collaborators,
+  rateYear,
+  rateMonth,
 }: {
   collaborators: Collaborator[];
+  rateYear: number;
+  rateMonth: number;
 }) {
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,8 +74,8 @@ export function CollaboratorsTable({
 
     setSaving(true);
     try {
-      await updateCollaboratorRate(userId, rate);
-      toast({ title: "Éxito", description: "Tarifa actualizada" });
+      await setCollaboratorRate(userId, rateYear, rateMonth, rate);
+      toast({ title: "Éxito", description: `Tarifa fijada para ${MONTH_NAMES[rateMonth - 1]} ${rateYear} en adelante` });
       setEditingId(null);
       window.location.reload();
     } catch (error: any) {
@@ -156,7 +165,7 @@ export function CollaboratorsTable({
                         variant="ghost"
                         className="h-7 w-7"
                         onClick={() => startEdit(collab)}
-                        title="Editar tarifa"
+                        title={`Fijar tarifa desde ${MONTH_NAMES[rateMonth - 1]} ${rateYear}`}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>

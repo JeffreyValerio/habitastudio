@@ -87,6 +87,13 @@ export async function inviteUser(data: z.infer<typeof inviteSchema>) {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="color-scheme" content="light">
+          <meta name="supported-color-schemes" content="light">
+          <style>
+            @media (prefers-color-scheme: dark) {
+              .btn-accept, .btn-accept a { background-color: #000000 !important; color: #ffffff !important; }
+            }
+          </style>
         </head>
         <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
           <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px;">
@@ -117,8 +124,8 @@ export async function inviteUser(data: z.infer<typeof inviteSchema>) {
                       </p>
                       <table role="presentation" style="margin: 30px 0;">
                         <tr>
-                          <td style="background-color: #000; border-radius: 5px; padding: 0;">
-                            <a href="${inviteLink}" style="background-color: #000; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                          <td class="btn-accept" bgcolor="#000000" style="background-color: #000000 !important; border-radius: 5px; padding: 0;">
+                            <a href="${inviteLink}" style="background-color: #000000 !important; color: #ffffff !important; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
                               Aceptar Invitación
                             </a>
                           </td>

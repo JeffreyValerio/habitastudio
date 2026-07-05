@@ -12,10 +12,12 @@ export function WorkOrderControls({
   workOrderId,
   status,
   deliveryDate,
+  canEditDeliveryDate = true,
 }: {
   workOrderId: string;
   status: string;
   deliveryDate: Date | null;
+  canEditDeliveryDate?: boolean;
 }) {
   const { toast } = useToast();
   const [dateValue, setDateValue] = useState(
@@ -57,22 +59,30 @@ export function WorkOrderControls({
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="space-y-2">
         <Label>Fecha de Compromiso de Entrega</Label>
-        <div className="flex gap-2">
-          <input
-            type="date"
-            value={dateValue}
-            onChange={(e) => setDateValue(e.target.value)}
-            className="flex-1 px-3 py-2 border rounded-md bg-background text-foreground text-sm"
-          />
-          <Button onClick={handleSaveDate} disabled={savingDate} size="sm">
-            {savingDate ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {deliveryDate
-            ? "Liberada: visible para el taller."
-            : "Sin fecha: solo tú puedes ver esta orden."}
-        </p>
+        {canEditDeliveryDate ? (
+          <>
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={dateValue}
+                onChange={(e) => setDateValue(e.target.value)}
+                className="flex-1 px-3 py-2 border rounded-md bg-background text-foreground text-sm"
+              />
+              <Button onClick={handleSaveDate} disabled={savingDate} size="sm">
+                {savingDate ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {deliveryDate
+                ? "Liberada: visible para el taller."
+                : "Sin fecha: solo tú puedes ver esta orden."}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm font-medium">
+            {deliveryDate ? new Date(deliveryDate).toLocaleDateString("es-CR") : "Sin definir"}
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">

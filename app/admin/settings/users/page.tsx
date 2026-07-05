@@ -1,13 +1,13 @@
 import { getCurrentUser } from "@/lib/auth";
 import { UserCreationPanel } from "@/components/admin/user-creation-panel";
 import { PendingInvitationsList } from "@/components/admin/pending-invitations-list";
+import { UsersTable } from "@/components/admin/users-table";
 import { getPendingInvitations } from "@/app/actions/invitations";
-import { Card, CardContent } from "@/components/ui/card";
-import { Lock } from "lucide-react";
+import { getUsers } from "@/app/actions/users";
+import { RestrictedAccess } from "@/components/admin/restricted-access";
 
 export default async function UsersPage() {
   const user = await getCurrentUser();
-  const invitations = await getPendingInvitations();
 
   // Solo administradores pueden gestionar usuarios
   if (!user || user.role !== "admin") {
@@ -20,24 +20,15 @@ export default async function UsersPage() {
           </p>
         </div>
 
-        <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <Lock className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold text-orange-900 dark:text-orange-100">
-                  Acceso Restringido
-                </h3>
-                <p className="text-sm text-orange-800 dark:text-orange-200 mt-1">
-                  Solo los administradores pueden gestionar usuarios e invitaciones.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <RestrictedAccess message="Solo los administradores pueden gestionar usuarios e invitaciones." />
       </div>
     );
   }
+
+  const [invitations, users] = await Promise.all([
+    getPendingInvitations(),
+    getUsers(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -56,6 +47,11 @@ export default async function UsersPage() {
         <div className="lg:col-span-2">
           <PendingInvitationsList invitations={invitations || []} />
         </div>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-bold mb-4">Usuarios Activos</h2>
+        <UsersTable users={users} />
       </div>
     </div>
   );

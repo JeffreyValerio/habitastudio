@@ -1,7 +1,22 @@
 import { getWorkOrders } from "@/app/actions/work-orders";
+import { getCurrentUser } from "@/lib/auth";
 import { WorkOrdersGrid } from "@/components/admin/work-orders-grid";
+import { RestrictedAccess } from "@/components/admin/restricted-access";
 
 export default async function WorkOrdersPage() {
+  const user = await getCurrentUser();
+
+  if (!user || user.role !== "admin") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Órdenes de Trabajo</h1>
+        </div>
+        <RestrictedAccess message="Solo los administradores pueden ver las órdenes de trabajo." />
+      </div>
+    );
+  }
+
   const workOrders = await getWorkOrders();
 
   const pending = workOrders.filter((w) => w.status === "pending").length;

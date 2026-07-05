@@ -29,7 +29,7 @@ interface WorkOrderOption {
 
 interface CollaboratorTimeEntriesProps {
   entries: TimeEntry[];
-  hourlyRate: number | null;
+  entryRates: Record<string, number>;
   workOrders: WorkOrderOption[];
 }
 
@@ -42,7 +42,7 @@ function toTimeInputValue(date: Date) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-export function CollaboratorTimeEntries({ entries, hourlyRate, workOrders }: CollaboratorTimeEntriesProps) {
+export function CollaboratorTimeEntries({ entries, entryRates, workOrders }: CollaboratorTimeEntriesProps) {
   const { toast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -239,7 +239,7 @@ export function CollaboratorTimeEntries({ entries, hourlyRate, workOrders }: Col
                 <div className="text-right">
                   <p className="font-semibold">{hours.toFixed(1)}h</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatCRC(hours * (hourlyRate || 0))}
+                    {formatCRC(hours * (entryRates[entry.id] || 0))}
                   </p>
                 </div>
               )}

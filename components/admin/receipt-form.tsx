@@ -17,8 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createUpdateReceipt, getReceipt, getReceiptsByQuote } from "@/app/actions/receipts";
-import { getQuotes } from "@/app/actions/quotes";
+import { createUpdateReceipt, getReceipt, getReceiptsByQuote, getQuotesWithBalance } from "@/app/actions/receipts";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -111,7 +110,7 @@ export function ReceiptForm({ receipt }: ReceiptFormProps) {
   useEffect(() => {
     async function loadQuotes() {
       try {
-        const quotesData = await getQuotes();
+        const quotesData = await getQuotesWithBalance(receipt?.id);
         setQuotes(quotesData);
         
         // Si hay un recibo, encontrar la cotización correspondiente
