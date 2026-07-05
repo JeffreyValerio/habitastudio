@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: "📊" },
-  { name: "Clientes", href: "/admin/customers", icon: "👥" },
+  { name: "Clientes", href: "/admin/crm/customers", icon: "👥" },
   { name: "Cotizaciones", href: "/admin/quotes", icon: "📄" },
   { name: "Recibos", href: "/admin/receipts", icon: "🧾" },
   { name: "Productos", href: "/admin/products", icon: "📦" },

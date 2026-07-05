@@ -93,7 +93,7 @@ async function sendApprovalEmail(
   });
 }
 
-export async function clockIn(projectId?: string, description?: string) {
+export async function clockIn(workOrderId?: string, workType?: string, description?: string) {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error("Usuario no autenticado");
@@ -102,7 +102,8 @@ export async function clockIn(projectId?: string, description?: string) {
   const timeEntry = await prisma.timeEntry.create({
     data: {
       userId: user.id,
-      projectId: projectId || null,
+      workOrderId: workOrderId || null,
+      workType: workType || null,
       entryDate: new Date(),
       entryTime: new Date(),
       description: description || null,
@@ -191,7 +192,7 @@ export async function getCollaboratorHours(userId: string, year?: number, month?
       exitTime: { not: null },
     },
     include: {
-      project: { select: { title: true } },
+      workOrder: { select: { workOrderNumber: true } },
     },
     orderBy: { entryDate: "desc" },
   });
@@ -227,7 +228,7 @@ export async function getMyCurrentEntry() {
       exitTime: null,
     },
     include: {
-      project: { select: { id: true, title: true } },
+      workOrder: { select: { id: true, workOrderNumber: true } },
     },
   });
 
@@ -404,7 +405,7 @@ export async function getCollaboratorTimeEntries(userId: string) {
   return await prisma.timeEntry.findMany({
     where: { userId },
     include: {
-      project: { select: { id: true, title: true } },
+      workOrder: { select: { id: true, workOrderNumber: true } },
     },
     orderBy: { entryDate: "desc" },
   });
@@ -433,7 +434,8 @@ export async function updateCollaboratorRate(userId: string, hourlyRate: number)
 
 export async function createManualTimeEntry(input: {
   userId: string;
-  projectId?: string;
+  workOrderId?: string;
+  workType?: string;
   entryDate: string;
   entryTime: string;
   exitTime?: string;
@@ -461,7 +463,8 @@ export async function createManualTimeEntry(input: {
   const timeEntry = await prisma.timeEntry.create({
     data: {
       userId: input.userId,
-      projectId: input.projectId || null,
+      workOrderId: input.workOrderId || null,
+      workType: input.workType || null,
       entryDate: new Date(input.entryDate),
       entryTime: entryDateTime,
       exitTime: exitDateTime,
@@ -495,6 +498,48 @@ export async function createManualTimeEntry(input: {
   return timeEntry;
 }
 
+export async function updateManualTimeEntry(
+  entryId: string,
+  input: {
+    workOrderId?: string;
+    workType?: string;
+    entryDate: string;
+    entryTime: string;
+    exitTime?: string;
+    description?: string;
+  }
+) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("Solo administradores pueden editar registros");
+  }
+
+  const entryDateTime = new Date(`${input.entryDate}T${input.entryTime}`);
+  const exitDateTime = input.exitTime
+    ? new Date(`${input.entryDate}T${input.exitTime}`)
+    : null;
+
+  if (exitDateTime && exitDateTime <= entryDateTime) {
+    throw new Error("La hora de salida debe ser posterior a la hora de entrada");
+  }
+
+  const entry = await prisma.timeEntry.update({
+    where: { id: entryId },
+    data: {
+      workOrderId: input.workOrderId || null,
+      workType: input.workType || null,
+      entryDate: new Date(input.entryDate),
+      entryTime: entryDateTime,
+      exitTime: exitDateTime,
+      description: input.description || null,
+    },
+  });
+
+  revalidatePath(`/admin/time-management/${entry.userId}`);
+  revalidatePath("/admin/time-management");
+  return entry;
+}
+
 export async function deleteManualTimeEntry(entryId: string) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
@@ -522,7 +567,7 @@ export async function getPendingApprovals() {
       timeEntry: {
         include: {
           user: { select: { id: true, name: true, email: true } },
-          project: { select: { id: true, title: true } },
+          workOrder: { select: { id: true, workOrderNumber: true } },
         },
       },
     },

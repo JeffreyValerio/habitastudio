@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, TrendingUp, CheckCircle, Clock, AlertCircle, DollarSign, Filter, ArrowUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getQuotes } from "@/app/actions/quotes";
-import { QuotesGrid } from "@/components/admin/quotes-grid";
+import { QuotesTable } from "@/components/admin/quotes-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatCRC } from "@/lib/utils";
@@ -330,7 +330,7 @@ export default function QuotesPage() {
       </Card>
 
       {/* Quotes Grid */}
-      <QuotesGrid quotes={filteredQuotes} />
+      <QuotesTable quotes={filteredQuotes} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { createManualTimeEntry } from "@/app/actions/timesheet";
+import { WORK_ORDER_TYPES } from "@/lib/work-order-types";
 import { Loader2 } from "lucide-react";
 
 interface Collaborator {
@@ -17,18 +18,19 @@ interface Collaborator {
   email: string;
 }
 
-interface ProjectOption {
+interface WorkOrderOption {
   id: string;
-  title: string;
+  workOrderNumber: string;
+  quote: { clientName: string; projectName: string };
 }
 
 interface ManualTimeEntryFormProps {
   collaborators: Collaborator[];
-  projects: ProjectOption[];
+  workOrders: WorkOrderOption[];
   defaultUserId?: string;
 }
 
-export function ManualTimeEntryForm({ collaborators, projects, defaultUserId }: ManualTimeEntryFormProps) {
+export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId }: ManualTimeEntryFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,7 +38,8 @@ export function ManualTimeEntryForm({ collaborators, projects, defaultUserId }: 
   const today = new Date().toISOString().split("T")[0];
 
   const [userId, setUserId] = useState(defaultUserId || "");
-  const [projectId, setProjectId] = useState("");
+  const [workOrderId, setWorkOrderId] = useState("");
+  const [workType, setWorkType] = useState("");
   const [entryDate, setEntryDate] = useState(today);
   const [entryTime, setEntryTime] = useState("");
   const [exitTime, setExitTime] = useState("");
@@ -58,7 +61,8 @@ export function ManualTimeEntryForm({ collaborators, projects, defaultUserId }: 
     try {
       await createManualTimeEntry({
         userId,
-        projectId: projectId || undefined,
+        workOrderId: workOrderId || undefined,
+        workType: workType || undefined,
         entryDate,
         entryTime,
         exitTime: exitTime || undefined,
@@ -135,21 +139,40 @@ export function ManualTimeEntryForm({ collaborators, projects, defaultUserId }: 
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="project">Proyecto (opcional)</Label>
-            <select
-              id="project"
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-            >
-              <option value="">Sin proyecto</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="workOrder">Orden de Trabajo (opcional)</Label>
+              <select
+                id="workOrder"
+                value={workOrderId}
+                onChange={(e) => setWorkOrderId(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+              >
+                <option value="">Sin orden específica</option>
+                {workOrders.map((wo) => (
+                  <option key={wo.id} value={wo.id}>
+                    {wo.workOrderNumber} — {wo.quote.clientName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="workType">Tipo de Labor (opcional)</Label>
+              <select
+                id="workType"
+                value={workType}
+                onChange={(e) => setWorkType(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+              >
+                <option value="">Sin especificar</option>
+                {WORK_ORDER_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="space-y-2">

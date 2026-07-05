@@ -1,5 +1,5 @@
 import { getCollaborators } from "@/app/actions/timesheet";
-import { getProjects } from "@/app/actions/projects";
+import { getWorkOrdersForSelect } from "@/app/actions/work-orders";
 import { ManualTimeEntryForm } from "@/components/admin/manual-time-entry-form";
 
 export default async function NewTimeEntryPage({
@@ -8,9 +8,9 @@ export default async function NewTimeEntryPage({
   searchParams: Promise<{ userId?: string }>;
 }) {
   const { userId } = await searchParams;
-  const [collaborators, projects] = await Promise.all([
+  const [collaborators, workOrders] = await Promise.all([
     getCollaborators(),
-    getProjects(),
+    getWorkOrdersForSelect(),
   ]);
 
   return (
@@ -24,7 +24,7 @@ export default async function NewTimeEntryPage({
 
       <ManualTimeEntryForm
         collaborators={collaborators}
-        projects={projects.map((p) => ({ id: p.id, title: p.title }))}
+        workOrders={workOrders}
         defaultUserId={userId}
       />
     </div>

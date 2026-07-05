@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCollaboratorDetails, getCollaboratorTimeEntries } from "@/app/actions/timesheet";
+import { getWorkOrdersForSelect } from "@/app/actions/work-orders";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCRC } from "@/lib/utils";
@@ -19,7 +20,10 @@ export default async function CollaboratorDetailPage({
     notFound();
   }
 
-  const timeEntries = await getCollaboratorTimeEntries(id);
+  const [timeEntries, workOrders] = await Promise.all([
+    getCollaboratorTimeEntries(id),
+    getWorkOrdersForSelect(),
+  ]);
 
   // Calculate total hours
   const totalHours = timeEntries.reduce((sum, entry) => {
@@ -98,7 +102,7 @@ export default async function CollaboratorDetailPage({
           <CardTitle>Historial de Horas</CardTitle>
         </CardHeader>
         <CardContent>
-          <CollaboratorTimeEntries entries={timeEntries} hourlyRate={collaborator.hourlyRate} />
+          <CollaboratorTimeEntries entries={timeEntries} hourlyRate={collaborator.hourlyRate} workOrders={workOrders} />
         </CardContent>
       </Card>
     </div>

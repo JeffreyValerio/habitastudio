@@ -91,9 +91,9 @@ export function TimeClock({ userId }: { userId: string }) {
             <p className="text-2xl font-bold text-green-700 dark:text-green-300">
               {entryTime}
             </p>
-            {currentEntry.project && (
+            {currentEntry.workOrder && (
               <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                Proyecto: {currentEntry.project.title}
+                Orden: {currentEntry.workOrder.workOrderNumber}
               </p>
             )}
           </div>

@@ -21,10 +21,13 @@ model User {
   updatedAt       DateTime      @updatedAt
 
   // Relaciones
-  timeEntries     TimeEntry[]
-  assignments     ProjectAssignment[]
-  payrolls        Payroll[]
-  approvals       TimeApproval[]
+  timeEntries          TimeEntry[]
+  assignments          ProjectAssignment[]
+  payrolls             Payroll[]
+  approvals            TimeApproval[]
+  workOrderAssignments WorkOrderAssignment[]
+  workOrderExpenses    WorkOrderExpense[]
+  materialMovements    MaterialMovement[]
 }
 
 model UserInvitation {
@@ -43,11 +46,12 @@ model UserInvitation {
 }
 
 model TimeEntry {
-  id           String    @id @default(cuid())
+  id           String     @id @default(cuid())
   userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectId    String?
-  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workOrderId  String?
+  workOrder    WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  workType     String?    // corte, encintado, instalacion, armado
   entryDate    DateTime  // Fecha de entrada
   entryTime    DateTime  // Hora de entrada
   exitTime     DateTime? // Hora de salida
@@ -59,7 +63,7 @@ model TimeEntry {
   approvals    TimeApproval[]
 
   @@index([userId])
-  @@index([projectId])
+  @@index([workOrderId])
   @@index([entryDate])
 }
 
@@ -200,128 +204,64 @@ model CustomerTag {
 
 // ============ END CRM MODELS ============
 
-// ============ ERP MODELS ============
+// ============ INVENTARIO (materia prima) ============
 
 model Supplier {
-  id               String    @id @default(cuid())
-  name             String
-  email            String?
-  phone            String?
-  address          String?   @db.Text
-  city             String?
-  country          String?
-  paymentTerms     String?   // net30, net60, etc
-  isActive         Boolean   @default(true)
+  id           String    @id @default(cuid())
+  name         String
+  email        String?
+  phone        String?
+  address      String?   @db.Text
+  city         String?
+  country      String?
+  paymentTerms String?   // net30, net60, etc
+  isActive     Boolean   @default(true)
 
-  // Relationships
-  purchaseOrders   PurchaseOrder[]
-  products         SupplierProduct[]
+  materials    Material[]
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([isActive])
 }
 
-model SupplierProduct {
-  id               String    @id @default(cuid())
-  supplierId       String
-  supplier         Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  productId        String
-  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+model Material {
+  id           String    @id @default(cuid())
+  name         String
+  unit         String    // unidad, m2, ml, kg
+  costPerUnit  Float     @default(0)
+  quantity     Float     @default(0)
+  minimumStock Float     @default(0)
+  supplierId   String?
+  supplier     Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  notes        String?   @db.Text
 
-  supplierSKU      String?
-  costPrice        Float
-  minimumOrder     Int       @default(1)
-  leadTime         Int?      // days
+  movements    MaterialMovement[]
+  expenses     WorkOrderExpense[]
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  @@unique([supplierId, productId])
-  @@index([productId])
-}
-
-model PurchaseOrder {
-  id               String    @id @default(cuid())
-  poNumber         String    @unique
-  supplierId       String
-  supplier         Supplier  @relation(fields: [supplierId], references: [id], onDelete: Restrict)
-
-  status           String    @default("draft") // draft, sent, received, cancelled
-  orderDate        DateTime  @default(now())
-  expectedDate     DateTime?
-  receivedDate     DateTime?
-
-  subtotal         Float     @default(0)
-  tax              Float     @default(0)
-  total            Float     @default(0)
-  notes            String?   @db.Text
-
-  items            PurchaseOrderItem[]
-  movements        InventoryMovement[]
-
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([supplierId])
-  @@index([status])
 }
 
-model PurchaseOrderItem {
-  id               String    @id @default(cuid())
-  poId             String
-  po               PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
-  productId        String
-  product          Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+model MaterialMovement {
+  id         String   @id @default(cuid())
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
 
-  quantity         Int
-  costPrice        Float
-  total            Float
+  type       String   // in (compra/ajuste), out (consumo/ajuste)
+  quantity   Float
+  reference  String?  // ej. número de orden de trabajo, o "Compra manual"
+  notes      String?  @db.Text
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdBy  String
+  creator    User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
-  @@index([poId])
-  @@index([productId])
-}
+  createdAt  DateTime @default(now())
 
-model ProductStock {
-  id               String    @id @default(cuid())
-  productId        String    @unique
-  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  quantity         Int       @default(0)
-  minimumStock     Int       @default(10)
-  maximumStock     Int?
-  warehouseLocation String?
-
-  lastRestockDate  DateTime?
-  lastMovementDate DateTime?
-
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-}
-
-model InventoryMovement {
-  id               String    @id @default(cuid())
-  productId        String
-  product          Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
-
-  type             String    // in (compra), out (venta), adjustment (ajuste), transfer (transferencia)
-  quantity         Int
-  reference        String?   // PO number, Quote number, etc
-  notes            String?   @db.Text
-
-  poId             String?
-  purchaseOrder    PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: SetNull)
-
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  @@index([productId])
+  @@index([materialId])
   @@index([type])
-  @@index([createdAt])
 }
 
 // ============ END ERP MODELS ============
@@ -343,12 +283,6 @@ model Product {
   warranty    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  // ERP Relationships
-  suppliers        SupplierProduct[]
-  stock            ProductStock?
-  movements        InventoryMovement[]
-  poItems          PurchaseOrderItem[]
 }
 
 model Service {
@@ -384,7 +318,6 @@ model Project {
   updatedAt       DateTime @updatedAt
 
   // Relaciones
-  timeEntries     TimeEntry[]
   assignments     ProjectAssignment[]
 }
 
@@ -416,6 +349,7 @@ model Quote {
   updatedAt          DateTime    @updatedAt
   items              QuoteItem[]
   receipts           Receipt[]
+  workOrder          WorkOrder?
 
   @@index([customerId])
 }
@@ -461,6 +395,65 @@ model Receipt {
 }
 
 model ReceiptSequence {
+  year       Int      @id
+  lastNumber Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+}
+
+model WorkOrder {
+  id              String    @id @default(cuid())
+  workOrderNumber String    @unique
+  quoteId         String    @unique
+  quote           Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  status          String    @default("pending") // pending, in_progress, completed
+  deliveryDate    DateTime? // Fecha de compromiso de entrega; libera la orden al taller
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  assignments     WorkOrderAssignment[]
+  timeEntries     TimeEntry[]
+  expenses        WorkOrderExpense[]
+
+  @@index([status])
+}
+
+model WorkOrderExpense {
+  id          String    @id @default(cuid())
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  category    String    // materiales, transporte, mano_obra_externa, otros
+  description String
+  amount      Float
+  quantity    Float?    // cantidad usada, si el gasto viene de un material de inventario
+  materialId  String?
+  material    Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  expenseDate DateTime  @default(now())
+  createdBy   String
+  creator     User      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workOrderId])
+  @@index([materialId])
+}
+
+model WorkOrderAssignment {
+  id          String    @id @default(cuid())
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workType    String    // corte, encintado, instalacion, armado
+  createdAt   DateTime  @default(now())
+
+  @@unique([workOrderId, userId, workType])
+  @@index([userId])
+  @@index([workOrderId])
+}
+
+model WorkOrderSequence {
   year       Int      @id
   lastNumber Int      @default(0)
   updatedAt  DateTime @updatedAt

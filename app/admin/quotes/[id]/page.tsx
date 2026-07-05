@@ -1,6 +1,9 @@
+import Link from "next/link";
 import { getQuote } from "@/app/actions/quotes";
 import { QuoteFormImproved } from "@/components/admin/quote-form-improved";
 import { QuoteDownloadButton } from "@/components/admin/quote-download-button";
+import { Button } from "@/components/ui/button";
+import { ClipboardList } from "lucide-react";
 import { notFound } from "next/navigation";
 
 export default async function EditQuotePage({
@@ -21,7 +24,17 @@ export default async function EditQuotePage({
         <h1 className="text-3xl font-bold">
           Editar Cotización: {quote.quoteNumber}
         </h1>
-        <QuoteDownloadButton quote={quote} />
+        <div className="flex gap-2">
+          {quote.workOrder && (
+            <Button variant="outline" asChild>
+              <Link href={`/admin/work-orders/${quote.workOrder.id}`}>
+                <ClipboardList className="mr-2 h-4 w-4" />
+                {quote.workOrder.workOrderNumber}
+              </Link>
+            </Button>
+          )}
+          <QuoteDownloadButton quote={quote} />
+        </div>
       </div>
       <QuoteFormImproved quote={quote} />
     </div>

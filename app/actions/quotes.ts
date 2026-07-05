@@ -276,6 +276,7 @@ export async function getQuote(id: string) {
     where: { id },
     include: {
       items: true,
+      workOrder: { select: { id: true, workOrderNumber: true } },
     },
   });
 }
@@ -575,9 +576,16 @@ export async function updateQuoteStatus(id: string, status: string) {
       });
     }
 
+    // Al aceptar, generar también la orden de trabajo si aún no existe
+    if (status === "accepted") {
+      const { createWorkOrderForQuote } = await import("@/app/actions/work-orders");
+      await createWorkOrderForQuote(id);
+    }
+
     revalidatePath("/admin/quotes");
     revalidatePath(`/admin/quotes/${id}`);
     revalidatePath("/admin/crm");
+    revalidatePath("/admin/work-orders");
 
     return { ok: true, message: "Estado actualizado" };
   } catch (error) {

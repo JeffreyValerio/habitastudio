@@ -1,31 +1,41 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, Receipt, LogOut, Home, Users, Settings, Clock, ChevronLeft, ChevronRight, FileSpreadsheet, ClipboardList, Globe } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, Receipt, LogOut, Users, Clock, ChevronLeft, ChevronRight, ChevronDown, FileSpreadsheet, ClipboardList, Boxes } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 
 const navigation = [
-  // Principal
   { group: "Principal", items: [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
   ]},
 
-  // CRM
   { group: "CRM", items: [
-    { name: "CRM", href: "/admin/crm", icon: Users, exact: true },
     { name: "Clientes", href: "/admin/crm/customers", icon: Users },
   ]},
 
-  // Ventas: cotizaciones, recibos, facturas, órdenes de trabajo
+  // Ventas: solo la etapa de cotizar
   { group: "Ventas", items: [
     { name: "Cotizaciones", href: "/admin/quotes", icon: FileText },
+  ]},
+
+  // Producción: lo que usa el taller para fabricar
+  { group: "Producción", items: [
+    { name: "Órdenes de Trabajo", href: "/admin/work-orders", icon: ClipboardList },
+  ]},
+
+  // Facturación: cobro, separado de vender y de fabricar
+  { group: "Facturación", items: [
     { name: "Recibos", href: "/admin/receipts", icon: Receipt },
     { name: "Facturas", href: "/admin/invoices", icon: FileSpreadsheet },
-    { name: "Órdenes de Trabajo", href: "/admin/work-orders", icon: ClipboardList },
+  ]},
+
+  // Inventario: materia prima y compras a proveedores
+  { group: "Inventario", items: [
+    { name: "Materiales", href: "/admin/inventory", icon: Boxes },
   ]},
 
   // Página Web: lo que se muestra en el sitio público
@@ -35,11 +45,20 @@ const navigation = [
     { name: "Productos", href: "/admin/products", icon: Package },
   ]},
 
-  // Recursos Humanos
   { group: "Recursos Humanos", items: [
     { name: "Tiempo & Asistencia", href: "/admin/time-management", icon: Clock },
   ]},
+
+  { group: "Configuración", items: [
+    { name: "Usuarios", href: "/admin/settings/users", icon: Users },
+  ]},
 ];
+
+function isItemActive(pathname: string, item: { href: string; exact?: boolean }) {
+  return item.exact
+    ? pathname === item.href
+    : pathname === item.href || pathname.startsWith(item.href + "/");
+}
 
 interface AdminSidebarProps {
   collapsed?: boolean;
@@ -49,6 +68,14 @@ interface AdminSidebarProps {
 export function AdminSidebar({ collapsed = false, onToggleCollapse }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+
+  useEffect(() => {
+    const activeGroup = navigation.find((g) =>
+      g.items.some((item) => isItemActive(pathname, item))
+    );
+    if (activeGroup) setExpandedGroup(activeGroup.group);
+  }, [pathname]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -59,7 +86,6 @@ export function AdminSidebar({ collapsed = false, onToggleCollapse }: AdminSideb
     <div className="flex flex-col sticky top-0 flex-1">
       {/* Logo with Collapse Button */}
       <div className={`border-b transition-all flex-shrink-0 relative ${collapsed ? "p-3" : "p-6"}`}>
-        {/* Collapse Button - Top Right */}
         {onToggleCollapse && (
           <Button
             variant="ghost"
@@ -90,64 +116,58 @@ export function AdminSidebar({ collapsed = false, onToggleCollapse }: AdminSideb
       </div>
 
       {/* Navigation */}
-      <nav className={`${collapsed ? "px-2" : "px-3"} space-y-4 flex-1 overflow-hidden`}>
-        {navigation.map((group: any) => (
-          <div key={group.group}>
-            {!collapsed && (
-              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                {group.group}
-              </div>
-            )}
-            <div className="space-y-1">
-              {group.items.map((item: any) => {
-                const Icon = item.icon;
-                const isActive = item.exact
-                  ? pathname === item.href
-                  : pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    title={collapsed ? item.name : ""}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg transition-colors",
-                      collapsed ? "p-3 justify-center" : "px-3 py-2 text-sm font-medium",
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                    )}
+      <nav className={`${collapsed ? "px-2" : "px-3"} space-y-1 flex-1 overflow-hidden py-2`}>
+        {navigation.map((group) => {
+          const isMultiItem = group.items.length > 1;
+          const isExpanded = collapsed || !isMultiItem || expandedGroup === group.group;
+
+          return (
+            <div key={group.group}>
+              {!collapsed && (
+                isMultiItem ? (
+                  <button
+                    type="button"
+                    onClick={() => setExpandedGroup(isExpanded ? null : group.group)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
                   >
-                    <Icon className="h-4 w-4" />
-                    {!collapsed && item.name}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-
-        {!collapsed && <div className="my-2 h-px bg-border" />}
-
-        {/* Settings */}
-        {!collapsed && (
-          <div className="space-y-1">
-            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
-              Configuración
-            </div>
-            <Link
-              href="/admin/settings/users"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ml-2",
-                pathname.startsWith("/admin/settings/users")
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    {group.group}
+                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-180")} />
+                  </button>
+                ) : (
+                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {group.group}
+                  </div>
+                )
               )}
-            >
-              <Users className="h-4 w-4" />
-              Usuarios
-            </Link>
-          </div>
-        )}
+
+              {isExpanded && (
+                <div className="space-y-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isItemActive(pathname, item);
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        title={collapsed ? item.name : ""}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg transition-colors",
+                          collapsed ? "p-3 justify-center" : "px-3 py-2 text-sm font-medium",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {!collapsed && item.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       {/* Logout Button */}
@@ -166,4 +186,3 @@ export function AdminSidebar({ collapsed = false, onToggleCollapse }: AdminSideb
     </div>
   );
 }
-

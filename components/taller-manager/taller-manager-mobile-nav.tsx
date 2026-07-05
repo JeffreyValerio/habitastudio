@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 
 const navigation = [
   { name: "Dashboard", href: "/taller-manager", icon: "📊" },
+  { name: "Órdenes de Trabajo", href: "/taller-manager/work-orders", icon: "📋" },
   { name: "Aprobaciones", href: "/taller-manager/approvals", icon: "✅" },
   { name: "Perfil", href: "/taller-manager/profile", icon: "👤" },
 ];

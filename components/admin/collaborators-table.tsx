@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatCRC } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { updateCollaboratorRate } from "@/app/actions/timesheet";
 import { Eye, Pencil, Check, X, Plus, Loader2 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+
+const ITEMS_PER_PAGE = 15;
 
 interface Collaborator {
   id: string;
@@ -29,6 +32,17 @@ export function CollaboratorsTable({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rateValue, setRateValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [collaborators]);
+
+  const totalPages = Math.ceil(collaborators.length / ITEMS_PER_PAGE);
+  const paginatedCollaborators = collaborators.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const showEarnings = collaborators.some((c) => c.hours !== undefined);
 
@@ -92,7 +106,7 @@ export function CollaboratorsTable({
             </tr>
           </thead>
           <tbody>
-            {collaborators.map((collab) => (
+            {paginatedCollaborators.map((collab) => (
               <tr key={collab.id} className="border-b hover:bg-accent/50">
                 <td className="py-3 px-4">{collab.name || "Sin nombre"}</td>
                 <td className="py-3 px-4 text-sm text-muted-foreground">
@@ -181,6 +195,7 @@ export function CollaboratorsTable({
           </tbody>
         </table>
       </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </Card>
   );
 }

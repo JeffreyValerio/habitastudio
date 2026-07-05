@@ -1,10 +1,8 @@
-import { getCurrentUser } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { getActiveWorkOrders } from "@/app/actions/work-orders";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
-import { ClipboardList, Calendar } from "lucide-react";
+import { Calendar, Users } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   pending: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
@@ -12,41 +10,26 @@ const statusColors: Record<string, string> = {
   completed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
 };
 
-export default async function WorkOrdersPage() {
-  const user = await getCurrentUser();
-
-  if (!user || user.role !== "collaborator") {
-    redirect("/admin/login");
-  }
-
+export default async function TallerManagerWorkOrdersPage() {
   const workOrders = await getActiveWorkOrders();
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Órdenes de Trabajo</h1>
+        <h1 className="text-3xl font-bold">Órdenes de Trabajo Activas</h1>
         <p className="text-muted-foreground mt-2">
-          Tus órdenes de trabajo activas asignadas
+          Órdenes liberadas por administración, con fecha de compromiso de entrega
         </p>
       </div>
 
       {workOrders.length === 0 ? (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
-              Órdenes Activas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center text-muted-foreground py-12">
-            <p>No hay órdenes de trabajo asignadas</p>
-            <p className="text-sm mt-2">
-              Las órdenes de trabajo aparecerán aquí cuando el equipo te asigne una
-            </p>
+          <CardContent className="pt-12 pb-12 text-center text-muted-foreground">
+            No hay órdenes de trabajo activas por el momento
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {workOrders.map((wo: any) => (
             <Card key={wo.id}>
               <CardHeader className="pb-3">
@@ -64,15 +47,21 @@ export default async function WorkOrdersPage() {
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>Entrega: {new Date(wo.deliveryDate).toLocaleDateString("es-CR")}</span>
+                  <span>
+                    Entrega: {new Date(wo.deliveryDate).toLocaleDateString("es-CR")}
+                  </span>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Mi labor en esta orden</p>
-                  <div className="flex flex-wrap gap-1">
-                    {wo.assignments.map((a: any, idx: number) => (
-                      <Badge key={idx} variant="secondary">
-                        {WORK_ORDER_TYPE_LABELS[a.workType] || a.workType}
-                      </Badge>
+                  <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    Equipo
+                  </p>
+                  <div className="space-y-1">
+                    {wo.assignments.map((a: any) => (
+                      <div key={a.id} className="text-sm flex justify-between">
+                        <span>{a.user.name}</span>
+                        <span className="text-muted-foreground">{WORK_ORDER_TYPE_LABELS[a.workType]}</span>
+                      </div>
                     ))}
                   </div>
                 </div>

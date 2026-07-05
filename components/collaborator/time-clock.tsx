@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { clockIn, clockOut, getMyCurrentEntry } from "@/app/actions/timesheet";
+import { getMyActiveWorkOrdersForClock } from "@/app/actions/work-orders";
+import { WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, LogOut, LogIn } from "lucide-react";
 
@@ -12,10 +15,18 @@ interface TimeEntry {
   entryTime: string;
   exitTime: string | null;
   description: string | null;
-  project?: {
+  workType?: string | null;
+  workOrder?: {
     id: string;
-    title: string;
+    workOrderNumber: string;
   } | null;
+}
+
+interface WorkOrderOption {
+  id: string;
+  workOrderNumber: string;
+  quote: { clientName: string; projectName: string };
+  assignments: { workType: string }[];
 }
 
 export function TimeClock() {
@@ -24,10 +35,12 @@ export function TimeClock() {
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState<string>("0h 0m");
   const [loadingInitial, setLoadingInitial] = useState(true);
+  const [workOrders, setWorkOrders] = useState<WorkOrderOption[]>([]);
+  const [selectedOption, setSelectedOption] = useState("");
 
-  // Load current entry on mount and refresh
   useEffect(() => {
     loadCurrentEntry();
+    loadWorkOrders();
   }, []);
 
   // Update elapsed time every second
@@ -58,10 +71,27 @@ export function TimeClock() {
     }
   };
 
+  const loadWorkOrders = async () => {
+    try {
+      const data = await getMyActiveWorkOrdersForClock();
+      setWorkOrders(data);
+    } catch (error) {
+      console.error("Error loading work orders:", error);
+    }
+  };
+
+  const options = workOrders.flatMap((wo) =>
+    wo.assignments.map((a) => ({
+      value: `${wo.id}|${a.workType}`,
+      label: `${wo.workOrderNumber} · ${WORK_ORDER_TYPE_LABELS[a.workType] || a.workType} — ${wo.quote.clientName}`,
+    }))
+  );
+
   const handleClockIn = async () => {
     setLoading(true);
     try {
-      await clockIn();
+      const [workOrderId, workType] = selectedOption ? selectedOption.split("|") : [undefined, undefined];
+      await clockIn(workOrderId, workType);
       await loadCurrentEntry();
       toast({
         title: "Éxito",
@@ -121,20 +151,37 @@ export function TimeClock() {
       <CardContent>
         {!currentEntry ? (
           <div className="space-y-6">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-4">
-                No has registrado entrada hoy
-              </p>
-              <Button
-                onClick={handleClockIn}
-                disabled={loading}
-                size="lg"
-                className="w-full bg-green-600 hover:bg-green-700"
+            <div className="space-y-2">
+              <Label htmlFor="work-order-select">Orden de Trabajo (opcional)</Label>
+              <select
+                id="work-order-select"
+                value={selectedOption}
+                onChange={(e) => setSelectedOption(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md bg-background text-foreground text-sm"
               >
-                <LogIn className="mr-2 h-5 w-5" />
-                {loading ? "Registrando..." : "Entrada"}
-              </Button>
+                <option value="">Sin orden específica</option>
+                {options.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              {options.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No tienes órdenes de trabajo activas asignadas todavía
+                </p>
+              )}
             </div>
+
+            <Button
+              onClick={handleClockIn}
+              disabled={loading}
+              size="lg"
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              <LogIn className="mr-2 h-5 w-5" />
+              {loading ? "Registrando..." : "Entrada"}
+            </Button>
           </div>
         ) : (
           <div className="space-y-6">
@@ -155,10 +202,13 @@ export function TimeClock() {
                   }
                 </p>
               </div>
-              {currentEntry.project && (
+              {currentEntry.workOrder && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Proyecto</p>
-                  <p className="font-medium">{currentEntry.project.title}</p>
+                  <p className="text-xs text-muted-foreground">Orden de Trabajo</p>
+                  <p className="font-medium">
+                    {currentEntry.workOrder.workOrderNumber}
+                    {currentEntry.workType && ` · ${WORK_ORDER_TYPE_LABELS[currentEntry.workType] || currentEntry.workType}`}
+                  </p>
                 </div>
               )}
             </div>
