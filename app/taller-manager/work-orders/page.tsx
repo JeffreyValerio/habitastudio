@@ -3,8 +3,8 @@ import { getActiveWorkOrders } from "@/app/actions/work-orders";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
-import { Calendar, Eye, Users } from "lucide-react";
+import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
+import { Calendar, Eye } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   pending: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
@@ -20,7 +20,7 @@ export default async function TallerManagerWorkOrdersPage() {
       <div>
         <h1 className="text-3xl font-bold">Órdenes de Trabajo Activas</h1>
         <p className="text-muted-foreground mt-2">
-          Órdenes liberadas por administración, con fecha de compromiso de entrega
+          Todas las órdenes de trabajo en curso, liberadas o no
         </p>
       </div>
 
@@ -50,22 +50,10 @@ export default async function TallerManagerWorkOrdersPage() {
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    Entrega: {new Date(wo.deliveryDate).toLocaleDateString("es-CR")}
+                    {wo.deliveryDate
+                      ? `Entrega: ${new Date(wo.deliveryDate).toLocaleDateString("es-CR")}`
+                      : "Sin liberar todavía"}
                   </span>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    Equipo
-                  </p>
-                  <div className="space-y-1">
-                    {wo.assignments.map((a: any) => (
-                      <div key={a.id} className="text-sm flex justify-between">
-                        <span>{a.user.name}</span>
-                        <span className="text-muted-foreground">{WORK_ORDER_TYPE_LABELS[a.workType]}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
                 <Button variant="outline" size="sm" className="w-full" asChild>
                   <Link href={`/taller-manager/work-orders/${wo.id}`}>

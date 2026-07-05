@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCRC } from "@/lib/utils";
-import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
+import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
 import { setWorkOrderDeliveryDate } from "@/app/actions/work-orders";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Eye, Users } from "lucide-react";
+import { Calendar, Eye } from "lucide-react";
 
 interface WorkOrder {
   id: string;
@@ -24,11 +24,6 @@ interface WorkOrder {
     total: number;
     customer: { id: string; name: string } | null;
   };
-  assignments: {
-    id: string;
-    workType: string;
-    user: { id: string; name: string | null; email: string };
-  }[];
   spent: number;
   percentUsed: number;
   _count: { timeEntries: number };
@@ -152,26 +147,6 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
                     ? new Date(wo.deliveryDate).toLocaleDateString("es-CR")
                     : "Sin liberar — asignar fecha"}
                 </button>
-              )}
-            </div>
-
-            {/* Assignments */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                Equipo asignado
-              </p>
-              {wo.assignments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Sin asignar</p>
-              ) : (
-                <div className="space-y-1">
-                  {wo.assignments.map((a) => (
-                    <div key={a.id} className="text-sm flex justify-between">
-                      <span>{a.user.name || a.user.email}</span>
-                      <span className="text-muted-foreground">{WORK_ORDER_TYPE_LABELS[a.workType]}</span>
-                    </div>
-                  ))}
-                </div>
               )}
             </div>
 

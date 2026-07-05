@@ -24,7 +24,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { QuoteClientSelector } from "./quote-client-selector";
-import { QuoteTemplateSelector } from "./quote-template-selector";
 import { QuotePreviewPanel } from "./quote-preview-panel";
 
 interface QuoteItem {
@@ -49,18 +48,6 @@ interface Customer {
   email?: string | null;
   phone?: string | null;
   company?: string | null;
-}
-
-interface QuoteTemplate {
-  id: string;
-  quoteNumber: string;
-  clientName: string;
-  projectName: string;
-  total: number;
-  items: any[];
-  tax: number;
-  discount: number;
-  notes?: string | null;
 }
 
 const quoteFormSchema = z.object({
@@ -107,13 +94,11 @@ interface QuoteFormImprovedProps {
     items: QuoteItem[];
   };
   recentCustomersData?: Customer[];
-  recentQuotesData?: QuoteTemplate[];
 }
 
 export function QuoteFormImproved({
   quote,
   recentCustomersData = [],
-  recentQuotesData = [],
 }: QuoteFormImprovedProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -376,30 +361,11 @@ export function QuoteFormImproved({
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Main Form */}
       <form onSubmit={handleSubmit(onSubmit)} encType="multipart/form-data" className="lg:col-span-3 space-y-6">
-        {/* Quick Actions */}
-        {!quote && (
-          <Card className="p-4 border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
-            <div className="space-y-3">
-              {recentQuotesData.length > 0 && (
-                <QuoteTemplateSelector
-                  templates={recentQuotesData}
-                  onSelectTemplate={(template) => {
-                    setValue("clientName", template.clientName);
-                    setValue("projectName", template.projectName);
-                    setValue("tax", ((template.tax / (template.total - template.tax - template.discount + template.discount)) * 100).toFixed(2));
-                    setItems(template.items as QuoteItem[]);
-                  }}
-                />
-              )}
-            </div>
-          </Card>
-        )}
-
         {/* Tabs Navigation */}
         <div className="border-b flex gap-4">
           <TabButton tab="client" label="👤 Cliente" />
           <TabButton tab="items" label="📋 Items" />
-          <TabButton tab="notes" label="📝 Notas" />
+          <TabButton tab="notes" label="🖼️ Imágenes y anotaciones" />
         </div>
 
         {/* Tab: Cliente */}

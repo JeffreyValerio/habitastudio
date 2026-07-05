@@ -372,26 +372,3 @@ export async function getRecentCustomers(limit: number = 10) {
     },
   });
 }
-
-export async function getRecentQuotes(limit: number = 5) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
-    throw new Error("No autorizado");
-  }
-
-  return await prisma.quote.findMany({
-    take: limit,
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      quoteNumber: true,
-      clientName: true,
-      projectName: true,
-      total: true,
-      items: true,
-      tax: true,
-      discount: true,
-      notes: true,
-    },
-  });
-}

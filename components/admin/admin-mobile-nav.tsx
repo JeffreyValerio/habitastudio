@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, Users, FileText, Receipt, FileSpreadsheet, ClipboardList, Boxes, FolderKanban, Wrench, Package, Clock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -10,20 +10,52 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 const navigation = [
-  { name: "Dashboard", href: "/admin", icon: "📊" },
-  { name: "Clientes", href: "/admin/crm/customers", icon: "👥" },
-  { name: "Cotizaciones", href: "/admin/quotes", icon: "📄" },
-  { name: "Recibos", href: "/admin/receipts", icon: "🧾" },
-  { name: "Productos", href: "/admin/products", icon: "📦" },
-  { name: "Servicios", href: "/admin/services", icon: "🔧" },
-  { name: "Proyectos", href: "/admin/projects", icon: "🏗️" },
-  { name: "Tiempo", href: "/admin/time-management", icon: "⏱️" },
+  { group: "Principal", items: [
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
+  ]},
+  { group: "CRM", items: [
+    { name: "Clientes", href: "/admin/crm/customers", icon: Users },
+  ], hiddenForRoles: ["moderator"] },
+  { group: "Ventas", items: [
+    { name: "Cotizaciones", href: "/admin/quotes", icon: FileText },
+  ]},
+  { group: "Producción", items: [
+    { name: "Órdenes de Trabajo", href: "/admin/work-orders", icon: ClipboardList },
+  ], hiddenForRoles: ["moderator"] },
+  { group: "Facturación", items: [
+    { name: "Recibos", href: "/admin/receipts", icon: Receipt },
+    { name: "Facturas", href: "/admin/invoices", icon: FileSpreadsheet },
+  ]},
+  { group: "Inventario", items: [
+    { name: "Materiales", href: "/admin/inventory", icon: Boxes },
+  ], hiddenForRoles: ["moderator"] },
+  { group: "Página Web", items: [
+    { name: "Proyectos", href: "/admin/projects", icon: FolderKanban },
+    { name: "Servicios", href: "/admin/services", icon: Wrench },
+    { name: "Productos", href: "/admin/products", icon: Package },
+  ]},
+  { group: "Recursos Humanos", items: [
+    { name: "Tiempo & Asistencia", href: "/admin/time-management", icon: Clock },
+  ], hiddenForRoles: ["moderator"] },
+  { group: "Configuración", items: [
+    { name: "Usuarios", href: "/admin/settings/users", icon: Users },
+  ], hiddenForRoles: ["moderator"] },
 ];
 
-export function AdminMobileNav() {
+function isItemActive(pathname: string, item: { href: string; exact?: boolean }) {
+  return item.exact
+    ? pathname === item.href
+    : pathname === item.href || pathname.startsWith(item.href + "/");
+}
+
+export function AdminMobileNav({ role }: { role?: string | null }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  const visibleNavigation = navigation.filter(
+    (g) => !g.hiddenForRoles || !role || !g.hiddenForRoles.includes(role)
+  );
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -33,7 +65,7 @@ export function AdminMobileNav() {
   return (
     <>
       {/* Mobile Navbar */}
-      <nav className="md:hidden fixed top-0 left-0 right-0 h-16 bg-background border-b border-border z-40 flex items-center justify-between px-4">
+      <nav className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-background border-b border-border z-40 flex items-center justify-between px-4">
         <Link href="/admin" className="flex items-center justify-center">
           <Image
             src="/images/logo.svg"
@@ -48,7 +80,7 @@ export function AdminMobileNav() {
           variant="ghost"
           size="icon"
           onClick={() => setOpen(!open)}
-          className="md:hidden"
+          className="lg:hidden"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
@@ -57,7 +89,7 @@ export function AdminMobileNav() {
       {/* Mobile Menu Overlay */}
       {open && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-30 top-16"
+          className="lg:hidden fixed inset-0 bg-black/50 z-30 top-16"
           onClick={() => setOpen(false)}
         />
       )}
@@ -65,50 +97,40 @@ export function AdminMobileNav() {
       {/* Mobile Sidebar */}
       <div
         className={cn(
-          "md:hidden fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-muted/40 border-r border-border z-30 overflow-y-auto transition-transform duration-300",
+          "lg:hidden fixed left-0 top-16 w-72 h-[calc(100vh-4rem)] bg-background border-r border-border z-30 overflow-y-auto shadow-xl transition-transform duration-300",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="p-4 space-y-2">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )}
-              >
-                <span className="text-base">{item.icon}</span>
-                {item.name}
-              </Link>
-            );
-          })}
-
-          {/* Settings Section */}
-          <div className="my-4 border-t pt-4">
-            <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">
-              Configuración
+        <div className="p-4 space-y-4">
+          {visibleNavigation.map((group) => (
+            <div key={group.group}>
+              <div className="px-4 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                {group.group}
+              </div>
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = isItemActive(pathname, item);
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-            <Link
-              href="/admin/settings/users"
-              onClick={() => setOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ml-0",
-                pathname.startsWith("/admin/settings/users")
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              )}
-            >
-              <span>👤</span>
-              Usuarios
-            </Link>
-          </div>
+          ))}
 
           {/* Logout */}
           <div className="border-t pt-4">
@@ -120,7 +142,7 @@ export function AdminMobileNav() {
                 handleLogout();
               }}
             >
-              <span className="mr-2">🚪</span>
+              <LogOut className="mr-2 h-4 w-4" />
               Cerrar Sesión
             </Button>
           </div>

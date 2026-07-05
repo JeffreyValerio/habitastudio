@@ -121,7 +121,7 @@ export function AdminSidebar({ role, collapsed = false, onToggleCollapse }: Admi
       </div>
 
       {/* Navigation */}
-      <nav className={`${collapsed ? "px-2" : "px-3"} space-y-1 flex-1 overflow-hidden py-2`}>
+      <nav className={`${collapsed ? "px-2" : "px-3"} space-y-1 flex-1 overflow-y-auto py-2`}>
         {visibleNavigation.map((group) => {
           const isMultiItem = group.items.length > 1;
           const isExpanded = collapsed || !isMultiItem || expandedGroup === group.group;

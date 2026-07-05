@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getWorkOrder } from "@/app/actions/work-orders";
-import { getCollaborators } from "@/app/actions/timesheet";
 import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { formatCRC } from "@/lib/utils";
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
 import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-costs";
-import { WorkOrderAssignments } from "@/components/admin/work-order-assignments";
 import { WorkOrderControls } from "@/components/admin/work-order-controls";
 import { WorkOrderExpenses } from "@/components/admin/work-order-expenses";
 import { RestrictedAccess } from "@/components/admin/restricted-access";
@@ -37,10 +35,7 @@ export default async function WorkOrderDetailPage({
     );
   }
 
-  const [workOrder, collaborators] = await Promise.all([
-    getWorkOrder(id),
-    getCollaborators(),
-  ]);
+  const workOrder = await getWorkOrder(id);
 
   if (!workOrder) {
     notFound();
@@ -90,7 +85,7 @@ export default async function WorkOrderDetailPage({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Valor Cotizado</CardTitle>
@@ -105,14 +100,6 @@ export default async function WorkOrderDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{totalHours.toFixed(1)}h</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Colaboradores Asignados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{workOrder.assignments.length}</p>
           </CardContent>
         </Card>
       </div>
@@ -176,19 +163,6 @@ export default async function WorkOrderDetailPage({
             workOrderId={workOrder.id}
             status={workOrder.status}
             deliveryDate={workOrder.deliveryDate}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Equipo Asignado</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <WorkOrderAssignments
-            workOrderId={workOrder.id}
-            assignments={workOrder.assignments}
-            collaborators={collaborators}
           />
         </CardContent>
       </Card>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { clockIn, clockOut, getMyCurrentEntry } from "@/app/actions/timesheet";
 import { getMyActiveWorkOrdersForClock } from "@/app/actions/work-orders";
-import { WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
+import { WORK_ORDER_TYPES, WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,6 @@ interface WorkOrderOption {
   id: string;
   workOrderNumber: string;
   quote: { clientName: string; projectName: string };
-  assignments: { workType: string }[];
 }
 
 export function TimeClock() {
@@ -36,7 +35,8 @@ export function TimeClock() {
   const [elapsed, setElapsed] = useState<string>("0h 0m");
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [workOrders, setWorkOrders] = useState<WorkOrderOption[]>([]);
-  const [selectedOption, setSelectedOption] = useState("");
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState("");
+  const [selectedWorkType, setSelectedWorkType] = useState("");
 
   useEffect(() => {
     loadCurrentEntry();
@@ -80,18 +80,10 @@ export function TimeClock() {
     }
   };
 
-  const options = workOrders.flatMap((wo) =>
-    wo.assignments.map((a) => ({
-      value: `${wo.id}|${a.workType}`,
-      label: `${wo.workOrderNumber} · ${WORK_ORDER_TYPE_LABELS[a.workType] || a.workType} — ${wo.quote.clientName}`,
-    }))
-  );
-
   const handleClockIn = async () => {
     setLoading(true);
     try {
-      const [workOrderId, workType] = selectedOption ? selectedOption.split("|") : [undefined, undefined];
-      await clockIn(workOrderId, workType);
+      await clockIn(selectedWorkOrderId || undefined, selectedWorkType || undefined);
       await loadCurrentEntry();
       toast({
         title: "Éxito",
@@ -155,23 +147,42 @@ export function TimeClock() {
               <Label htmlFor="work-order-select">Orden de Trabajo (opcional)</Label>
               <select
                 id="work-order-select"
-                value={selectedOption}
-                onChange={(e) => setSelectedOption(e.target.value)}
+                value={selectedWorkOrderId}
+                onChange={(e) => setSelectedWorkOrderId(e.target.value)}
                 className="w-full px-3 py-2 border rounded-md bg-background text-foreground text-sm"
               >
                 <option value="">Sin orden específica</option>
-                {options.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                {workOrders.map((wo) => (
+                  <option key={wo.id} value={wo.id}>
+                    {wo.workOrderNumber} — {wo.quote.clientName}
                   </option>
                 ))}
               </select>
-              {options.length === 0 && (
+              {workOrders.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  No tienes órdenes de trabajo activas asignadas todavía
+                  No hay órdenes de trabajo activas liberadas todavía
                 </p>
               )}
             </div>
+
+            {selectedWorkOrderId && (
+              <div className="space-y-2">
+                <Label htmlFor="work-type-select">Tipo de Labor (opcional)</Label>
+                <select
+                  id="work-type-select"
+                  value={selectedWorkType}
+                  onChange={(e) => setSelectedWorkType(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md bg-background text-foreground text-sm"
+                >
+                  <option value="">Sin especificar</option>
+                  {WORK_ORDER_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <Button
               onClick={handleClockIn}

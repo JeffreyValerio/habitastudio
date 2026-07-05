@@ -8,9 +8,12 @@ import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 
 export function MainWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname.startsWith("/admin");
+  const isPortal =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/taller-manager") ||
+    pathname.startsWith("/collaborator");
 
-  if (isAdmin) {
+  if (isPortal) {
     return <>{children}</>;
   }
 

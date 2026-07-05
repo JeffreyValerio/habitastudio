@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getActiveWorkOrders } from "@/app/actions/work-orders";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
+import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
 import { ClipboardList, Calendar } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -26,7 +26,7 @@ export default async function WorkOrdersPage() {
       <div>
         <h1 className="text-3xl font-bold">Órdenes de Trabajo</h1>
         <p className="text-muted-foreground mt-2">
-          Tus órdenes de trabajo activas asignadas
+          Órdenes de trabajo activas liberadas al taller
         </p>
       </div>
 
@@ -39,9 +39,9 @@ export default async function WorkOrdersPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center text-muted-foreground py-12">
-            <p>No hay órdenes de trabajo asignadas</p>
+            <p>No hay órdenes de trabajo activas</p>
             <p className="text-sm mt-2">
-              Las órdenes de trabajo aparecerán aquí cuando el equipo te asigne una
+              Las órdenes de trabajo aparecerán aquí cuando el admin las libere al taller
             </p>
           </CardContent>
         </Card>
@@ -65,16 +65,6 @@ export default async function WorkOrdersPage() {
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>Entrega: {new Date(wo.deliveryDate).toLocaleDateString("es-CR")}</span>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Mi labor en esta orden</p>
-                  <div className="flex flex-wrap gap-1">
-                    {wo.assignments.map((a: any, idx: number) => (
-                      <Badge key={idx} variant="secondary">
-                        {WORK_ORDER_TYPE_LABELS[a.workType] || a.workType}
-                      </Badge>
-                    ))}
-                  </div>
                 </div>
               </CardContent>
             </Card>

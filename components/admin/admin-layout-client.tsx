@@ -23,15 +23,15 @@ export function AdminLayoutClient({
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Mobile Navigation */}
-      <AdminMobileNav />
+      <AdminMobileNav role={role} />
 
-      {/* Desktop Sidebar - Hidden on mobile */}
-      <div className={`hidden md:flex flex-col border-r border-border bg-muted/40 transition-all duration-300 ${collapsed ? "w-20" : "w-64"} flex-shrink-0 h-screen`}>
+      {/* Desktop Sidebar - Hidden on mobile/tablet (they use the hamburger menu) */}
+      <div className={`hidden lg:flex flex-col border-r border-border bg-muted/40 transition-all duration-300 ${collapsed ? "w-20" : "w-64"} flex-shrink-0 h-screen`}>
         <AdminSidebar role={role} collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} />
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
+      <main className="flex-1 overflow-y-auto pt-16 lg:pt-0">
         <div className="container mx-auto p-4 md:p-6">{children}</div>
       </main>
     </div>

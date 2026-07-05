@@ -82,9 +82,6 @@ export async function getWorkOrders() {
           customer: { select: { id: true, name: true } },
         },
       },
-      assignments: {
-        include: { user: { select: { id: true, name: true, email: true } } },
-      },
       timeEntries: {
         select: {
           entryDate: true,
@@ -125,9 +122,6 @@ export async function getWorkOrder(id: string) {
           items: true,
         },
       },
-      assignments: {
-        include: { user: { select: { id: true, name: true, email: true } } },
-      },
       timeEntries: {
         include: { user: { select: { id: true, name: true, hourlyRate: true } } },
         orderBy: { entryDate: "desc" },
@@ -143,13 +137,12 @@ export async function getWorkOrder(id: string) {
 
   if (user.role === "admin") return workOrder;
 
-  if (!workOrder.deliveryDate) {
-    throw new Error("Esta orden aún no ha sido liberada");
-  }
-
+  // El jefe de taller ve cualquier orden en cuanto existe; el colaborador
+  // solo una vez que el admin la libera con fecha de entrega.
   if (user.role === "collaborator") {
-    const isAssigned = workOrder.assignments.some((a) => a.userId === user.id);
-    if (!isAssigned) throw new Error("No tienes acceso a esta orden de trabajo");
+    if (!workOrder.deliveryDate) {
+      throw new Error("Esta orden aún no ha sido liberada");
+    }
   } else if (user.role !== "taller-manager") {
     throw new Error("No autorizado");
   }
@@ -209,56 +202,15 @@ export async function updateWorkOrderStatus(
   return workOrder;
 }
 
-export async function assignCollaboratorToWorkOrder(
-  workOrderId: string,
-  userId: string,
-  workType: string
-) {
-  const user = await getCurrentUser();
-  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
-    throw new Error("No autorizado");
-  }
-
-  const assignment = await prisma.workOrderAssignment.create({
-    data: { workOrderId, userId, workType },
-  });
-
-  revalidatePath(`/admin/work-orders/${workOrderId}`);
-  revalidatePath("/admin/work-orders");
-  revalidatePath("/taller-manager/work-orders");
-  revalidatePath("/collaborator/work-orders");
-  return assignment;
-}
-
-export async function removeWorkOrderAssignment(assignmentId: string) {
-  const user = await getCurrentUser();
-  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
-    throw new Error("No autorizado");
-  }
-
-  const assignment = await prisma.workOrderAssignment.delete({
-    where: { id: assignmentId },
-  });
-
-  revalidatePath(`/admin/work-orders/${assignment.workOrderId}`);
-  revalidatePath("/admin/work-orders");
-  revalidatePath("/taller-manager/work-orders");
-  revalidatePath("/collaborator/work-orders");
-  return assignment;
-}
-
-// Órdenes visibles en el panel de "activas": solo las liberadas (con fecha de entrega) y no completadas.
-// Jefe de taller ve todas; colaborador solo las suyas.
+// Órdenes visibles en el panel de "activas". El jefe de taller ve cualquier
+// orden en cuanto existe (liberada o no); el colaborador solo las liberadas.
 export async function getActiveWorkOrders() {
   const user = await getCurrentUser();
   if (!user) throw new Error("No autenticado");
 
   if (user.role === "admin" || user.role === "taller-manager") {
     return await prisma.workOrder.findMany({
-      where: {
-        deliveryDate: { not: null },
-        status: { not: "completed" },
-      },
+      where: { status: { not: "completed" } },
       include: {
         quote: {
           select: {
@@ -268,9 +220,8 @@ export async function getActiveWorkOrders() {
             customer: { select: { name: true } },
           },
         },
-        assignments: { include: { user: { select: { id: true, name: true } } } },
       },
-      orderBy: { deliveryDate: "asc" },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -279,7 +230,6 @@ export async function getActiveWorkOrders() {
       where: {
         deliveryDate: { not: null },
         status: { not: "completed" },
-        assignments: { some: { userId: user.id } },
       },
       include: {
         quote: {
@@ -290,28 +240,12 @@ export async function getActiveWorkOrders() {
             customer: { select: { name: true } },
           },
         },
-        assignments: { where: { userId: user.id }, select: { workType: true } },
       },
       orderBy: { deliveryDate: "asc" },
     });
   }
 
   return [];
-}
-
-// Lista liviana de colaboradores (sin tarifas) para asignar a órdenes de trabajo.
-// Accesible también para el jefe de taller, que puede asignar equipo pero no ve precios.
-export async function getCollaboratorsForAssignment() {
-  const user = await getCurrentUser();
-  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
-    throw new Error("No autorizado");
-  }
-
-  return await prisma.user.findMany({
-    where: { isCollaborator: true },
-    select: { id: true, name: true, email: true },
-    orderBy: { name: "asc" },
-  });
 }
 
 // Para el selector de "Registrar Horas" del admin: órdenes no completadas
@@ -332,7 +266,9 @@ export async function getWorkOrdersForSelect() {
   });
 }
 
-// Órdenes activas asignadas al colaborador logueado, para elegir al marcar entrada/salida
+// Órdenes liberadas al taller, para elegir al marcar entrada/salida.
+// Cualquier colaborador puede marcar en cualquier orden liberada, sin importar
+// quién la vaya a trabajar (ya no existe la asignación de equipo).
 export async function getMyActiveWorkOrdersForClock() {
   const user = await getCurrentUser();
   if (!user) throw new Error("No autenticado");
@@ -341,13 +277,11 @@ export async function getMyActiveWorkOrdersForClock() {
     where: {
       deliveryDate: { not: null },
       status: { not: "completed" },
-      assignments: { some: { userId: user.id } },
     },
     select: {
       id: true,
       workOrderNumber: true,
       quote: { select: { clientName: true, projectName: true } },
-      assignments: { where: { userId: user.id }, select: { workType: true } },
     },
     orderBy: { deliveryDate: "asc" },
   });

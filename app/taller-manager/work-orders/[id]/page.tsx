@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getWorkOrder, getCollaboratorsForAssignment } from "@/app/actions/work-orders";
+import { getWorkOrder } from "@/app/actions/work-orders";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
-import { WorkOrderAssignments } from "@/components/admin/work-order-assignments";
 import { WorkOrderControls } from "@/components/admin/work-order-controls";
 import { ArrowLeft } from "lucide-react";
 
@@ -15,10 +14,7 @@ export default async function TallerManagerWorkOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [workOrder, collaborators] = await Promise.all([
-    getWorkOrder(id),
-    getCollaboratorsForAssignment(),
-  ]);
+  const workOrder = await getWorkOrder(id);
 
   if (!workOrder) {
     notFound();
@@ -53,21 +49,13 @@ export default async function TallerManagerWorkOrderDetailPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Horas Registradas</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{totalHours.toFixed(1)}h</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Colaboradores Asignados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{workOrder.assignments.length}</p>
           </CardContent>
         </Card>
       </div>
@@ -82,19 +70,6 @@ export default async function TallerManagerWorkOrderDetailPage({
             status={workOrder.status}
             deliveryDate={workOrder.deliveryDate}
             canEditDeliveryDate={false}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Equipo Asignado</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <WorkOrderAssignments
-            workOrderId={workOrder.id}
-            assignments={workOrder.assignments}
-            collaborators={collaborators}
           />
         </CardContent>
       </Card>

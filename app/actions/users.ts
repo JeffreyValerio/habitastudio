@@ -118,20 +118,19 @@ export async function deleteUser(id: string) {
 
   // Evitar que se borren en cascada registros de negocio (horas, gastos,
   // movimientos de inventario) que dependen de este usuario.
-  const [timeEntries, expenses, movements, payrolls, assignments] = await Promise.all([
+  const [timeEntries, expenses, movements, payrolls] = await Promise.all([
     prisma.timeEntry.count({ where: { userId: id } }),
     prisma.workOrderExpense.count({ where: { createdBy: id } }),
     prisma.materialMovement.count({ where: { createdBy: id } }),
     prisma.payroll.count({ where: { userId: id } }),
-    prisma.workOrderAssignment.count({ where: { userId: id } }),
   ]);
 
   const hasHistory =
-    timeEntries > 0 || expenses > 0 || movements > 0 || payrolls > 0 || assignments > 0;
+    timeEntries > 0 || expenses > 0 || movements > 0 || payrolls > 0;
 
   if (hasHistory) {
     throw new Error(
-      "Este usuario tiene historial asociado (horas, gastos o asignaciones) y no se puede eliminar sin perder esos registros. Cambia su rol en su lugar si ya no debe tener acceso."
+      "Este usuario tiene historial asociado (horas, gastos u otros registros) y no se puede eliminar sin perder esos registros. Cambia su rol en su lugar si ya no debe tener acceso."
     );
   }
 
