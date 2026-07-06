@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
 import { WorkOrderControls } from "@/components/admin/work-order-controls";
 import { WorkOrderImages } from "@/components/admin/work-order-images";
+import { WorkOrderStages } from "@/components/admin/work-order-stages";
 import type { getWorkOrder } from "@/app/actions/work-orders";
 
 type WorkOrderData = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
@@ -82,6 +83,22 @@ export function TallerManagerWorkOrderDetailTabs({
                 status={workOrder.status}
                 deliveryDate={workOrder.deliveryDate}
                 canEditDeliveryDate={false}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Etapas de Producción</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WorkOrderStages
+                workOrderId={workOrder.id}
+                corteCompletedAt={workOrder.corteCompletedAt}
+                encintadoCompletedAt={workOrder.encintadoCompletedAt}
+                armadoCompletedAt={workOrder.armadoCompletedAt}
+                instaladoCompletedAt={workOrder.instaladoCompletedAt}
+                canEdit
               />
             </CardContent>
           </Card>

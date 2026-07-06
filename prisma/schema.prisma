@@ -73,6 +73,7 @@ model TimeEntry {
   entryTime    DateTime  // Hora de entrada
   exitTime     DateTime? // Hora de salida
   description  String?   // Descripción del trabajo
+  purpose      String    @default("salary") // "budget" (rebaja presupuesto de la OT, no cuenta para salario) | "salary" (cuenta para salario, no afecta presupuesto)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -429,6 +430,12 @@ model WorkOrder {
   images          String[]  @default([]) // fotos de referencia/avance, subidas por el admin
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  // Cierre por etapas de producción, en orden estricto: corte -> encintado -> armado -> instalado
+  corteCompletedAt     DateTime?
+  encintadoCompletedAt DateTime?
+  armadoCompletedAt    DateTime?
+  instaladoCompletedAt DateTime?
 
   timeEntries     TimeEntry[]
   expenses        WorkOrderExpense[]

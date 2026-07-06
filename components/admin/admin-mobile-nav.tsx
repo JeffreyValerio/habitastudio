@@ -36,7 +36,7 @@ const navigation = [
   ]},
   { group: "Recursos Humanos", items: [
     { name: "Tiempo & Asistencia", href: "/admin/time-management", icon: Clock },
-  ], hiddenForRoles: ["moderator"] },
+  ]},
   { group: "Configuración", items: [
     { name: "Usuarios", href: "/admin/settings/users", icon: Users },
   ], hiddenForRoles: ["moderator"] },

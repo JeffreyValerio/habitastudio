@@ -24,7 +24,8 @@ interface CollaboratorEarnings {
   earned: number;
 }
 
-export function TimeManagementDashboard() {
+export function TimeManagementDashboard({ role }: { role: string }) {
+  const canRegisterHours = role === "admin" || role === "moderator";
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -69,12 +70,14 @@ export function TimeManagementDashboard() {
             Administra las horas y nómina de tus colaboradores
           </p>
         </div>
-        <Button asChild size="lg">
-          <Link href="/admin/time-management/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Registrar Horas
-          </Link>
-        </Button>
+        {canRegisterHours && (
+          <Button asChild size="lg">
+            <Link href="/admin/time-management/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Registrar Horas
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -180,7 +183,7 @@ export function TimeManagementDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <CollaboratorsTable collaborators={data} rateYear={year} rateMonth={month} />
+          <CollaboratorsTable collaborators={data} rateYear={year} rateMonth={month} role={role} />
         )}
       </div>
     </div>

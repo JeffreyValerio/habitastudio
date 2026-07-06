@@ -12,6 +12,15 @@ async function requireAdmin() {
   return user;
 }
 
+// El moderador puede ver tarifas (parte de Tiempo & Asistencia) pero no gestionarlas.
+async function requireAdminOrModerator() {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+    throw new Error("No autorizado");
+  }
+  return user;
+}
+
 // Fija (o actualiza) la tarifa de un colaborador a partir de un mes específico.
 // Ese valor rige desde ese mes en adelante hasta que se fije una tarifa más reciente.
 export async function setCollaboratorRate(
@@ -50,7 +59,7 @@ export async function setCollaboratorRate(
 }
 
 export async function getCollaboratorRateHistory(userId: string) {
-  await requireAdmin();
+  await requireAdminOrModerator();
 
   return await prisma.collaboratorRate.findMany({
     where: { userId },
@@ -72,7 +81,7 @@ export async function deleteCollaboratorRate(id: string) {
 // reciente fijada en ese mes o antes; si no hay ninguna, cae al hourlyRate
 // base del usuario (compatibilidad con tarifas fijadas a la manera antigua).
 export async function getEffectiveRate(userId: string, year: number, month: number): Promise<number> {
-  await requireAdmin();
+  await requireAdminOrModerator();
 
   const rate = await prisma.collaboratorRate.findFirst({
     where: {
@@ -92,7 +101,7 @@ export async function getEffectiveRate(userId: string, year: number, month: numb
 export async function getEffectiveRatesBatch(
   requests: { userId: string; year: number; month: number }[]
 ): Promise<Record<string, number>> {
-  await requireAdmin();
+  await requireAdminOrModerator();
 
   if (requests.length === 0) return {};
 

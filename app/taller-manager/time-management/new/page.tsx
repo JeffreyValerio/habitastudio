@@ -21,6 +21,7 @@ export default async function TallerManagerNewTimeEntryPage() {
         collaborators={collaborators}
         workOrders={workOrders}
         onSuccessRedirect="/taller-manager"
+        requireWorkOrder
       />
     </div>
   );

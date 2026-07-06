@@ -25,10 +25,12 @@ export function CollaboratorRateHistory({
   userId,
   history,
   baseRate,
+  canEdit = true,
 }: {
   userId: string;
   history: RateEntry[];
   baseRate: number | null;
+  canEdit?: boolean;
 }) {
   const { toast } = useToast();
   const now = new Date();
@@ -107,51 +109,55 @@ export function CollaboratorRateHistory({
               </span>
               <div className="flex items-center gap-3">
                 <span className="font-semibold">{formatCRC(h.hourlyRate)}/h</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive"
-                  onClick={() => handleDelete(h.id)}
-                  disabled={deletingId === h.id}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive"
+                    onClick={() => handleDelete(h.id)}
+                    disabled={deletingId === h.id}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-2 pt-2 border-t">
-        <select
-          value={month}
-          onChange={(e) => setMonth(parseInt(e.target.value))}
-          className="px-3 py-2 border rounded-md bg-background text-foreground text-sm"
-        >
-          {MONTH_NAMES.map((name, idx) => (
-            <option key={idx} value={idx + 1}>{name}</option>
-          ))}
-        </select>
-        <select
-          value={year}
-          onChange={(e) => setYear(parseInt(e.target.value))}
-          className="px-3 py-2 border rounded-md bg-background text-foreground text-sm"
-        >
-          {yearOptions.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
-        <Input
-          type="number"
-          placeholder="Nueva tarifa ₡"
-          value={rate}
-          onChange={(e) => setRate(e.target.value)}
-        />
-        <Button onClick={handleAdd} disabled={saving} size="sm">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-          Fijar Tarifa
-        </Button>
-      </div>
+      {canEdit && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 pt-2 border-t">
+          <select
+            value={month}
+            onChange={(e) => setMonth(parseInt(e.target.value))}
+            className="px-3 py-2 border rounded-md bg-background text-foreground text-sm"
+          >
+            {MONTH_NAMES.map((name, idx) => (
+              <option key={idx} value={idx + 1}>{name}</option>
+            ))}
+          </select>
+          <select
+            value={year}
+            onChange={(e) => setYear(parseInt(e.target.value))}
+            className="px-3 py-2 border rounded-md bg-background text-foreground text-sm"
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <Input
+            type="number"
+            placeholder="Nueva tarifa ₡"
+            value={rate}
+            onChange={(e) => setRate(e.target.value)}
+          />
+          <Button onClick={handleAdd} disabled={saving} size="sm">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+            Fijar Tarifa
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

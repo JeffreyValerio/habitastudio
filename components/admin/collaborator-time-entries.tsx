@@ -19,6 +19,7 @@ interface TimeEntry {
   description: string | null;
   workType: string | null;
   workOrder: { id: string; workOrderNumber: string } | null;
+  purpose: string;
 }
 
 interface WorkOrderOption {
@@ -31,6 +32,7 @@ interface CollaboratorTimeEntriesProps {
   entries: TimeEntry[];
   entryRates: Record<string, number>;
   workOrders: WorkOrderOption[];
+  canEdit?: boolean;
 }
 
 function toDateInputValue(date: Date) {
@@ -42,7 +44,7 @@ function toTimeInputValue(date: Date) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-export function CollaboratorTimeEntries({ entries, entryRates, workOrders }: CollaboratorTimeEntriesProps) {
+export function CollaboratorTimeEntries({ entries, entryRates, workOrders, canEdit = true }: CollaboratorTimeEntriesProps) {
   const { toast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -206,12 +208,21 @@ export function CollaboratorTimeEntries({ entries, entryRates, workOrders }: Col
             className="flex items-center justify-between p-4 rounded-lg border"
           >
             <div className="space-y-1">
-              <p className="font-medium">
+              <p className="font-medium flex items-center gap-2 flex-wrap">
                 {new Date(entry.entryDate).toLocaleDateString("es-CR")}
                 {entry.workOrder && (
-                  <span className="ml-2 text-xs text-muted-foreground font-normal">
+                  <span className="text-xs text-muted-foreground font-normal">
                     {entry.workOrder.workOrderNumber}
                     {entry.workType && ` · ${WORK_ORDER_TYPE_LABELS[entry.workType] || entry.workType}`}
+                  </span>
+                )}
+                {entry.purpose === "salary" ? (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                    Cuenta para salario
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    Solo presupuesto (OT)
                   </span>
                 )}
               </p>
@@ -238,28 +249,34 @@ export function CollaboratorTimeEntries({ entries, entryRates, workOrders }: Col
               {entry.exitTime && (
                 <div className="text-right">
                   <p className="font-semibold">{hours.toFixed(1)}h</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatCRC(hours * (entryRates[entry.id] || 0))}
-                  </p>
+                  {entry.purpose === "salary" && (
+                    <p className="text-sm text-muted-foreground">
+                      {formatCRC(hours * (entryRates[entry.id] || 0))}
+                    </p>
+                  )}
                 </div>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => startEdit(entry)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => handleDelete(entry.id)}
-                disabled={deletingId === entry.id}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {canEdit && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => startEdit(entry)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => handleDelete(entry.id)}
+                    disabled={deletingId === entry.id}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         );

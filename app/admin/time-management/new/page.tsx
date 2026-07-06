@@ -1,4 +1,4 @@
-import { getCollaborators } from "@/app/actions/timesheet";
+import { getCollaboratorsForTimeEntry } from "@/app/actions/timesheet";
 import { getWorkOrdersForSelect } from "@/app/actions/work-orders";
 import { getCurrentUser } from "@/lib/auth";
 import { ManualTimeEntryForm } from "@/components/admin/manual-time-entry-form";
@@ -12,7 +12,7 @@ export default async function NewTimeEntryPage({
   const { userId } = await searchParams;
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "admin") {
+  if (!user || (user.role !== "admin" && user.role !== "moderator")) {
     return (
       <div className="space-y-6 max-w-2xl">
         <div>
@@ -24,7 +24,7 @@ export default async function NewTimeEntryPage({
   }
 
   const [collaborators, workOrders] = await Promise.all([
-    getCollaborators(),
+    getCollaboratorsForTimeEntry(),
     getWorkOrdersForSelect(),
   ]);
 
@@ -33,7 +33,7 @@ export default async function NewTimeEntryPage({
       <div>
         <h1 className="text-3xl font-bold">Registrar Horas</h1>
         <p className="text-muted-foreground mt-2">
-          Elige un colaborador y registra sus horas de entrada y salida
+          Elige un colaborador y registra sus horas de asistencia (cuentan para salario)
         </p>
       </div>
 
@@ -41,6 +41,7 @@ export default async function NewTimeEntryPage({
         collaborators={collaborators}
         workOrders={workOrders}
         defaultUserId={userId}
+        requireWorkOrder={false}
       />
     </div>
   );

@@ -16,6 +16,7 @@ export async function getCollaboratorHours(userId: string, year?: number, month?
   const entries = await prisma.timeEntry.findMany({
     where: {
       userId,
+      purpose: "salary",
       entryDate: {
         gte: startDate,
         lte: endDate,
@@ -65,7 +66,7 @@ export async function getCollaborators() {
 // Accesible también para el jefe de taller, que registra horas pero no ve precios.
 export async function getCollaboratorsForTimeEntry() {
   const user = await getCurrentUser();
-  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
+  if (!user || (user.role !== "admin" && user.role !== "taller-manager" && user.role !== "moderator")) {
     throw new Error("No autorizado");
   }
 
@@ -103,8 +104,8 @@ export async function getCollaboratorsWithEarnings(params: {
   quincena?: 1 | 2;
 }) {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden ver colaboradores");
+  if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+    throw new Error("No autorizado para ver colaboradores");
   }
 
   const collaborators = await prisma.user.findMany({
@@ -117,6 +118,7 @@ export async function getCollaboratorsWithEarnings(params: {
   const entries = await prisma.timeEntry.findMany({
     where: {
       userId: { in: collaborators.map((c) => c.id) },
+      purpose: "salary",
       entryDate: { gte: start, lte: end },
       exitTime: { not: null },
     },
@@ -204,8 +206,8 @@ export async function calculatePayroll(userId: string, year: number, month: numb
 
 export async function getCollaboratorDetails(userId: string) {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden ver detalles");
+  if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+    throw new Error("No autorizado para ver detalles");
   }
 
   return await prisma.user.findUnique({
@@ -222,8 +224,8 @@ export async function getCollaboratorDetails(userId: string) {
 
 export async function getCollaboratorTimeEntries(userId: string) {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden ver registros");
+  if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+    throw new Error("No autorizado para ver registros");
   }
 
   return await prisma.timeEntry.findMany({
@@ -258,23 +260,31 @@ export async function updateCollaboratorRate(userId: string, hourlyRate: number)
 
 export async function createManualTimeEntry(input: {
   userId: string;
-  workOrderId: string;
-  workType: string;
+  workOrderId?: string;
+  workType?: string;
   entryDate: string;
   entryTime: string;
   exitTime?: string;
   description?: string;
 }) {
   const user = await getCurrentUser();
-  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
+  if (!user || (user.role !== "admin" && user.role !== "taller-manager" && user.role !== "moderator")) {
     throw new Error("No autorizado para registrar horas manualmente");
   }
 
-  if (!input.workOrderId) {
-    throw new Error("Debes seleccionar una orden de trabajo");
-  }
-  if (!input.workType) {
-    throw new Error("Debes seleccionar un tipo de labor");
+  // El jefe de taller siempre registra horas de producción contra una orden de
+  // trabajo (rebajan presupuesto, no cuentan para salario). Admin/moderador
+  // registran horas de asistencia para nómina, sin necesidad de una orden.
+  const isTallerManager = user.role === "taller-manager";
+  const purpose = isTallerManager ? "budget" : "salary";
+
+  if (isTallerManager) {
+    if (!input.workOrderId) {
+      throw new Error("Debes seleccionar una orden de trabajo");
+    }
+    if (!input.workType) {
+      throw new Error("Debes seleccionar un tipo de labor");
+    }
   }
 
   const collaborator = await prisma.user.findUnique({ where: { id: input.userId } });
@@ -294,12 +304,13 @@ export async function createManualTimeEntry(input: {
   const timeEntry = await prisma.timeEntry.create({
     data: {
       userId: input.userId,
-      workOrderId: input.workOrderId,
-      workType: input.workType,
+      workOrderId: input.workOrderId || null,
+      workType: input.workType || null,
       entryDate: new Date(input.entryDate),
       entryTime: entryDateTime,
       exitTime: exitDateTime,
       description: input.description || null,
+      purpose,
     },
   });
 

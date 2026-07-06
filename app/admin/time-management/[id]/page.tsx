@@ -20,7 +20,7 @@ export default async function CollaboratorDetailPage({
   const { id } = await params;
   const currentUser = await getCurrentUser();
 
-  if (!currentUser || currentUser.role !== "admin") {
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "moderator")) {
     return <RestrictedAccess message="Solo los administradores pueden ver la gestión de tiempo." />;
   }
 
@@ -32,7 +32,7 @@ export default async function CollaboratorDetailPage({
 
   const [timeEntries, workOrders, rateHistory] = await Promise.all([
     getCollaboratorTimeEntries(id),
-    getWorkOrdersForSelect(),
+    currentUser.role === "admin" ? getWorkOrdersForSelect() : Promise.resolve([]),
     getCollaboratorRateHistory(id),
   ]);
 
@@ -54,11 +54,13 @@ export default async function CollaboratorDetailPage({
     return ratesByPeriod[key] ?? collaborator.hourlyRate ?? 0;
   };
 
-  // Calcular horas totales y salario estimado usando la tarifa vigente de cada mes
+  // Calcular horas totales y salario estimado usando la tarifa vigente de cada mes.
+  // Solo cuentan las horas de "asistencia" (purpose = salary); las horas registradas
+  // contra una orden de trabajo rebajan presupuesto pero no forman parte del salario.
   let totalHours = 0;
   let estimatedSalary = 0;
   timeEntries.forEach((entry) => {
-    if (entry.exitTime) {
+    if (entry.exitTime && entry.purpose === "salary") {
       const diffMs = new Date(entry.exitTime).getTime() - new Date(entry.entryTime).getTime();
       const hours = diffMs / (1000 * 60 * 60);
       totalHours += hours;
@@ -79,12 +81,14 @@ export default async function CollaboratorDetailPage({
           <h1 className="text-3xl font-bold">{collaborator.name || "Sin nombre"}</h1>
           <p className="text-muted-foreground mt-2">{collaborator.email}</p>
         </div>
-        <Button asChild size="lg">
-          <Link href={`/admin/time-management/new?userId=${collaborator.id}`}>
-            <Plus className="mr-2 h-4 w-4" />
-            Registrar Horas
-          </Link>
-        </Button>
+        {(currentUser.role === "admin" || currentUser.role === "moderator") && (
+          <Button asChild size="lg">
+            <Link href={`/admin/time-management/new?userId=${collaborator.id}`}>
+              <Plus className="mr-2 h-4 w-4" />
+              Registrar Horas
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Stats */}
@@ -108,11 +112,12 @@ export default async function CollaboratorDetailPage({
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Total Horas
+              Horas de Asistencia
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{totalHours.toFixed(1)}h</p>
+            <p className="text-xs text-muted-foreground mt-1">Cuentan para salario</p>
           </CardContent>
         </Card>
 
@@ -139,6 +144,7 @@ export default async function CollaboratorDetailPage({
             userId={collaborator.id}
             history={rateHistory}
             baseRate={collaborator.hourlyRate}
+            canEdit={currentUser.role === "admin"}
           />
         </CardContent>
       </Card>
@@ -149,7 +155,12 @@ export default async function CollaboratorDetailPage({
           <CardTitle>Historial de Horas</CardTitle>
         </CardHeader>
         <CardContent>
-          <CollaboratorTimeEntries entries={timeEntries} entryRates={entryRates} workOrders={workOrders} />
+          <CollaboratorTimeEntries
+            entries={timeEntries}
+            entryRates={entryRates}
+            workOrders={workOrders}
+            canEdit={currentUser.role === "admin"}
+          />
         </CardContent>
       </Card>
     </div>

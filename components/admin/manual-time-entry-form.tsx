@@ -29,9 +29,16 @@ interface ManualTimeEntryFormProps {
   workOrders: WorkOrderOption[];
   defaultUserId?: string;
   onSuccessRedirect?: string;
+  requireWorkOrder?: boolean;
 }
 
-export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId, onSuccessRedirect }: ManualTimeEntryFormProps) {
+export function ManualTimeEntryForm({
+  collaborators,
+  workOrders,
+  defaultUserId,
+  onSuccessRedirect,
+  requireWorkOrder = false,
+}: ManualTimeEntryFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,11 +64,11 @@ export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId, 
       toast({ title: "Error", description: "Ingresa la hora de entrada", variant: "destructive" });
       return;
     }
-    if (!workOrderId) {
+    if (requireWorkOrder && !workOrderId) {
       toast({ title: "Error", description: "Selecciona una orden de trabajo", variant: "destructive" });
       return;
     }
-    if (!workType) {
+    if (requireWorkOrder && !workType) {
       toast({ title: "Error", description: "Selecciona un tipo de labor", variant: "destructive" });
       return;
     }
@@ -70,8 +77,8 @@ export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId, 
     try {
       await createManualTimeEntry({
         userId,
-        workOrderId,
-        workType,
+        workOrderId: workOrderId || undefined,
+        workType: workType || undefined,
         entryDate,
         entryTime,
         exitTime: exitTime || undefined,
@@ -150,15 +157,17 @@ export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId, 
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="workOrder">Orden de Trabajo *</Label>
+              <Label htmlFor="workOrder">Orden de Trabajo {requireWorkOrder ? "*" : "(opcional)"}</Label>
               <select
                 id="workOrder"
                 value={workOrderId}
                 onChange={(e) => setWorkOrderId(e.target.value)}
                 className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-                required
+                required={requireWorkOrder}
               >
-                <option value="">Selecciona una orden de trabajo</option>
+                <option value="">
+                  {requireWorkOrder ? "Selecciona una orden de trabajo" : "Sin orden específica"}
+                </option>
                 {workOrders.map((wo) => (
                   <option key={wo.id} value={wo.id}>
                     {wo.workOrderNumber} — {wo.quote.clientName}
@@ -168,15 +177,15 @@ export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId, 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="workType">Tipo de Labor *</Label>
+              <Label htmlFor="workType">Tipo de Labor {requireWorkOrder ? "*" : "(opcional)"}</Label>
               <select
                 id="workType"
                 value={workType}
                 onChange={(e) => setWorkType(e.target.value)}
                 className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-                required
+                required={requireWorkOrder}
               >
-                <option value="">Selecciona un tipo de labor</option>
+                <option value="">Sin especificar</option>
                 {WORK_ORDER_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>
                     {t.label}
@@ -185,6 +194,12 @@ export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId, 
               </select>
             </div>
           </div>
+
+          <p className="text-xs text-muted-foreground -mt-2">
+            {requireWorkOrder
+              ? "Estas horas rebajan el presupuesto de la orden de trabajo. No cuentan para el salario del colaborador."
+              : "Estas horas son de asistencia y cuentan para el salario del colaborador. No afectan el presupuesto de ninguna orden de trabajo."}
+          </p>
 
           <div className="space-y-2">
             <Label htmlFor="description">Descripción (opcional)</Label>

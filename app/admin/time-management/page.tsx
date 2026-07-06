@@ -5,7 +5,7 @@ import { RestrictedAccess } from "@/components/admin/restricted-access";
 export default async function TimeManagementPage() {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "admin") {
+  if (!user || (user.role !== "admin" && user.role !== "moderator")) {
     return (
       <div className="space-y-6">
         <div>
@@ -16,5 +16,5 @@ export default async function TimeManagementPage() {
     );
   }
 
-  return <TimeManagementDashboard />;
+  return <TimeManagementDashboard role={user.role} />;
 }

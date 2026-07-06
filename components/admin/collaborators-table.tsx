@@ -32,11 +32,15 @@ export function CollaboratorsTable({
   collaborators,
   rateYear,
   rateMonth,
+  role,
 }: {
   collaborators: Collaborator[];
   rateYear: number;
   rateMonth: number;
+  role: string;
 }) {
+  const canManageRates = role === "admin";
+  const canRegisterHours = role === "admin" || role === "moderator";
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rateValue, setRateValue] = useState("");
@@ -160,15 +164,17 @@ export function CollaboratorsTable({
                       ) : (
                         <span className="text-muted-foreground">No asignada</span>
                       )}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        onClick={() => startEdit(collab)}
-                        title={`Fijar tarifa desde ${MONTH_NAMES[rateMonth - 1]} ${rateYear}`}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
+                      {canManageRates && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => startEdit(collab)}
+                          title={`Fijar tarifa desde ${MONTH_NAMES[rateMonth - 1]} ${rateYear}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   )}
                 </td>
@@ -187,11 +193,13 @@ export function CollaboratorsTable({
                 </td>
                 <td className="py-3 px-4 text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="sm" asChild title="Registrar horas">
-                      <Link href={`/admin/time-management/new?userId=${collab.id}`}>
-                        <Plus className="h-4 w-4" />
-                      </Link>
-                    </Button>
+                    {canRegisterHours && (
+                      <Button variant="ghost" size="sm" asChild title="Registrar horas">
+                        <Link href={`/admin/time-management/new?userId=${collab.id}`}>
+                          <Plus className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" asChild title="Ver detalle">
                       <Link href={`/admin/time-management/${collab.id}`}>
                         <Eye className="h-4 w-4" />

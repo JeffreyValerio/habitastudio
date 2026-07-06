@@ -17,6 +17,21 @@ export const WORK_ORDER_STATUS_LABELS: Record<string, string> = {
   completed: "Completada",
 };
 
+// Etapas de cierre de producción de una orden de trabajo, en orden estricto:
+// no se puede marcar una etapa sin haber completado todas las anteriores.
+export const WORK_ORDER_STAGES = [
+  { key: "corte", label: "Corte", field: "corteCompletedAt" },
+  { key: "encintado", label: "Encintado", field: "encintadoCompletedAt" },
+  { key: "armado", label: "Armado", field: "armadoCompletedAt" },
+  { key: "instalado", label: "Instalado", field: "instaladoCompletedAt" },
+] as const;
+
+export type WorkOrderStage = (typeof WORK_ORDER_STAGES)[number]["key"];
+
+export const WORK_ORDER_STAGE_LABELS: Record<string, string> = Object.fromEntries(
+  WORK_ORDER_STAGES.map((s) => [s.key, s.label])
+);
+
 export const EXPENSE_CATEGORIES = [
   { value: "materiales", label: "Materiales" },
   { value: "transporte", label: "Transporte / Envío" },

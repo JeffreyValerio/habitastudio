@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-costs";
 import { uploadImages } from "@/lib/cloudinary";
-import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
+import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_STAGES, WORK_ORDER_STAGE_LABELS, WorkOrderStage } from "@/lib/work-order-types";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -107,6 +107,166 @@ async function sendWorkOrderStatusChangeEmail(
   }
 }
 
+// Notifica a todos los administradores cuando el jefe de taller (o admin) marca
+// una etapa de producción, para que sepan en qué fase va la orden.
+async function sendWorkOrderStageEmail(
+  workOrder: {
+    id: string;
+    workOrderNumber: string;
+    quote: { clientName: string; projectName: string; customer: { name: string } | null };
+  },
+  stage: WorkOrderStage,
+  markedBy: { name: string | null; email: string }
+) {
+  const admins = await prisma.user.findMany({
+    where: { role: "admin" },
+    select: { email: true },
+  });
+  const adminEmails = admins.map((a) => a.email).filter(Boolean);
+  if (adminEmails.length === 0) return;
+
+  const workOrderLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/admin/work-orders/${workOrder.id}`;
+  const stageLabel = WORK_ORDER_STAGE_LABELS[stage] || stage;
+  const clientName = workOrder.quote.customer?.name || workOrder.quote.clientName;
+
+  try {
+    await resend.emails.send({
+      from: "Habita Studio <info@habitastudio.online>",
+      to: adminEmails,
+      replyTo: "info@habitastudio.online",
+      subject: `${workOrder.workOrderNumber} completó la etapa "${stageLabel}"`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="color-scheme" content="light">
+          <meta name="supported-color-schemes" content="light">
+          <style>
+            @media (prefers-color-scheme: dark) {
+              .btn-accept, .btn-accept a { background-color: #000000 !important; color: #ffffff !important; }
+            }
+          </style>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+          <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px;">
+            <tr>
+              <td align="center">
+                <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <tr>
+                    <td style="background-color: #ffffff; padding: 30px 40px 20px 40px; text-align: center;">
+                      <img src="https://habitastudio.online/images/logo.png" alt="Habita Studio" style="max-width: 200px; height: auto; margin-bottom: 20px;" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0 40px;">
+                      <h2 style="margin: 20px 0; font-size: 24px; color: #333;">Etapa de Producción Completada</h2>
+                      <p style="margin: 15px 0; color: #666; line-height: 1.6;">
+                        <strong>${markedBy.name || markedBy.email}</strong> marcó la etapa <strong>${stageLabel}</strong> de la orden de trabajo <strong>${workOrder.workOrderNumber}</strong>.
+                      </p>
+
+                      <div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
+                        <p style="margin: 10px 0;"><strong>Orden:</strong> ${workOrder.workOrderNumber}</p>
+                        <p style="margin: 10px 0;"><strong>Cliente:</strong> ${clientName} — ${workOrder.quote.projectName}</p>
+                        <p style="margin: 10px 0;"><strong>Etapa completada:</strong> ${stageLabel}</p>
+                        <p style="margin: 10px 0;"><strong>Marcada por:</strong> ${markedBy.name || "Sin nombre"} (${markedBy.email})</p>
+                      </div>
+
+                      <table role="presentation" style="margin: 30px 0;">
+                        <tr>
+                          <td class="btn-accept" bgcolor="#000000" style="background-color: #000000 !important; border-radius: 5px; padding: 0; margin-right: 10px;">
+                            <a href="${workOrderLink}" style="background-color: #000000 !important; color: #ffffff !important; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                              Ver Orden de Trabajo
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background-color: #f9f9f9; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;">
+                      <p style="margin: 0; color: #999; font-size: 12px;">
+                        © Habita Studio. Todos los derechos reservados.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+  } catch (error) {
+    console.error("Error al enviar notificación de etapa:", error);
+  }
+}
+
+export async function markWorkOrderStage(workOrderId: string, stage: WorkOrderStage) {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
+    throw new Error("No autorizado");
+  }
+
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: workOrderId },
+    include: {
+      quote: {
+        select: {
+          clientName: true,
+          projectName: true,
+          customer: { select: { name: true } },
+        },
+      },
+    },
+  });
+  if (!workOrder) throw new Error("Orden de trabajo no encontrada");
+
+  const stageIndex = WORK_ORDER_STAGES.findIndex((s) => s.key === stage);
+  const targetStage = WORK_ORDER_STAGES[stageIndex];
+
+  // Verificar que todas las etapas anteriores ya estén completadas (orden estricto)
+  for (let i = 0; i < stageIndex; i++) {
+    const priorField = WORK_ORDER_STAGES[i].field;
+    if (!workOrder[priorField]) {
+      throw new Error(`Debes completar "${WORK_ORDER_STAGES[i].label}" antes de marcar "${targetStage.label}"`);
+    }
+  }
+
+  if (workOrder[targetStage.field]) {
+    throw new Error(`"${targetStage.label}" ya fue marcada como completada`);
+  }
+
+  const updated = await prisma.workOrder.update({
+    where: { id: workOrderId },
+    data: { [targetStage.field]: new Date() },
+    include: {
+      quote: {
+        select: {
+          clientName: true,
+          projectName: true,
+          customer: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  await sendWorkOrderStageEmail(updated, stage, user);
+
+  // La última etapa (instalado) cierra automáticamente la orden.
+  if (stage === "instalado") {
+    await updateWorkOrderStatus(workOrderId, "completed");
+  }
+
+  revalidatePath("/admin/work-orders");
+  revalidatePath(`/admin/work-orders/${workOrderId}`);
+  revalidatePath("/taller-manager/work-orders");
+  revalidatePath(`/taller-manager/work-orders/${workOrderId}`);
+  return updated;
+}
+
 async function generateWorkOrderNumber() {
   const currentYear = new Date().getFullYear();
 
@@ -185,6 +345,7 @@ export async function getWorkOrders() {
         },
       },
       timeEntries: {
+        where: { purpose: "budget" },
         select: {
           entryDate: true,
           entryTime: true,
@@ -193,7 +354,7 @@ export async function getWorkOrders() {
         },
       },
       expenses: { select: { amount: true } },
-      _count: { select: { timeEntries: true } },
+      _count: { select: { timeEntries: { where: { purpose: "budget" } } } },
     },
     orderBy: { deliveryDate: { sort: "asc", nulls: "last" } },
   });
@@ -225,6 +386,7 @@ export async function getWorkOrder(id: string) {
         },
       },
       timeEntries: {
+        where: { purpose: "budget" },
         include: { user: { select: { id: true, name: true, hourlyRate: true } } },
         orderBy: { entryDate: "desc" },
       },
@@ -364,7 +526,7 @@ export async function getActiveWorkOrders() {
 // Para el selector de "Registrar Horas" del admin: órdenes no completadas
 export async function getWorkOrdersForSelect() {
   const user = await getCurrentUser();
-  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
+  if (!user || (user.role !== "admin" && user.role !== "taller-manager" && user.role !== "moderator")) {
     throw new Error("No autorizado");
   }
 
