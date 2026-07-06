@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
 import { TallerManagerWorkOrderDetailTabs } from "@/components/taller-manager/work-order-detail-tabs";
+import { WorkOrderDownloadButton } from "@/components/admin/work-order-download-button";
 import { ArrowLeft } from "lucide-react";
 
 export default async function TallerManagerWorkOrderDetailPage({
@@ -70,6 +71,7 @@ export default async function TallerManagerWorkOrderDetailPage({
             {workOrder.quote.customer?.name || workOrder.quote.clientName} — {workOrder.quote.projectName}
           </p>
         </div>
+        <WorkOrderDownloadButton workOrder={workOrder} />
       </div>
 
       <TallerManagerWorkOrderDetailTabs

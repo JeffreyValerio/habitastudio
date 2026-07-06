@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
 import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-costs";
 import { WorkOrderDetailTabs } from "@/components/admin/work-order-detail-tabs";
+import { WorkOrderDownloadButton } from "@/components/admin/work-order-download-button";
 import { RestrictedAccess } from "@/components/admin/restricted-access";
 import { ArrowLeft } from "lucide-react";
 
@@ -79,9 +80,12 @@ export default async function WorkOrderDetailPage({
             {workOrder.quote.customer?.name || workOrder.quote.clientName} — {workOrder.quote.projectName}
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href={`/admin/quotes/${workOrder.quoteId}`}>Ver Cotización {workOrder.quote.quoteNumber}</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/admin/quotes/${workOrder.quoteId}`}>Ver Cotización {workOrder.quote.quoteNumber}</Link>
+          </Button>
+          <WorkOrderDownloadButton workOrder={workOrder} />
+        </div>
       </div>
 
       <WorkOrderDetailTabs
