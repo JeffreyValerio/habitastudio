@@ -20,7 +20,7 @@ export default async function TallerManagerWorkOrdersPage() {
       <div>
         <h1 className="text-3xl font-bold">Órdenes de Trabajo Activas</h1>
         <p className="text-muted-foreground mt-2">
-          Todas las órdenes de trabajo en curso, liberadas o no
+          Órdenes de trabajo liberadas al taller
         </p>
       </div>
 

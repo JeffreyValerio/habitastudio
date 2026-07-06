@@ -401,14 +401,14 @@ export async function getWorkOrder(id: string) {
 
   if (user.role === "admin") return workOrder;
 
-  // El jefe de taller ve cualquier orden en cuanto existe; el colaborador
-  // solo una vez que el admin la libera con fecha de entrega.
-  if (user.role === "collaborator") {
-    if (!workOrder.deliveryDate) {
-      throw new Error("Esta orden aún no ha sido liberada");
-    }
-  } else if (user.role !== "taller-manager") {
+  if (user.role !== "taller-manager" && user.role !== "collaborator") {
     throw new Error("No autorizado");
+  }
+
+  // El jefe de taller y el colaborador solo ven la orden una vez que
+  // el admin la libera poniéndole fecha de entrega.
+  if (!workOrder.deliveryDate) {
+    throw new Error("Esta orden aún no ha sido liberada");
   }
 
   // Ocultar información financiera sensible (precios, tarifas y gastos) a roles no-admin
@@ -477,13 +477,13 @@ export async function updateWorkOrderStatus(
   return workOrder;
 }
 
-// Órdenes visibles en el panel de "activas". El jefe de taller ve cualquier
-// orden en cuanto existe (liberada o no); el colaborador solo las liberadas.
+// Órdenes visibles en el panel de "activas". El admin ve cualquier orden en
+// cuanto existe (liberada o no); jefe de taller y colaborador solo las liberadas.
 export async function getActiveWorkOrders() {
   const user = await getCurrentUser();
   if (!user) throw new Error("No autenticado");
 
-  if (user.role === "admin" || user.role === "taller-manager") {
+  if (user.role === "admin") {
     return await prisma.workOrder.findMany({
       where: { status: { not: "completed" } },
       include: {
@@ -500,7 +500,7 @@ export async function getActiveWorkOrders() {
     });
   }
 
-  if (user.role === "collaborator") {
+  if (user.role === "taller-manager" || user.role === "collaborator") {
     return await prisma.workOrder.findMany({
       where: {
         deliveryDate: { not: null },
@@ -523,7 +523,8 @@ export async function getActiveWorkOrders() {
   return [];
 }
 
-// Para el selector de "Registrar Horas" del admin: órdenes no completadas
+// Para el selector de "Registrar Horas": órdenes no completadas. El jefe de
+// taller solo puede elegir órdenes ya liberadas (con fecha de entrega).
 export async function getWorkOrdersForSelect() {
   const user = await getCurrentUser();
   if (!user || (user.role !== "admin" && user.role !== "taller-manager" && user.role !== "moderator")) {
@@ -531,7 +532,10 @@ export async function getWorkOrdersForSelect() {
   }
 
   return await prisma.workOrder.findMany({
-    where: { status: { not: "completed" } },
+    where: {
+      status: { not: "completed" },
+      ...(user.role === "taller-manager" ? { deliveryDate: { not: null } } : {}),
+    },
     select: {
       id: true,
       workOrderNumber: true,

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getWorkOrder } from "@/app/actions/work-orders";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
 import { TallerManagerWorkOrderDetailTabs } from "@/components/taller-manager/work-order-detail-tabs";
 import { ArrowLeft } from "lucide-react";
@@ -13,7 +14,28 @@ export default async function TallerManagerWorkOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const workOrder = await getWorkOrder(id);
+
+  let workOrder;
+  try {
+    workOrder = await getWorkOrder(id);
+  } catch {
+    // Orden existe pero aún no ha sido liberada por el admin
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" asChild className="mb-2">
+          <Link href="/taller-manager/work-orders">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver a Órdenes de Trabajo
+          </Link>
+        </Button>
+        <Card>
+          <CardContent className="pt-12 pb-12 text-center text-muted-foreground">
+            Esta orden aún no ha sido liberada por el administrador
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!workOrder) {
     notFound();
