@@ -1,5 +1,6 @@
 import { getQuotes } from "@/app/actions/quotes";
 import { getCRMAnalytics } from "@/app/actions/crm";
+import { getTotalReceiptsAmount } from "@/app/actions/receipts";
 import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -33,15 +34,15 @@ export default async function AdminDashboard() {
 
   const isAdmin = user.role === "admin";
 
-  const [quotes, crmData] = await Promise.all([
+  const [quotes, crmData, totalReceived] = await Promise.all([
     getQuotes(),
     isAdmin ? getCRMAnalytics() : Promise.resolve(null),
+    getTotalReceiptsAmount(),
   ]);
 
   // Calculate metrics
   const totalQuotesValue = quotes.reduce((sum, q) => sum + q.total, 0);
   const acceptedQuotes = quotes.filter((q) => q.status === "accepted");
-  const acceptedValue = acceptedQuotes.reduce((sum, q) => sum + q.total, 0);
   const conversionRate =
     quotes.length > 0 ? ((acceptedQuotes.length / quotes.length) * 100).toFixed(1) : "0";
   const pendingQuotes = quotes.filter((q) => q.status === "draft" || q.status === "sent");
@@ -119,10 +120,10 @@ export default async function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {formatCRC(acceptedValue)}
+              {formatCRC(totalReceived)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              De {acceptedQuotes.length} órdenes
+              Pagos recibidos
             </p>
           </CardContent>
         </Card>

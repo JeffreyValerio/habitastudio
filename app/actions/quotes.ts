@@ -8,6 +8,7 @@ import { uploadImages as uploadMany } from "@/lib/cloudinary";
 import { Resend } from "resend";
 import { generateQuotePDFBuffer } from "@/lib/generate-pdf-server";
 import { formatCRC } from "@/lib/utils";
+import { syncCustomerTotalSpent } from "@/app/actions/crm";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -232,8 +233,15 @@ export async function createUpdateQuote(formData: FormData) {
       });
     });
 
+    // Si la cotización ya está vinculada a un cliente, recalcular totalSpent
+    // por si cambió el monto o el estado directamente desde este formulario.
+    if (result?.customerId) {
+      await syncCustomerTotalSpent(result.customerId);
+    }
+
     revalidatePath("/admin/quotes");
     revalidatePath(`/admin/quotes/${result?.id}`);
+    revalidatePath("/admin/crm");
 
     return {
       ok: true,
@@ -255,11 +263,21 @@ export async function deleteQuote(id: string) {
     throw new Error("Unauthorized");
   }
 
+  const quote = await prisma.quote.findUnique({
+    where: { id },
+    select: { customerId: true },
+  });
+
   await prisma.quote.delete({
     where: { id },
   });
 
+  if (quote?.customerId) {
+    await syncCustomerTotalSpent(quote.customerId);
+  }
+
   revalidatePath("/admin/quotes");
+  revalidatePath("/admin/crm");
 }
 
 export async function getQuotes() {
@@ -526,8 +544,9 @@ export async function updateQuoteStatus(id: string, status: string) {
       return { ok: false, message: "Cotización no encontrada" };
     }
 
-    // If status is "accepted" and there's no customer yet, create one
-    if (status === "accepted" && !quote.customerId) {
+    // If status is "accepted" and there's no customer yet, create/link one
+    let customerId = quote.customerId;
+    if (status === "accepted" && !customerId) {
       let customer = null;
 
       // Check if customer with this email already exists
@@ -547,33 +566,32 @@ export async function updateQuoteStatus(id: string, status: string) {
             address: quote.clientAddress || undefined,
             status: "customer",
             source: "converted_from_quote",
-            totalSpent: quote.total,
+            totalSpent: 0,
           },
         });
       } else {
-        // Update existing customer
         await prisma.customer.update({
           where: { id: customer.id },
-          data: {
-            totalSpent: {
-              increment: quote.total,
-            },
-            status: "customer",
-          },
+          data: { status: "customer" },
         });
       }
 
-      // Update quote with customer ID
+      customerId = customer.id;
       await prisma.quote.update({
         where: { id },
-        data: { status, customerId: customer.id },
+        data: { status, customerId },
       });
     } else {
-      // Just update status
       await prisma.quote.update({
         where: { id },
         data: { status },
       });
+    }
+
+    // Recalcular totalSpent en vez de solo incrementar, para que nunca quede
+    // desincronizado si la cotización luego cambia de estado o de monto.
+    if (customerId) {
+      await syncCustomerTotalSpent(customerId);
     }
 
     // Al aceptar, generar también la orden de trabajo si aún no existe

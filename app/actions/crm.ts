@@ -6,6 +6,21 @@ import { revalidatePath } from "next/cache";
 
 // ============ CUSTOMERS ============
 
+// Recalcula totalSpent desde las cotizaciones aceptadas actuales del cliente.
+// Se llama cada vez que una cotización cambia de estado, de monto, o se elimina,
+// para que este campo cacheado nunca quede desincronizado.
+export async function syncCustomerTotalSpent(customerId: string) {
+  const result = await prisma.quote.aggregate({
+    where: { customerId, status: "accepted" },
+    _sum: { total: true },
+  });
+
+  await prisma.customer.update({
+    where: { id: customerId },
+    data: { totalSpent: result._sum.total || 0 },
+  });
+}
+
 export async function getCustomers() {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {

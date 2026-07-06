@@ -204,6 +204,15 @@ export async function getReceipts() {
   });
 }
 
+// Suma de todos los pagos efectivamente recibidos (dinero real cobrado),
+// usada en el Dashboard como "Ingresos" en vez del valor de las cotizaciones.
+export async function getTotalReceiptsAmount() {
+  const result = await prisma.receipt.aggregate({
+    _sum: { amount: true },
+  });
+  return result._sum.amount || 0;
+}
+
 // Función helper para calcular el saldo pendiente de una cotización
 // Calcula el saldo DESPUÉS de aplicar el recibo actual
 async function calculateBalance(quoteId: string, receiptId: string, receiptAmount: number): Promise<number> {
