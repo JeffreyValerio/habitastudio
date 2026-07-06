@@ -19,6 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { Trash2, Edit, Search, X as XIcon } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
+import { MobileListItem, ImageAvatar } from "@/components/admin/mobile-list-item";
+import { FilterTabs } from "@/components/admin/filter-tabs";
 
 interface Product {
   id: string;
@@ -36,6 +38,7 @@ export function ProductsTable({ products }: { products: Product[] }) {
   const { toast } = useToast();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   const confirmDelete = async (id: string) => {
@@ -72,17 +75,35 @@ export function ProductsTable({ products }: { products: Product[] }) {
   };
 
 
+  const categoryTabs = useMemo(() => {
+    const counts = new Map<string, number>();
+    products.forEach((p) => counts.set(p.category, (counts.get(p.category) || 0) + 1));
+    const categories = Array.from(counts.keys()).sort();
+    return [
+      { key: "all", label: "Todos", count: products.length },
+      ...categories.map((c) => ({ key: c, label: c, count: counts.get(c)! })),
+    ];
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return products;
-    
-    const query = searchQuery.toLowerCase().trim();
-    return products.filter(
-      (product) =>
-        product.name.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query) ||
-        formatCRC(product.price, 0).toLowerCase().includes(query)
-    );
-  }, [products, searchQuery]);
+    let filtered = products;
+
+    if (activeCategory !== "all") {
+      filtered = filtered.filter((product) => product.category === activeCategory);
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(
+        (product) =>
+          product.name.toLowerCase().includes(query) ||
+          product.category.toLowerCase().includes(query) ||
+          formatCRC(product.price, 0).toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [products, searchQuery, activeCategory]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const paginatedProducts = useMemo(() => {
@@ -93,6 +114,11 @@ export function ProductsTable({ products }: { products: Product[] }) {
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handleCategoryChange = (key: string) => {
+    setActiveCategory(key);
     setCurrentPage(1);
   };
 
@@ -136,7 +162,42 @@ export function ProductsTable({ products }: { products: Product[] }) {
           </p>
         )}
       </div>
-      <div className="border rounded-lg">
+
+      <FilterTabs tabs={categoryTabs} active={activeCategory} onChange={handleCategoryChange} />
+
+      {/* Mobile: lista compacta */}
+      <div className="md:hidden border rounded-lg">
+        {paginatedProducts.map((product) => (
+          <MobileListItem
+            key={product.id}
+            avatar={<ImageAvatar src={product.image} alt={product.name} />}
+            title={product.name}
+            subtitle={product.category}
+            value={formatCRC(product.price, 0)}
+            actions={
+              <>
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                  <Link href={`/admin/products/${product.id}`}>
+                    <Edit className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleDelete(product.id)}
+                  disabled={deleting === product.id}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </>
+            }
+          />
+        ))}
+      </div>
+
+      {/* Desktop: tabla */}
+      <div className="hidden md:block border rounded-lg">
       <Table>
         <TableHeader>
           <TableRow>

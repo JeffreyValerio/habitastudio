@@ -426,6 +426,7 @@ model WorkOrder {
   status          String    @default("pending") // pending, in_progress, completed
   deliveryDate    DateTime? // Fecha de compromiso de entrega; libera la orden al taller
   notes           String?   @db.Text
+  images          String[]  @default([]) // fotos de referencia/avance, subidas por el admin
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

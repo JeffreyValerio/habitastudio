@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-costs";
+import { uploadImages } from "@/lib/cloudinary";
 
 async function generateWorkOrderNumber() {
   const currentYear = new Date().getFullYear();
@@ -401,4 +402,55 @@ export async function deleteWorkOrderExpense(id: string) {
     revalidatePath("/admin/inventory");
     return expense;
   });
+}
+
+export async function addWorkOrderImages(workOrderId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("Solo administradores pueden subir imágenes");
+  }
+
+  const files = formData.getAll("images") as File[];
+  if (files.length === 0) {
+    throw new Error("No se recibieron imágenes");
+  }
+
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: workOrderId },
+    select: { images: true },
+  });
+  if (!workOrder) throw new Error("Orden de trabajo no encontrada");
+
+  const uploaded = await uploadImages(files, "habita-studio/work-orders");
+
+  const updated = await prisma.workOrder.update({
+    where: { id: workOrderId },
+    data: { images: [...workOrder.images, ...uploaded] },
+  });
+
+  revalidatePath(`/admin/work-orders/${workOrderId}`);
+  revalidatePath(`/taller-manager/work-orders/${workOrderId}`);
+  return updated;
+}
+
+export async function removeWorkOrderImage(workOrderId: string, imageUrl: string) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("Solo administradores pueden eliminar imágenes");
+  }
+
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: workOrderId },
+    select: { images: true },
+  });
+  if (!workOrder) throw new Error("Orden de trabajo no encontrada");
+
+  const updated = await prisma.workOrder.update({
+    where: { id: workOrderId },
+    data: { images: workOrder.images.filter((u) => u !== imageUrl) },
+  });
+
+  revalidatePath(`/admin/work-orders/${workOrderId}`);
+  revalidatePath(`/taller-manager/work-orders/${workOrderId}`);
+  return updated;
 }

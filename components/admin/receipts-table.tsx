@@ -20,6 +20,7 @@ import { Trash2, Edit, Send, Search, X as XIcon } from "lucide-react";
 import { ReceiptDownloadButton } from "./receipt-download-button";
 import { Pagination } from "@/components/ui/pagination";
 import { MobileListItem, InitialsAvatar } from "@/components/admin/mobile-list-item";
+import { FilterTabs } from "@/components/admin/filter-tabs";
 
 interface Receipt {
   id: string;
@@ -59,6 +60,7 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [sending, setSending] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeStatus, setActiveStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Calcular el total pagado por cotización
@@ -211,25 +213,50 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
     }
   };
 
-  const filteredReceipts = useMemo(() => {
-    if (!searchQuery.trim()) return enrichedReceipts;
+  const statusTabs = useMemo(() => {
+    const paid = enrichedReceipts.filter((r) => r.isPaid).length;
+    const pending = enrichedReceipts.length - paid;
+    return [
+      { key: "all", label: "Todos", count: enrichedReceipts.length },
+      { key: "paid", label: "Pagados", count: paid },
+      { key: "pending", label: "Pendientes", count: pending },
+    ];
+  }, [enrichedReceipts]);
 
-    const query = searchQuery.toLowerCase();
-    return enrichedReceipts.filter(
-      (receipt) =>
-        receipt.receiptNumber.toLowerCase().includes(query) ||
-        receipt.clientName.toLowerCase().includes(query) ||
-        receipt.clientEmail?.toLowerCase().includes(query) ||
-        receipt.quote.quoteNumber.toLowerCase().includes(query) ||
-        receipt.concept.toLowerCase().includes(query)
-    );
-  }, [enrichedReceipts, searchQuery]);
+  const filteredReceipts = useMemo(() => {
+    let filtered = enrichedReceipts;
+
+    if (activeStatus === "paid") {
+      filtered = filtered.filter((r) => r.isPaid);
+    } else if (activeStatus === "pending") {
+      filtered = filtered.filter((r) => !r.isPaid);
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (receipt) =>
+          receipt.receiptNumber.toLowerCase().includes(query) ||
+          receipt.clientName.toLowerCase().includes(query) ||
+          receipt.clientEmail?.toLowerCase().includes(query) ||
+          receipt.quote.quoteNumber.toLowerCase().includes(query) ||
+          receipt.concept.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [enrichedReceipts, searchQuery, activeStatus]);
 
   const totalPages = Math.ceil(filteredReceipts.length / ITEMS_PER_PAGE);
   const paginatedReceipts = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredReceipts.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredReceipts, currentPage]);
+
+  const handleStatusChange = (key: string) => {
+    setActiveStatus(key);
+    setCurrentPage(1);
+  };
 
 
   return (
@@ -256,6 +283,8 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
           )}
         </div>
       </div>
+
+      <FilterTabs tabs={statusTabs} active={activeStatus} onChange={handleStatusChange} />
 
       {/* Mobile: lista compacta */}
       <div className="md:hidden rounded-md border">

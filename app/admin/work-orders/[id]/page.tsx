@@ -2,14 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getWorkOrder } from "@/app/actions/work-orders";
 import { getCurrentUser } from "@/lib/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCRC } from "@/lib/utils";
-import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
+import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
 import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-costs";
-import { WorkOrderControls } from "@/components/admin/work-order-controls";
-import { WorkOrderExpenses } from "@/components/admin/work-order-expenses";
+import { WorkOrderDetailTabs } from "@/components/admin/work-order-detail-tabs";
 import { RestrictedAccess } from "@/components/admin/restricted-access";
 import { ArrowLeft } from "lucide-react";
 
@@ -85,144 +82,18 @@ export default async function WorkOrderDetailPage({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Valor Cotizado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatCRC(workOrder.quote.total)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Horas Registradas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{totalHours.toFixed(1)}h</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Presupuesto vs. Gastos Reales</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Presupuesto</p>
-              <p className="text-lg font-bold">{formatCRC(budget)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Mano de Obra</p>
-              <p className="text-lg font-bold">{formatCRC(laborCost)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Materiales</p>
-              <p className="text-lg font-bold">{formatCRC(materialsCost)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Otros Gastos</p>
-              <p className="text-lg font-bold">{formatCRC(otherExpensesCost)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Margen</p>
-              <p className={`text-lg font-bold ${margin >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {formatCRC(margin)}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>Gastado: {formatCRC(totalSpent)}</span>
-              <span>{percentUsed.toFixed(0)}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className={`h-full rounded-full ${isOverBudget ? "bg-red-600" : "bg-primary"}`}
-                style={{ width: `${percentUsed}%` }}
-              />
-            </div>
-            {isOverBudget && (
-              <p className="text-xs text-red-600 mt-1">
-                Esta orden superó el presupuesto de la cotización
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Liberación y Estado</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <WorkOrderControls
-            workOrderId={workOrder.id}
-            status={workOrder.status}
-            deliveryDate={workOrder.deliveryDate}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Gastos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <WorkOrderExpenses workOrderId={workOrder.id} expenses={workOrder.expenses} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Ítems de la Cotización</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {workOrder.quote.items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm border-b pb-2">
-                <span>{item.description} × {item.quantity}</span>
-                <span className="font-medium">{formatCRC(item.total)}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Horas Registradas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {workOrder.timeEntries.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Sin registros de tiempo aún</p>
-          ) : (
-            <div className="space-y-3">
-              {workOrder.timeEntries.map((entry) => {
-                let hours = 0;
-                if (entry.exitTime) {
-                  hours = (new Date(entry.exitTime).getTime() - new Date(entry.entryTime).getTime()) / (1000 * 60 * 60);
-                }
-                return (
-                  <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg border text-sm">
-                    <div>
-                      <p className="font-medium">{entry.user.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(entry.entryDate).toLocaleDateString("es-CR")}
-                        {entry.workType && ` · ${WORK_ORDER_TYPE_LABELS[entry.workType] || entry.workType}`}
-                      </p>
-                    </div>
-                    <p className="font-semibold">{entry.exitTime ? `${hours.toFixed(1)}h` : "Activo"}</p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <WorkOrderDetailTabs
+        workOrder={workOrder}
+        budget={budget}
+        laborCost={laborCost}
+        materialsCost={materialsCost}
+        otherExpensesCost={otherExpensesCost}
+        totalSpent={totalSpent}
+        margin={margin}
+        percentUsed={percentUsed}
+        isOverBudget={isOverBudget}
+        totalHours={totalHours}
+      />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export function getInitials(name: string): string {
@@ -32,6 +33,14 @@ export function InitialsAvatar({ name, className }: { name: string; className?: 
       )}
     >
       {getInitials(name || "?")}
+    </div>
+  );
+}
+
+export function ImageAvatar({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  return (
+    <div className={cn("relative h-11 w-11 shrink-0 rounded-full overflow-hidden bg-muted", className)}>
+      <Image src={src} alt={alt} fill className="object-cover" unoptimized />
     </div>
   );
 }

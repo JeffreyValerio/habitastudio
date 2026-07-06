@@ -14,6 +14,12 @@ import { Trash2, Send, Check, X, Eye, Download, MoreVertical } from "lucide-reac
 import { generateQuotePDF } from "@/lib/generate-pdf";
 import { Pagination } from "@/components/ui/pagination";
 import { MobileListItem, InitialsAvatar } from "@/components/admin/mobile-list-item";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -64,23 +70,7 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [sending, setSending] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // El menú de acciones se renderiza dos veces (lista mobile y tabla desktop,
-      // una de las dos oculta por CSS), así que no se puede usar un solo ref.
-      if (!(event.target as Element).closest("[data-quote-actions]")) {
-        setOpenMenu(null);
-      }
-    };
-
-    if (openMenu) {
-      document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
-    }
-  }, [openMenu]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -220,116 +210,67 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
   };
 
   const renderActionsMenu = (quote: Quote) => (
-    <div className="relative flex justify-end" data-quote-actions={quote.id}>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
-        onClick={() => setOpenMenu(openMenu === quote.id ? null : quote.id)}
-      >
-        <MoreVertical className="h-4 w-4" />
-      </Button>
-
-      {openMenu === quote.id && (
-        <div
-          className="absolute right-0 top-full mt-1 bg-background border rounded-md shadow-md z-50 min-w-[160px]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 border-b"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              router.push(`/admin/quotes/${quote.id}`);
-              setOpenMenu(null);
-            }}
-          >
+    <div className="flex justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => router.push(`/admin/quotes/${quote.id}`)}>
             <Eye className="h-4 w-4" />
             Ver
-          </button>
+          </DropdownMenuItem>
 
-          <button
-            type="button"
-            className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 border-b"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleDownload(quote);
-              setOpenMenu(null);
-            }}
-          >
+          <DropdownMenuItem onClick={() => handleDownload(quote)}>
             <Download className="h-4 w-4" />
             Descargar
-          </button>
+          </DropdownMenuItem>
 
           {quote.status !== "accepted" && (
-            <button
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 dark:hover:bg-green-950 flex items-center gap-2 border-b text-green-600"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleStatusChange(quote.id, "accepted");
-                setOpenMenu(null);
-              }}
+            <DropdownMenuItem
+              className="text-green-600 focus:text-green-600 focus:bg-green-50 dark:focus:bg-green-950"
+              onClick={() => handleStatusChange(quote.id, "accepted")}
               disabled={updatingStatus === quote.id}
             >
               <Check className="h-4 w-4" />
               Aceptar
-            </button>
+            </DropdownMenuItem>
           )}
 
           {quote.status !== "rejected" && quote.status !== "accepted" && (
-            <button
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2 border-b text-red-600"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleStatusChange(quote.id, "rejected");
-                setOpenMenu(null);
-              }}
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+              onClick={() => handleStatusChange(quote.id, "rejected")}
               disabled={updatingStatus === quote.id}
             >
               <X className="h-4 w-4" />
               Rechazar
-            </button>
+            </DropdownMenuItem>
           )}
 
           {quote.status === "draft" && (
-            <button
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-950 flex items-center gap-2 border-b text-blue-600"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleSend(quote);
-                setOpenMenu(null);
-              }}
+            <DropdownMenuItem
+              className="text-blue-600 focus:text-blue-600 focus:bg-blue-50 dark:focus:bg-blue-950"
+              onClick={() => handleSend(quote)}
               disabled={sending === quote.id}
             >
               <Send className="h-4 w-4" />
               Enviar
-            </button>
+            </DropdownMenuItem>
           )}
 
-          <button
-            type="button"
-            className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2 text-red-600"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleDelete(quote.id);
-              setOpenMenu(null);
-            }}
+          <DropdownMenuItem
+            className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+            onClick={() => handleDelete(quote.id)}
             disabled={deleting === quote.id}
           >
             <Trash2 className="h-4 w-4" />
             Eliminar
-          </button>
-        </div>
-      )}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 
