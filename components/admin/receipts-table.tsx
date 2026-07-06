@@ -36,6 +36,7 @@ interface Receipt {
     id: string;
     quoteNumber: string;
     total: number;
+    status: string;
   };
 }
 
@@ -44,6 +45,14 @@ interface ReceiptWithBalance extends Receipt {
   balance?: number;
   isPaid?: boolean;
 }
+
+const quoteStatusConfig: Record<string, { label: string; color: string }> = {
+  draft: { label: "Borrador", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  sent: { label: "Enviada", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  accepted: { label: "Aceptada", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  rejected: { label: "Rechazada", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  expired: { label: "Expirada", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
+};
 
 const paymentMethodLabels: Record<string, string> = {
   efectivo: "Efectivo",
@@ -299,9 +308,23 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
               avatar={<InitialsAvatar name={receipt.clientName} />}
               title={receipt.clientName}
               subtitle={
-                <span>
-                  {receipt.receiptNumber} ·{" "}
-                  {paymentMethodLabels[receipt.paymentMethod] || receipt.paymentMethod}
+                <span className="flex flex-wrap items-center gap-1">
+                  <span>
+                    {receipt.receiptNumber} ·{" "}
+                    {paymentMethodLabels[receipt.paymentMethod] || receipt.paymentMethod}
+                  </span>
+                  {(() => {
+                    const config = quoteStatusConfig[receipt.quote.status];
+                    return (
+                      <span
+                        className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${
+                          config?.color || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                        }`}
+                      >
+                        {config?.label || receipt.quote.status}
+                      </span>
+                    );
+                  })()}
                 </span>
               }
               value={
@@ -396,12 +419,26 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Link
-                      href={`/admin/quotes/${receipt.quote.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {receipt.quote.quoteNumber}
-                    </Link>
+                    <div className="flex flex-col gap-1">
+                      <Link
+                        href={`/admin/quotes/${receipt.quote.id}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {receipt.quote.quoteNumber}
+                      </Link>
+                      {(() => {
+                        const config = quoteStatusConfig[receipt.quote.status];
+                        return (
+                          <span
+                            className={`inline-flex w-fit items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              config?.color || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                            }`}
+                          >
+                            {config?.label || receipt.quote.status}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </TableCell>
                   <TableCell className="font-medium">
                     {formatCRC(receipt.amount)}
