@@ -267,6 +267,21 @@ export async function getCollaborators() {
   });
 }
 
+// Lista liviana de colaboradores (sin tarifas) para registrar horas.
+// Accesible también para el jefe de taller, que registra horas pero no ve precios.
+export async function getCollaboratorsForTimeEntry() {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
+    throw new Error("No autorizado");
+  }
+
+  return await prisma.user.findMany({
+    where: { isCollaborator: true },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: "asc" },
+  });
+}
+
 function getPeriodRange(year: number, month: number, quincena?: 1 | 2) {
   const lastDay = new Date(year, month, 0).getDate();
 
@@ -449,16 +464,23 @@ export async function updateCollaboratorRate(userId: string, hourlyRate: number)
 
 export async function createManualTimeEntry(input: {
   userId: string;
-  workOrderId?: string;
-  workType?: string;
+  workOrderId: string;
+  workType: string;
   entryDate: string;
   entryTime: string;
   exitTime?: string;
   description?: string;
 }) {
-  const admin = await getCurrentUser();
-  if (!admin || admin.role !== "admin") {
-    throw new Error("Solo administradores pueden registrar horas manualmente");
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
+    throw new Error("No autorizado para registrar horas manualmente");
+  }
+
+  if (!input.workOrderId) {
+    throw new Error("Debes seleccionar una orden de trabajo");
+  }
+  if (!input.workType) {
+    throw new Error("Debes seleccionar un tipo de labor");
   }
 
   const collaborator = await prisma.user.findUnique({ where: { id: input.userId } });
@@ -478,8 +500,8 @@ export async function createManualTimeEntry(input: {
   const timeEntry = await prisma.timeEntry.create({
     data: {
       userId: input.userId,
-      workOrderId: input.workOrderId || null,
-      workType: input.workType || null,
+      workOrderId: input.workOrderId,
+      workType: input.workType,
       entryDate: new Date(input.entryDate),
       entryTime: entryDateTime,
       exitTime: exitDateTime,
@@ -487,13 +509,14 @@ export async function createManualTimeEntry(input: {
     },
   });
 
-  // Registrado directamente por un admin: se marca como ya aprobado, sin pasar por el flujo de aprobación del taller-manager
+  // Registrado directamente por un admin o jefe de taller: se marca como ya aprobado,
+  // sin pasar por el flujo de aprobación.
   await prisma.timeApproval.create({
     data: {
       timeEntryId: timeEntry.id,
       type: "entry",
       status: "approved",
-      approvedBy: admin.id,
+      approvedBy: user.id,
     },
   });
 
@@ -503,7 +526,7 @@ export async function createManualTimeEntry(input: {
         timeEntryId: timeEntry.id,
         type: "exit",
         status: "approved",
-        approvedBy: admin.id,
+        approvedBy: user.id,
       },
     });
   }

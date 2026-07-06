@@ -93,7 +93,7 @@ export async function getWorkOrders() {
       expenses: { select: { amount: true } },
       _count: { select: { timeEntries: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { deliveryDate: { sort: "asc", nulls: "last" } },
   });
 
   // Costeo de mano de obra según la tarifa vigente en el mes de cada entrada,
@@ -221,7 +221,7 @@ export async function getActiveWorkOrders() {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { deliveryDate: { sort: "asc", nulls: "last" } },
     });
   }
 
@@ -251,7 +251,7 @@ export async function getActiveWorkOrders() {
 // Para el selector de "Registrar Horas" del admin: órdenes no completadas
 export async function getWorkOrdersForSelect() {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
     throw new Error("No autorizado");
   }
 

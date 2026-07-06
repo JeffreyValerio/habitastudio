@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, CheckSquare, Home, User, ClipboardList } from "lucide-react";
+import { LogOut, CheckSquare, Home, User, ClipboardList, Clock } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { name: "Dashboard", href: "/taller-manager", icon: Home },
   { name: "Órdenes de Trabajo", href: "/taller-manager/work-orders", icon: ClipboardList },
+  { name: "Registrar Horas", href: "/taller-manager/time-management/new", icon: Clock },
   { name: "Aprobaciones Pendientes", href: "/taller-manager/approvals", icon: CheckSquare },
   { name: "Mi Perfil", href: "/taller-manager/profile", icon: User },
 ];

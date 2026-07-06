@@ -16,9 +16,10 @@ import {
 import { deleteReceipt, sendReceipt } from "@/app/actions/receipts";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { Trash2, Edit, Send, Download, Search, X as XIcon } from "lucide-react";
+import { Trash2, Edit, Send, Search, X as XIcon } from "lucide-react";
 import { ReceiptDownloadButton } from "./receipt-download-button";
 import { Pagination } from "@/components/ui/pagination";
+import { MobileListItem, InitialsAvatar } from "@/components/admin/mobile-list-item";
 
 interface Receipt {
   id: string;
@@ -256,7 +257,79 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
         </div>
       </div>
 
-      <div className="rounded-md border">
+      {/* Mobile: lista compacta */}
+      <div className="md:hidden rounded-md border">
+        {paginatedReceipts.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            {searchQuery ? "No se encontraron recibos" : "No hay recibos"}
+          </p>
+        ) : (
+          paginatedReceipts.map((receipt) => (
+            <MobileListItem
+              key={receipt.id}
+              avatar={<InitialsAvatar name={receipt.clientName} />}
+              title={receipt.clientName}
+              subtitle={
+                <span>
+                  {receipt.receiptNumber} ·{" "}
+                  {paymentMethodLabels[receipt.paymentMethod] || receipt.paymentMethod}
+                </span>
+              }
+              value={
+                <div className="flex flex-col items-end gap-0.5">
+                  <span>{formatCRC(receipt.amount)}</span>
+                  {receipt.isPaid ? (
+                    <span className="text-[10px] font-medium text-green-600 dark:text-green-400">
+                      ✓ Pagado
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      Saldo {formatCRC(receipt.balance || 0)}
+                    </span>
+                  )}
+                </div>
+              }
+              actions={
+                <>
+                  <ReceiptDownloadButton receipt={receipt} />
+                  {receipt.clientEmail && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleSend(receipt.id)}
+                      disabled={sending === receipt.id}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                    <Link href={`/admin/receipts/${receipt.id}`}>
+                      <Edit className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleDelete(receipt.id)}
+                    disabled={deleting === receipt.id}
+                  >
+                    {deleting === receipt.id ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    )}
+                  </Button>
+                </>
+              }
+            />
+          ))
+        )}
+      </div>
+
+      {/* Desktop: tabla */}
+      <div className="hidden md:block rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

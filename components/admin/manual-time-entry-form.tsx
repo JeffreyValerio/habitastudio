@@ -28,9 +28,10 @@ interface ManualTimeEntryFormProps {
   collaborators: Collaborator[];
   workOrders: WorkOrderOption[];
   defaultUserId?: string;
+  onSuccessRedirect?: string;
 }
 
-export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId }: ManualTimeEntryFormProps) {
+export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId, onSuccessRedirect }: ManualTimeEntryFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,13 +57,21 @@ export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId }
       toast({ title: "Error", description: "Ingresa la hora de entrada", variant: "destructive" });
       return;
     }
+    if (!workOrderId) {
+      toast({ title: "Error", description: "Selecciona una orden de trabajo", variant: "destructive" });
+      return;
+    }
+    if (!workType) {
+      toast({ title: "Error", description: "Selecciona un tipo de labor", variant: "destructive" });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       await createManualTimeEntry({
         userId,
-        workOrderId: workOrderId || undefined,
-        workType: workType || undefined,
+        workOrderId,
+        workType,
         entryDate,
         entryTime,
         exitTime: exitTime || undefined,
@@ -70,7 +79,7 @@ export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId }
       });
 
       toast({ title: "Éxito", description: "Horas registradas correctamente" });
-      router.push(`/admin/time-management/${userId}`);
+      router.push(onSuccessRedirect || `/admin/time-management/${userId}`);
       router.refresh();
     } catch (error: any) {
       toast({
@@ -99,7 +108,7 @@ export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId }
               <option value="">Selecciona un colaborador</option>
               {collaborators.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name || c.email} ({c.email})
+                  {c.name || c.email}
                 </option>
               ))}
             </select>
@@ -141,14 +150,15 @@ export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId }
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="workOrder">Orden de Trabajo (opcional)</Label>
+              <Label htmlFor="workOrder">Orden de Trabajo *</Label>
               <select
                 id="workOrder"
                 value={workOrderId}
                 onChange={(e) => setWorkOrderId(e.target.value)}
                 className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                required
               >
-                <option value="">Sin orden específica</option>
+                <option value="">Selecciona una orden de trabajo</option>
                 {workOrders.map((wo) => (
                   <option key={wo.id} value={wo.id}>
                     {wo.workOrderNumber} — {wo.quote.clientName}
@@ -158,14 +168,15 @@ export function ManualTimeEntryForm({ collaborators, workOrders, defaultUserId }
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="workType">Tipo de Labor (opcional)</Label>
+              <Label htmlFor="workType">Tipo de Labor *</Label>
               <select
                 id="workType"
                 value={workType}
                 onChange={(e) => setWorkType(e.target.value)}
                 className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                required
               >
-                <option value="">Sin especificar</option>
+                <option value="">Selecciona un tipo de labor</option>
                 {WORK_ORDER_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>
                     {t.label}

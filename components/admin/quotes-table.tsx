@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { formatCRC } from "@/lib/utils";
+import { formatCRC, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { Trash2, Send, Check, X, Eye, Download, MoreVertical } from "lucide-react";
 import { generateQuotePDF } from "@/lib/generate-pdf";
 import { Pagination } from "@/components/ui/pagination";
+import { MobileListItem, InitialsAvatar } from "@/components/admin/mobile-list-item";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -49,6 +50,14 @@ const statusConfig = {
   expired: { label: "Expirada", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
 };
 
+const statusTextColor: Record<string, string> = {
+  draft: "text-gray-500 dark:text-gray-400",
+  sent: "text-blue-600 dark:text-blue-400",
+  accepted: "text-green-600 dark:text-green-400",
+  rejected: "text-red-600 dark:text-red-400",
+  expired: "text-orange-600 dark:text-orange-400",
+};
+
 export function QuotesTable({ quotes }: { quotes: Quote[] }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -57,11 +66,12 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      // El menú de acciones se renderiza dos veces (lista mobile y tabla desktop,
+      // una de las dos oculta por CSS), así que no se puede usar un solo ref.
+      if (!(event.target as Element).closest("[data-quote-actions]")) {
         setOpenMenu(null);
       }
     };
@@ -108,13 +118,76 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
     });
   };
 
-  const handleSend = async (quote: Quote) => {
-    setSending(quote.id);
+  const handleSend = (quote: Quote) => {
+    const description = quote.clientEmail
+      ? `Enviar cotización ${quote.quoteNumber} a ${quote.clientName} (${quote.clientEmail}) por email y WhatsApp.`
+      : "Se enviará por email y se abrirá WhatsApp para compartir el PDF.";
+
+    toast({
+      title: "¿Enviar cotización?",
+      description,
+      action: (
+        <ToastAction altText="Confirmar envío" onClick={() => confirmSend(quote.id)}>
+          Enviar
+        </ToastAction>
+      ),
+    });
+  };
+
+  const confirmSend = async (id: string) => {
+    setSending(id);
     try {
-      await sendQuote(quote.id);
-      await updateQuoteStatus(quote.id, "sent");
-      toast({ title: "Éxito", description: "Cotización enviada por email" });
-      window.location.reload();
+      const result = await sendQuote(id);
+      await updateQuoteStatus(id, "sent");
+
+      if (result.ok) {
+        toast({ title: "Éxito", description: result.message });
+
+        // Si hay URL de WhatsApp, descargar PDF y abrir WhatsApp
+        if (result.whatsappUrl && result.pdfBase64 && result.quoteNumber) {
+          try {
+            const pdfBlob = new Blob(
+              [Uint8Array.from(atob(result.pdfBase64), (c) => c.charCodeAt(0))],
+              { type: "application/pdf" }
+            );
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            const link = document.createElement("a");
+            link.href = pdfUrl;
+            link.download = `cotizacion-${result.quoteNumber}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(pdfUrl);
+
+            setTimeout(() => {
+              window.open(result.whatsappUrl, "_blank");
+              toast({
+                title: "WhatsApp abierto",
+                description: "El PDF se ha descargado. Por favor adjúntalo manualmente en WhatsApp (botón 📎).",
+                duration: 5000,
+              });
+            }, 800);
+          } catch (error) {
+            console.error("Error descargando PDF:", error);
+            window.open(result.whatsappUrl, "_blank");
+            toast({
+              title: "WhatsApp abierto",
+              description: "Error al descargar PDF. Por favor genera el PDF manualmente y envíalo por WhatsApp.",
+              variant: "destructive",
+            });
+          }
+
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        } else {
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
+      } else {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+      }
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -146,6 +219,120 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
     generateQuotePDF(quote);
   };
 
+  const renderActionsMenu = (quote: Quote) => (
+    <div className="relative flex justify-end" data-quote-actions={quote.id}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => setOpenMenu(openMenu === quote.id ? null : quote.id)}
+      >
+        <MoreVertical className="h-4 w-4" />
+      </Button>
+
+      {openMenu === quote.id && (
+        <div
+          className="absolute right-0 top-full mt-1 bg-background border rounded-md shadow-md z-50 min-w-[160px]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 border-b"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              router.push(`/admin/quotes/${quote.id}`);
+              setOpenMenu(null);
+            }}
+          >
+            <Eye className="h-4 w-4" />
+            Ver
+          </button>
+
+          <button
+            type="button"
+            className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 border-b"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleDownload(quote);
+              setOpenMenu(null);
+            }}
+          >
+            <Download className="h-4 w-4" />
+            Descargar
+          </button>
+
+          {quote.status !== "accepted" && (
+            <button
+              type="button"
+              className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 dark:hover:bg-green-950 flex items-center gap-2 border-b text-green-600"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleStatusChange(quote.id, "accepted");
+                setOpenMenu(null);
+              }}
+              disabled={updatingStatus === quote.id}
+            >
+              <Check className="h-4 w-4" />
+              Aceptar
+            </button>
+          )}
+
+          {quote.status !== "rejected" && quote.status !== "accepted" && (
+            <button
+              type="button"
+              className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2 border-b text-red-600"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleStatusChange(quote.id, "rejected");
+                setOpenMenu(null);
+              }}
+              disabled={updatingStatus === quote.id}
+            >
+              <X className="h-4 w-4" />
+              Rechazar
+            </button>
+          )}
+
+          {quote.status === "draft" && (
+            <button
+              type="button"
+              className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-950 flex items-center gap-2 border-b text-blue-600"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSend(quote);
+                setOpenMenu(null);
+              }}
+              disabled={sending === quote.id}
+            >
+              <Send className="h-4 w-4" />
+              Enviar
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2 text-red-600"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleDelete(quote.id);
+              setOpenMenu(null);
+            }}
+            disabled={deleting === quote.id}
+          >
+            <Trash2 className="h-4 w-4" />
+            Eliminar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   if (quotes.length === 0) {
     return (
       <Card>
@@ -161,7 +348,30 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
 
   return (
     <Card>
-      <div className="overflow-x-auto">
+      {/* Mobile: lista compacta */}
+      <div className="md:hidden">
+        {paginatedQuotes.map((quote) => (
+          <MobileListItem
+            key={quote.id}
+            avatar={<InitialsAvatar name={quote.clientName} />}
+            title={quote.clientName}
+            subtitle={
+              <span>
+                #{quote.quoteNumber} ·{" "}
+                <span className={cn("font-medium", statusTextColor[quote.status])}>
+                  {statusConfig[quote.status as keyof typeof statusConfig].label}
+                </span>
+              </span>
+            }
+            value={formatCRC(quote.total)}
+            valueClassName="text-blue-600 dark:text-blue-400"
+            actions={renderActionsMenu(quote)}
+          />
+        ))}
+      </div>
+
+      {/* Desktop: tabla */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b">
@@ -195,119 +405,7 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
                   <td className="py-3 px-4 text-right text-sm text-muted-foreground">
                     {new Date(quote.createdAt).toLocaleDateString("es-CR")}
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="relative flex justify-end" ref={openMenu === quote.id ? menuRef : undefined}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setOpenMenu(openMenu === quote.id ? null : quote.id)}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-
-                      {openMenu === quote.id && (
-                        <div
-                          className="absolute right-0 top-full mt-1 bg-background border rounded-md shadow-md z-50 min-w-[160px]"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 border-b"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              router.push(`/admin/quotes/${quote.id}`);
-                              setOpenMenu(null);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                            Ver
-                          </button>
-
-                          <button
-                            type="button"
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 border-b"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleDownload(quote);
-                              setOpenMenu(null);
-                            }}
-                          >
-                            <Download className="h-4 w-4" />
-                            Descargar
-                          </button>
-
-                          {quote.status !== "accepted" && (
-                            <button
-                              type="button"
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 dark:hover:bg-green-950 flex items-center gap-2 border-b text-green-600"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleStatusChange(quote.id, "accepted");
-                                setOpenMenu(null);
-                              }}
-                              disabled={updatingStatus === quote.id}
-                            >
-                              <Check className="h-4 w-4" />
-                              Aceptar
-                            </button>
-                          )}
-
-                          {quote.status !== "rejected" && quote.status !== "accepted" && (
-                            <button
-                              type="button"
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2 border-b text-red-600"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleStatusChange(quote.id, "rejected");
-                                setOpenMenu(null);
-                              }}
-                              disabled={updatingStatus === quote.id}
-                            >
-                              <X className="h-4 w-4" />
-                              Rechazar
-                            </button>
-                          )}
-
-                          {quote.status === "draft" && (
-                            <button
-                              type="button"
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-950 flex items-center gap-2 border-b text-blue-600"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleSend(quote);
-                                setOpenMenu(null);
-                              }}
-                              disabled={sending === quote.id}
-                            >
-                              <Send className="h-4 w-4" />
-                              Enviar
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2 text-red-600"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleDelete(quote.id);
-                              setOpenMenu(null);
-                            }}
-                            disabled={deleting === quote.id}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Eliminar
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </td>
+                  <td className="py-3 px-4">{renderActionsMenu(quote)}</td>
                 </tr>
               );
             })}

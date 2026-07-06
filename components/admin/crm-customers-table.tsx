@@ -5,12 +5,13 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCRC } from "@/lib/utils";
+import { formatCRC, cn } from "@/lib/utils";
 import { Eye, Trash2 } from "lucide-react";
 import { deleteCustomer } from "@/app/actions/crm";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { Pagination } from "@/components/ui/pagination";
+import { MobileListItem, InitialsAvatar } from "@/components/admin/mobile-list-item";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -36,6 +37,14 @@ const statusConfig = {
   negotiation: { label: "Negociación", color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
   customer: { label: "Cliente", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
   inactive: { label: "Inactivo", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+};
+
+const statusTextColor: Record<string, string> = {
+  prospect: "text-gray-500 dark:text-gray-400",
+  qualified: "text-blue-600 dark:text-blue-400",
+  negotiation: "text-amber-600 dark:text-amber-400",
+  customer: "text-green-600 dark:text-green-400",
+  inactive: "text-red-600 dark:text-red-400",
 };
 
 export function CrmCustomersTable({ customers }: { customers: Customer[] }) {
@@ -90,7 +99,56 @@ export function CrmCustomersTable({ customers }: { customers: Customer[] }) {
 
   return (
     <Card>
-      <div className="overflow-x-auto">
+      {/* Mobile: lista compacta */}
+      <div className="md:hidden">
+        {paginatedCustomers.map((customer) => {
+          const status = statusConfig[customer.status as keyof typeof statusConfig];
+          return (
+            <MobileListItem
+              key={customer.id}
+              avatar={<InitialsAvatar name={customer.name} />}
+              title={customer.name}
+              subtitle={
+                <span>
+                  {customer.company && <>{customer.company} · </>}
+                  <span className={cn("font-medium", statusTextColor[customer.status])}>
+                    {status.label}
+                  </span>
+                </span>
+              }
+              value={
+                customer.totalSpent > 0 ? formatCRC(customer.totalSpent) : "—"
+              }
+              valueClassName={
+                customer.totalSpent > 0
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-muted-foreground font-normal"
+              }
+              actions={
+                <>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                    <Link href={`/admin/crm/customers/${customer.id}`}>
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    onClick={() => handleDelete(customer.id)}
+                    disabled={deleting === customer.id}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              }
+            />
+          );
+        })}
+      </div>
+
+      {/* Desktop: tabla */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b">
