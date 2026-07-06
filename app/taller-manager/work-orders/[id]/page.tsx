@@ -27,6 +27,8 @@ export default async function TallerManagerWorkOrderDetailPage({
     return sum;
   }, 0);
 
+  const personnelCount = new Set(workOrder.timeEntries.map((entry) => entry.user.id)).size;
+
   return (
     <div className="space-y-6">
       <Button variant="ghost" asChild className="mb-2">
@@ -48,7 +50,11 @@ export default async function TallerManagerWorkOrderDetailPage({
         </div>
       </div>
 
-      <TallerManagerWorkOrderDetailTabs workOrder={workOrder} totalHours={totalHours} />
+      <TallerManagerWorkOrderDetailTabs
+        workOrder={workOrder}
+        totalHours={totalHours}
+        personnelCount={personnelCount}
+      />
     </div>
   );
 }

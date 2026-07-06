@@ -24,6 +24,7 @@ export function WorkOrderDetailTabs({
   percentUsed,
   isOverBudget,
   totalHours,
+  personnelCount,
 }: {
   workOrder: WorkOrderData;
   budget: number;
@@ -35,6 +36,7 @@ export function WorkOrderDetailTabs({
   percentUsed: number;
   isOverBudget: boolean;
   totalHours: number;
+  personnelCount: number;
 }) {
   const [tab, setTab] = useState<Tab>("general");
 
@@ -66,7 +68,7 @@ export function WorkOrderDetailTabs({
 
       {tab === "general" && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Valor Cotizado</CardTitle>
@@ -81,6 +83,17 @@ export function WorkOrderDetailTabs({
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{totalHours.toFixed(1)}h</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Personal Utilizado</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{personnelCount}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {personnelCount === 1 ? "colaborador" : "colaboradores"} con horas registradas
+                </p>
               </CardContent>
             </Card>
           </div>

@@ -5,6 +5,107 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-costs";
 import { uploadImages } from "@/lib/cloudinary";
+import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Notifica a todos los administradores cuando alguien cambia el estado de una
+// orden de trabajo, indicando quién la movió y a qué estado quedó.
+async function sendWorkOrderStatusChangeEmail(
+  workOrder: {
+    id: string;
+    workOrderNumber: string;
+    status: string;
+    quote: { clientName: string; projectName: string; customer: { name: string } | null };
+  },
+  changedBy: { name: string | null; email: string }
+) {
+  const admins = await prisma.user.findMany({
+    where: { role: "admin" },
+    select: { email: true },
+  });
+  const adminEmails = admins.map((a) => a.email).filter(Boolean);
+  if (adminEmails.length === 0) return;
+
+  const workOrderLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/admin/work-orders/${workOrder.id}`;
+  const statusLabel = WORK_ORDER_STATUS_LABELS[workOrder.status] || workOrder.status;
+  const clientName = workOrder.quote.customer?.name || workOrder.quote.clientName;
+
+  try {
+    await resend.emails.send({
+      from: "Habita Studio <info@habitastudio.online>",
+      to: adminEmails,
+      replyTo: "info@habitastudio.online",
+      subject: `${workOrder.workOrderNumber} cambió a "${statusLabel}"`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="color-scheme" content="light">
+          <meta name="supported-color-schemes" content="light">
+          <style>
+            @media (prefers-color-scheme: dark) {
+              .btn-accept, .btn-accept a { background-color: #000000 !important; color: #ffffff !important; }
+            }
+          </style>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+          <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px;">
+            <tr>
+              <td align="center">
+                <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <tr>
+                    <td style="background-color: #ffffff; padding: 30px 40px 20px 40px; text-align: center;">
+                      <img src="https://habitastudio.online/images/logo.png" alt="Habita Studio" style="max-width: 200px; height: auto; margin-bottom: 20px;" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0 40px;">
+                      <h2 style="margin: 20px 0; font-size: 24px; color: #333;">Cambio de Estado</h2>
+                      <p style="margin: 15px 0; color: #666; line-height: 1.6;">
+                        <strong>${changedBy.name || changedBy.email}</strong> cambió el estado de la orden de trabajo <strong>${workOrder.workOrderNumber}</strong>.
+                      </p>
+
+                      <div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
+                        <p style="margin: 10px 0;"><strong>Orden:</strong> ${workOrder.workOrderNumber}</p>
+                        <p style="margin: 10px 0;"><strong>Cliente:</strong> ${clientName} — ${workOrder.quote.projectName}</p>
+                        <p style="margin: 10px 0;"><strong>Nuevo estado:</strong> ${statusLabel}</p>
+                        <p style="margin: 10px 0;"><strong>Cambiado por:</strong> ${changedBy.name || "Sin nombre"} (${changedBy.email})</p>
+                      </div>
+
+                      <table role="presentation" style="margin: 30px 0;">
+                        <tr>
+                          <td class="btn-accept" bgcolor="#000000" style="background-color: #000000 !important; border-radius: 5px; padding: 0; margin-right: 10px;">
+                            <a href="${workOrderLink}" style="background-color: #000000 !important; color: #ffffff !important; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                              Ver Orden de Trabajo
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background-color: #f9f9f9; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;">
+                      <p style="margin: 0; color: #999; font-size: 12px;">
+                        © Habita Studio. Todos los derechos reservados.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+  } catch (error) {
+    console.error("Error al enviar notificación de cambio de estado:", error);
+  }
+}
 
 async function generateWorkOrderNumber() {
   const currentYear = new Date().getFullYear();
@@ -194,7 +295,18 @@ export async function updateWorkOrderStatus(
   const workOrder = await prisma.workOrder.update({
     where: { id },
     data: { status },
+    include: {
+      quote: {
+        select: {
+          clientName: true,
+          projectName: true,
+          customer: { select: { name: true } },
+        },
+      },
+    },
   });
+
+  await sendWorkOrderStatusChangeEmail(workOrder, user);
 
   revalidatePath("/admin/work-orders");
   revalidatePath(`/admin/work-orders/${id}`);
@@ -264,27 +376,6 @@ export async function getWorkOrdersForSelect() {
       quote: { select: { clientName: true, projectName: true } },
     },
     orderBy: { createdAt: "desc" },
-  });
-}
-
-// Órdenes liberadas al taller, para elegir al marcar entrada/salida.
-// Cualquier colaborador puede marcar en cualquier orden liberada, sin importar
-// quién la vaya a trabajar (ya no existe la asignación de equipo).
-export async function getMyActiveWorkOrdersForClock() {
-  const user = await getCurrentUser();
-  if (!user) throw new Error("No autenticado");
-
-  return await prisma.workOrder.findMany({
-    where: {
-      deliveryDate: { not: null },
-      status: { not: "completed" },
-    },
-    select: {
-      id: true,
-      workOrderNumber: true,
-      quote: { select: { clientName: true, projectName: true } },
-    },
-    orderBy: { deliveryDate: "asc" },
   });
 }
 

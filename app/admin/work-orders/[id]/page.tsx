@@ -46,6 +46,8 @@ export default async function WorkOrderDetailPage({
     return sum;
   }, 0);
 
+  const personnelCount = new Set(workOrder.timeEntries.map((entry) => entry.user.id)).size;
+
   const budget = workOrder.quote.total;
   const laborCost = await calculateLaborCost(workOrder.timeEntries);
   const expensesCost = calculateExpensesCost(workOrder.expenses);
@@ -93,6 +95,7 @@ export default async function WorkOrderDetailPage({
         percentUsed={percentUsed}
         isOverBudget={isOverBudget}
         totalHours={totalHours}
+        personnelCount={personnelCount}
       />
     </div>
   );

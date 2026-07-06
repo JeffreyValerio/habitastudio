@@ -1,6 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { TimeClock } from "@/components/collaborator/time-clock";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, DollarSign, Calendar } from "lucide-react";
 
@@ -61,9 +60,6 @@ export default async function CollaboratorDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Time Clock */}
-      <TimeClock />
     </div>
   );
 }
