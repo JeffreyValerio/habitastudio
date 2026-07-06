@@ -174,6 +174,7 @@ export function WorkOrderDetailTabs({
                 armadoCompletedAt={workOrder.armadoCompletedAt}
                 instaladoCompletedAt={workOrder.instaladoCompletedAt}
                 canEdit
+                canRevert
               />
             </CardContent>
           </Card>

@@ -267,6 +267,47 @@ export async function markWorkOrderStage(workOrderId: string, stage: WorkOrderSt
   return updated;
 }
 
+// Permite al admin corregir una etapa marcada por error. Solo se puede
+// reversar la última etapa completada (no se puede dejar un hueco en medio
+// de la secuencia estricta).
+export async function revertWorkOrderStage(workOrderId: string, stage: WorkOrderStage) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("Solo un administrador puede reversar una etapa");
+  }
+
+  const workOrder = await prisma.workOrder.findUnique({ where: { id: workOrderId } });
+  if (!workOrder) throw new Error("Orden de trabajo no encontrada");
+
+  const stageIndex = WORK_ORDER_STAGES.findIndex((s) => s.key === stage);
+  const targetStage = WORK_ORDER_STAGES[stageIndex];
+
+  if (!workOrder[targetStage.field]) {
+    throw new Error(`"${targetStage.label}" no está marcada como completada`);
+  }
+
+  for (let i = stageIndex + 1; i < WORK_ORDER_STAGES.length; i++) {
+    if (workOrder[WORK_ORDER_STAGES[i].field]) {
+      throw new Error(`Debes reversar primero "${WORK_ORDER_STAGES[i].label}"`);
+    }
+  }
+
+  const updated = await prisma.workOrder.update({
+    where: { id: workOrderId },
+    data: {
+      [targetStage.field]: null,
+      // Instalado completa automáticamente la OT; al reversarla, reabrirla.
+      ...(stage === "instalado" && workOrder.status === "completed" ? { status: "in_progress" } : {}),
+    },
+  });
+
+  revalidatePath("/admin/work-orders");
+  revalidatePath(`/admin/work-orders/${workOrderId}`);
+  revalidatePath("/taller-manager/work-orders");
+  revalidatePath(`/taller-manager/work-orders/${workOrderId}`);
+  return updated;
+}
+
 async function generateWorkOrderNumber() {
   const currentYear = new Date().getFullYear();
 

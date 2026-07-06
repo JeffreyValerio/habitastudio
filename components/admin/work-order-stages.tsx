@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { markWorkOrderStage } from "@/app/actions/work-orders";
+import { markWorkOrderStage, revertWorkOrderStage } from "@/app/actions/work-orders";
 import { WORK_ORDER_STAGES, WorkOrderStage } from "@/lib/work-order-types";
-import { CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, Undo2 } from "lucide-react";
 
 export function WorkOrderStages({
   workOrderId,
@@ -14,6 +14,7 @@ export function WorkOrderStages({
   armadoCompletedAt,
   instaladoCompletedAt,
   canEdit,
+  canRevert = false,
 }: {
   workOrderId: string;
   corteCompletedAt: Date | null;
@@ -21,9 +22,11 @@ export function WorkOrderStages({
   armadoCompletedAt: Date | null;
   instaladoCompletedAt: Date | null;
   canEdit: boolean;
+  canRevert?: boolean;
 }) {
   const { toast } = useToast();
   const [marking, setMarking] = useState<WorkOrderStage | null>(null);
+  const [reverting, setReverting] = useState<WorkOrderStage | null>(null);
 
   const completedAtByStage: Record<WorkOrderStage, Date | null> = {
     corte: corteCompletedAt,
@@ -33,6 +36,7 @@ export function WorkOrderStages({
   };
 
   const nextIndex = WORK_ORDER_STAGES.findIndex((s) => !completedAtByStage[s.key]);
+  const lastCompletedIndex = nextIndex === -1 ? WORK_ORDER_STAGES.length - 1 : nextIndex - 1;
 
   const handleMark = async (stage: WorkOrderStage) => {
     setMarking(stage);
@@ -44,6 +48,19 @@ export function WorkOrderStages({
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setMarking(null);
+    }
+  };
+
+  const handleRevert = async (stage: WorkOrderStage) => {
+    setReverting(stage);
+    try {
+      await revertWorkOrderStage(workOrderId, stage);
+      toast({ title: "Éxito", description: `Se revirtió la etapa "${stage}"` });
+      window.location.reload();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setReverting(null);
     }
   };
 
@@ -83,6 +100,21 @@ export function WorkOrderStages({
               <Button size="sm" onClick={() => handleMark(s.key)} disabled={marking === s.key}>
                 {marking === s.key && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Marcar Completado
+              </Button>
+            )}
+            {canRevert && i === lastCompletedIndex && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleRevert(s.key)}
+                disabled={reverting === s.key}
+              >
+                {reverting === s.key ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Undo2 className="mr-2 h-4 w-4" />
+                )}
+                Revertir
               </Button>
             )}
           </div>
