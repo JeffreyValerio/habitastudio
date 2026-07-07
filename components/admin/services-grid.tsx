@@ -3,13 +3,13 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { deleteService } from "@/app/actions/services";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { Trash2, Edit, Search, X as XIcon, Zap, CheckCircle2, List } from "lucide-react";
+import { Trash2, Edit, Zap, CheckCircle2, List } from "lucide-react";
 import * as Icons from "lucide-react";
+import { SearchInput } from "@/components/admin/search-input";
 
 interface Service {
   id: string;
@@ -110,26 +110,7 @@ export function ServicesGrid({ services }: { services: Service[] }) {
     <div className="space-y-6">
       {/* Búsqueda */}
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar servicios..."
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10 pr-10"
-          />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
-              onClick={() => handleSearchChange("")}
-            >
-              <XIcon className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+        <SearchInput value={searchQuery} onChange={handleSearchChange} placeholder="Buscar servicios..." />
         {searchQuery && (
           <p className="text-sm text-muted-foreground">
             {filteredServices.length} resultado{filteredServices.length !== 1 ? "s" : ""}

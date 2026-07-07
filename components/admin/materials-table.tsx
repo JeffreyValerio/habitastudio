@@ -18,8 +18,9 @@ import { ToastAction } from "@/components/ui/toast";
 import { adjustMaterialStock, deleteMaterial } from "@/app/actions/inventory";
 import { MATERIAL_UNIT_LABELS } from "@/lib/inventory-types";
 import { formatCRC } from "@/lib/utils";
-import { Pencil, Trash2, Plus, Minus, Loader2, AlertTriangle, Search, X as XIcon } from "lucide-react";
+import { Pencil, Trash2, Plus, Minus, Loader2, AlertTriangle } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
+import { SearchInput } from "@/components/admin/search-input";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -135,23 +136,7 @@ export function MaterialsTable({ materials }: { materials: Material[] }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
-            >
-              <XIcon className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por nombre..." />
         <Select value={supplierFilter} onValueChange={setSupplierFilter}>
           <SelectTrigger className="w-full sm:w-56">
             <SelectValue placeholder="Proveedor" />

@@ -9,12 +9,13 @@ interface ChartData {
   monthKey: string;
   quoted: number;
   accepted: number;
+  paid: number;
 }
 
 export function QuotesRevenueChart() {
   const [data, setData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hoveredPoint, setHoveredPoint] = useState<{ index: number; type: "quoted" | "accepted" } | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<{ index: number; type: "quoted" | "accepted" | "paid" } | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export function QuotesRevenueChart() {
   }
 
   const maxValue = Math.max(
-    ...data.map(d => Math.max(d.quoted, d.accepted))
+    ...data.map(d => Math.max(d.quoted, d.accepted, d.paid))
   );
 
   if (maxValue === 0) {
@@ -69,8 +70,9 @@ export function QuotesRevenueChart() {
 
   const quotedPoints = data.map((d, i) => `${getX(i)},${getY(d.quoted)}`).join(" ");
   const acceptedPoints = data.map((d, i) => `${getX(i)},${getY(d.accepted)}`).join(" ");
+  const paidPoints = data.map((d, i) => `${getX(i)},${getY(d.paid)}`).join(" ");
 
-  const handlePointHover = (index: number, type: "quoted" | "accepted", e: React.MouseEvent<SVGCircleElement>) => {
+  const handlePointHover = (index: number, type: "quoted" | "accepted" | "paid", e: React.MouseEvent<SVGCircleElement>) => {
     const svg = e.currentTarget.closest("svg");
     if (!svg) return;
 
@@ -92,11 +94,7 @@ export function QuotesRevenueChart() {
     setHoveredPoint(null);
   };
 
-  const tooltipValue = hoveredPoint
-    ? hoveredPoint.type === "quoted"
-      ? data[hoveredPoint.index].quoted
-      : data[hoveredPoint.index].accepted
-    : 0;
+  const tooltipValue = hoveredPoint ? data[hoveredPoint.index][hoveredPoint.type] : 0;
 
   return (
     <div className="space-y-4">
@@ -110,6 +108,10 @@ export function QuotesRevenueChart() {
           <div className="flex items-center gap-2">
             <div className="w-3 h-0.5 bg-green-500"></div>
             <span className="text-muted-foreground">Aceptado</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-0.5 bg-purple-500"></div>
+            <span className="text-muted-foreground">Pagado</span>
           </div>
         </div>
       </div>
@@ -197,6 +199,17 @@ export function QuotesRevenueChart() {
             vectorEffect="non-scaling-stroke"
           />
 
+          {/* Paid line (purple) */}
+          <polyline
+            points={paidPoints}
+            fill="none"
+            stroke="#a855f7"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+
           {/* Data points - Quoted */}
           {data.map((d, i) => (
             <circle
@@ -227,6 +240,23 @@ export function QuotesRevenueChart() {
               opacity="0.9"
               className="cursor-pointer hover:r-6 transition-all"
               onMouseEnter={(e) => handlePointHover(i, "accepted", e)}
+              onMouseLeave={handlePointLeave}
+            />
+          ))}
+
+          {/* Data points - Paid */}
+          {data.map((d, i) => (
+            <circle
+              key={`paid-${i}`}
+              cx={getX(i)}
+              cy={getY(d.paid)}
+              r="5"
+              fill="#a855f7"
+              stroke="white"
+              strokeWidth="2"
+              opacity="0.9"
+              className="cursor-pointer hover:r-6 transition-all"
+              onMouseEnter={(e) => handlePointHover(i, "paid", e)}
               onMouseLeave={handlePointLeave}
             />
           ))}

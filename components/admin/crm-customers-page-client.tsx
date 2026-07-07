@@ -7,7 +7,14 @@ import { Plus, Filter, ArrowUpDown, Users, DollarSign } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCustomers } from "@/app/actions/crm";
 import { CrmCustomersTable } from "@/components/admin/crm-customers-table";
-import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SearchInput } from "@/components/admin/search-input";
 import { formatCRC } from "@/lib/utils";
 
 export function CrmCustomersPageClient() {
@@ -133,10 +140,11 @@ export function CrmCustomersPageClient() {
           {/* Search */}
           <div>
             <label className="text-sm font-medium mb-1 block">Buscar</label>
-            <Input
-              placeholder="Nombre o email..."
+            <SearchInput
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={setSearchTerm}
+              placeholder="Nombre o email..."
+              className="max-w-none"
             />
           </div>
 
@@ -144,16 +152,17 @@ export function CrmCustomersPageClient() {
           <div>
             <label className="text-sm font-medium mb-1 block">Ordenar por</label>
             <div className="flex gap-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="flex-1 px-3 py-2 border rounded-md bg-background text-foreground"
-              >
-                <option value="name">Nombre</option>
-                <option value="date">Fecha</option>
-                <option value="spent">Gastado</option>
-                <option value="interactions">Interacciones</option>
-              </select>
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Nombre</SelectItem>
+                  <SelectItem value="date">Fecha</SelectItem>
+                  <SelectItem value="spent">Gastado</SelectItem>
+                  <SelectItem value="interactions">Interacciones</SelectItem>
+                </SelectContent>
+              </Select>
               <button
                 onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
                 className="px-3 py-2 border rounded-md hover:bg-accent transition-colors"

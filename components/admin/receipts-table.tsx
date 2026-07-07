@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { formatCRC } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -24,10 +23,11 @@ import {
 import { deleteReceipt, sendReceipt } from "@/app/actions/receipts";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { Trash2, Edit, Send, Search, X as XIcon, Receipt as ReceiptIcon, CheckCircle2, Clock } from "lucide-react";
+import { Trash2, Edit, Send, Receipt as ReceiptIcon, CheckCircle2, Clock } from "lucide-react";
 import { ReceiptDownloadButton } from "./receipt-download-button";
 import { Pagination } from "@/components/ui/pagination";
 import { MobileListItem, InitialsAvatar } from "@/components/admin/mobile-list-item";
+import { SearchInput } from "@/components/admin/search-input";
 
 interface Receipt {
   id: string;
@@ -335,26 +335,14 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar recibos..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-8"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
-            >
-              <XIcon className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={(value) => {
+            setSearchQuery(value);
+            setCurrentPage(1);
+          }}
+          placeholder="Buscar recibos..."
+        />
         <Select value={activeStatus} onValueChange={handleStatusChange}>
           <SelectTrigger className="w-full sm:w-56">
             <SelectValue placeholder="Estado" />

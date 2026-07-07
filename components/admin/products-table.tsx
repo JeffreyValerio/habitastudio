@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatCRC } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -17,10 +16,11 @@ import {
 import { deleteProduct } from "@/app/actions/products";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { Trash2, Edit, Search, X as XIcon } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { MobileListItem, ImageAvatar } from "@/components/admin/mobile-list-item";
 import { FilterTabs } from "@/components/admin/filter-tabs";
+import { SearchInput } from "@/components/admin/search-input";
 
 interface Product {
   id: string;
@@ -136,26 +136,11 @@ export function ProductsTable({ products }: { products: Product[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar por nombre, categoría..."
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10 pr-10"
-          />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
-              onClick={() => handleSearchChange("")}
-            >
-              <XIcon className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={handleSearchChange}
+          placeholder="Buscar por nombre, categoría..."
+        />
         {searchQuery && (
           <p className="text-sm text-muted-foreground">
             {filteredProducts.length} resultado{filteredProducts.length !== 1 ? "s" : ""}

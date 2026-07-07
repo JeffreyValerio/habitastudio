@@ -7,7 +7,14 @@ import { useEffect, useState } from "react";
 import { getQuotes } from "@/app/actions/quotes";
 import { QuotesTable } from "@/components/admin/quotes-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SearchInput } from "@/components/admin/search-input";
 import { formatCRC } from "@/lib/utils";
 
 const MONTH_NAMES = [
@@ -152,73 +159,78 @@ export default function QuotesPage() {
           {/* Search */}
           <div>
             <label className="text-sm font-medium mb-1 block">Buscar</label>
-            <Input
-              placeholder="Nº, cliente, proyecto..."
+            <SearchInput
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={setSearchTerm}
+              placeholder="Nº, cliente, proyecto..."
+              className="max-w-none"
             />
           </div>
 
           {/* Status Filter */}
           <div>
             <label className="text-sm font-medium mb-1 block">Estado</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-            >
-              <option value="all">Todos</option>
-              <option value="draft">Borrador</option>
-              <option value="sent">Enviada</option>
-              <option value="accepted">Aceptada</option>
-              <option value="rejected">Rechazada</option>
-              <option value="expired">Expirada</option>
-            </select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="draft">Borrador</SelectItem>
+                <SelectItem value="sent">Enviada</SelectItem>
+                <SelectItem value="accepted">Aceptada</SelectItem>
+                <SelectItem value="rejected">Rechazada</SelectItem>
+                <SelectItem value="expired">Expirada</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Month Filter */}
           <div>
             <label className="text-sm font-medium mb-1 block">Mes</label>
-            <select
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-            >
-              <option value="all">Todos</option>
-              {MONTH_NAMES.map((name, idx) => (
-                <option key={idx} value={idx}>{name}</option>
-              ))}
-            </select>
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {MONTH_NAMES.map((name, idx) => (
+                  <SelectItem key={idx} value={String(idx)}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Year Filter */}
           <div>
             <label className="text-sm font-medium mb-1 block">Año</label>
-            <select
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-            >
-              <option value="all">Todos</option>
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
+            <Select value={yearFilter} onValueChange={setYearFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Sort */}
           <div>
             <label className="text-sm font-medium mb-1 block">Ordenar por</label>
             <div className="flex gap-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="flex-1 px-3 py-2 border rounded-md bg-background text-foreground"
-              >
-                <option value="date">Fecha</option>
-                <option value="amount">Monto</option>
-                <option value="number">Número</option>
-              </select>
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Fecha</SelectItem>
+                  <SelectItem value="amount">Monto</SelectItem>
+                  <SelectItem value="number">Número</SelectItem>
+                </SelectContent>
+              </Select>
               <button
                 onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
                 className="px-3 py-2 border rounded-md hover:bg-accent transition-colors"

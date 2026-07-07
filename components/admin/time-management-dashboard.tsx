@@ -5,6 +5,13 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CollaboratorsTable } from "@/components/admin/collaborators-table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getCollaboratorsWithEarnings } from "@/app/actions/timesheet";
 import { formatCRC } from "@/lib/utils";
 import { Users, Plus, Clock, DollarSign, Filter } from "lucide-react";
@@ -90,41 +97,44 @@ export function TimeManagementDashboard({ role }: { role: string }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">Mes</label>
-              <select
-                value={month}
-                onChange={(e) => setMonth(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-              >
-                {MONTH_NAMES.map((name, idx) => (
-                  <option key={idx} value={idx + 1}>{name}</option>
-                ))}
-              </select>
+              <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTH_NAMES.map((name, idx) => (
+                    <SelectItem key={idx} value={String(idx + 1)}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="text-sm font-medium mb-1 block">Año</label>
-              <select
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-              >
-                {yearOptions.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+              <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="text-sm font-medium mb-1 block">Quincena</label>
-              <select
-                value={quincena}
-                onChange={(e) => setQuincena(e.target.value as "all" | "1" | "2")}
-                className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
-              >
-                <option value="all">Mes completo</option>
-                <option value="1">1ra Quincena (1-15)</option>
-                <option value="2">2da Quincena (16-fin)</option>
-              </select>
+              <Select value={quincena} onValueChange={(v) => setQuincena(v as "all" | "1" | "2")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Mes completo</SelectItem>
+                  <SelectItem value="1">1ra Quincena (1-15)</SelectItem>
+                  <SelectItem value="2">2da Quincena (16-fin)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, X } from "lucide-react";
+import { X } from "lucide-react";
 import { getRecentCustomers } from "@/app/actions/crm";
+import { SearchInput } from "@/components/admin/search-input";
 
 interface Customer {
   id: string;
@@ -78,19 +78,17 @@ export function QuoteClientSelector({
   return (
     <div className="relative" ref={containerRef}>
       <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar cliente o empresa..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setShowSuggestions(true);
-            }}
-            onFocus={() => setShowSuggestions(true)}
-            className="pl-9"
-          />
-        </div>
+        <SearchInput
+          value={searchTerm}
+          onChange={(value) => {
+            setSearchTerm(value);
+            setShowSuggestions(true);
+          }}
+          onFocus={() => setShowSuggestions(true)}
+          placeholder="Buscar cliente o empresa..."
+          showClear={false}
+          className="max-w-none"
+        />
         {selectedCustomer?.name && (
           <Button
             type="button"

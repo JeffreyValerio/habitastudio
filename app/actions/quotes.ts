@@ -624,26 +624,37 @@ export async function getQuotesRevenueTrend(months: number = 12) {
   startDate.setMonth(startDate.getMonth() - months);
   startDate.setDate(1);
 
-  const quotes = await prisma.quote.findMany({
-    where: {
-      createdAt: { gte: startDate },
-    },
-    select: {
-      total: true,
-      status: true,
-      createdAt: true,
-    },
-  });
+  const [quotes, receipts] = await Promise.all([
+    prisma.quote.findMany({
+      where: {
+        createdAt: { gte: startDate },
+      },
+      select: {
+        total: true,
+        status: true,
+        createdAt: true,
+      },
+    }),
+    prisma.receipt.findMany({
+      where: {
+        receiptDate: { gte: startDate },
+      },
+      select: {
+        amount: true,
+        receiptDate: true,
+      },
+    }),
+  ]);
 
   // Agrupar por mes
-  const monthlyData = new Map<string, { quoted: number; accepted: number }>();
+  const monthlyData = new Map<string, { quoted: number; accepted: number; paid: number }>();
 
   quotes.forEach((quote) => {
     const date = new Date(quote.createdAt);
     const monthKey = date.toISOString().slice(0, 7); // YYYY-MM
 
     if (!monthlyData.has(monthKey)) {
-      monthlyData.set(monthKey, { quoted: 0, accepted: 0 });
+      monthlyData.set(monthKey, { quoted: 0, accepted: 0, paid: 0 });
     }
 
     const data = monthlyData.get(monthKey)!;
@@ -651,6 +662,17 @@ export async function getQuotesRevenueTrend(months: number = 12) {
     if (quote.status === "accepted") {
       data.accepted += quote.total;
     }
+  });
+
+  receipts.forEach((receipt) => {
+    const date = new Date(receipt.receiptDate);
+    const monthKey = date.toISOString().slice(0, 7);
+
+    if (!monthlyData.has(monthKey)) {
+      monthlyData.set(monthKey, { quoted: 0, accepted: 0, paid: 0 });
+    }
+
+    monthlyData.get(monthKey)!.paid += receipt.amount;
   });
 
   // Convertir a array y asegurar todos los meses
@@ -667,6 +689,7 @@ export async function getQuotesRevenueTrend(months: number = 12) {
       monthKey,
       quoted: data?.quoted || 0,
       accepted: data?.accepted || 0,
+      paid: data?.paid || 0,
     });
 
     current.setMonth(current.getMonth() + 1);
