@@ -5,6 +5,14 @@ import Link from "next/link";
 import { formatCRC } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -16,11 +24,10 @@ import {
 import { deleteReceipt, sendReceipt } from "@/app/actions/receipts";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { Trash2, Edit, Send, Search, X as XIcon } from "lucide-react";
+import { Trash2, Edit, Send, Search, X as XIcon, Receipt as ReceiptIcon, CheckCircle2, Clock } from "lucide-react";
 import { ReceiptDownloadButton } from "./receipt-download-button";
 import { Pagination } from "@/components/ui/pagination";
 import { MobileListItem, InitialsAvatar } from "@/components/admin/mobile-list-item";
-import { FilterTabs } from "@/components/admin/filter-tabs";
 
 interface Receipt {
   id: string;
@@ -222,7 +229,7 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
     }
   };
 
-  const statusTabs = useMemo(() => {
+  const statusOptions = useMemo(() => {
     const paid = enrichedReceipts.filter((r) => r.isPaid).length;
     const pending = enrichedReceipts.length - paid;
     return [
@@ -230,6 +237,21 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
       { key: "paid", label: "Pagados", count: paid },
       { key: "pending", label: "Pendientes", count: pending },
     ];
+  }, [enrichedReceipts]);
+
+  // KPIs: total cobrado (todos los recibos) y saldo pendiente (por cotización
+  // única, para no contar el mismo saldo varias veces si tiene varios recibos)
+  const totalCollected = useMemo(
+    () => enrichedReceipts.reduce((sum, r) => sum + r.amount, 0),
+    [enrichedReceipts]
+  );
+
+  const totalPendingBalance = useMemo(() => {
+    const balanceByQuote = new Map<string, number>();
+    enrichedReceipts.forEach((r) => {
+      balanceByQuote.set(r.quote.id, r.balance || 0);
+    });
+    return Array.from(balanceByQuote.values()).reduce((sum, b) => sum + b, 0);
   }, [enrichedReceipts]);
 
   const filteredReceipts = useMemo(() => {
@@ -270,7 +292,49 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <ReceiptIcon className="h-4 w-4 text-blue-600" />
+              Total Recibos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{enrichedReceipts.length}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              Total Cobrado
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {formatCRC(totalCollected)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={totalPendingBalance > 0 ? "border-amber-200 dark:border-amber-800" : undefined}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4 text-amber-600" />
+              Saldo Pendiente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+              {formatCRC(totalPendingBalance)}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -291,9 +355,19 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
             </button>
           )}
         </div>
+        <Select value={activeStatus} onValueChange={handleStatusChange}>
+          <SelectTrigger className="w-full sm:w-56">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            {statusOptions.map((opt) => (
+              <SelectItem key={opt.key} value={opt.key}>
+                {opt.label} ({opt.count})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-
-      <FilterTabs tabs={statusTabs} active={activeStatus} onChange={handleStatusChange} />
 
       {/* Mobile: lista compacta */}
       <div className="md:hidden rounded-md border">
