@@ -1,17 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { adjustMaterialStock, deleteMaterial } from "@/app/actions/inventory";
 import { MATERIAL_UNIT_LABELS } from "@/lib/inventory-types";
 import { formatCRC } from "@/lib/utils";
-import { Pencil, Trash2, Plus, Minus, Loader2, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, Plus, Minus, Loader2, AlertTriangle, Search, X as XIcon } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 
 const ITEMS_PER_PAGE = 15;
@@ -32,13 +39,33 @@ export function MaterialsTable({ materials }: { materials: Material[] }) {
   const [adjustType, setAdjustType] = useState<"in" | "out">("in");
   const [adjustQty, setAdjustQty] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("all");
+
+  const suppliers = useMemo(() => {
+    const map = new Map<string, string>();
+    materials.forEach((m) => {
+      if (m.supplier) map.set(m.supplier.id, m.supplier.name);
+    });
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [materials]);
+
+  const filteredMaterials = useMemo(() => {
+    return materials.filter((m) => {
+      const matchesSearch = m.name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+      const matchesSupplier = supplierFilter === "all" || m.supplier?.id === supplierFilter;
+      return matchesSearch && matchesSupplier;
+    });
+  }, [materials, searchQuery, supplierFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [materials]);
+  }, [searchQuery, supplierFilter, materials]);
 
-  const totalPages = Math.ceil(materials.length / ITEMS_PER_PAGE);
-  const paginatedMaterials = materials.slice(
+  const totalPages = Math.ceil(filteredMaterials.length / ITEMS_PER_PAGE);
+  const paginatedMaterials = filteredMaterials.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -106,7 +133,46 @@ export function MaterialsTable({ materials }: { materials: Material[] }) {
   }
 
   return (
-    <Card>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+          <SelectTrigger className="w-full sm:w-56">
+            <SelectValue placeholder="Proveedor" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los proveedores</SelectItem>
+            {suppliers.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Card>
+      {filteredMaterials.length === 0 ? (
+        <CardContent className="pt-12 pb-12 text-center text-muted-foreground">
+          No se encontraron materiales con esos filtros
+        </CardContent>
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -196,7 +262,11 @@ export function MaterialsTable({ materials }: { materials: Material[] }) {
           </tbody>
         </table>
       </div>
-      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-    </Card>
+      )}
+      </Card>
+      {filteredMaterials.length > 0 && (
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+      )}
+    </div>
   );
 }

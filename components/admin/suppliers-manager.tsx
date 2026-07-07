@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { createSupplier, deleteSupplier } from "@/app/actions/inventory";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { createSupplier, updateSupplier, deleteSupplier } from "@/app/actions/inventory";
+import { Loader2, Plus, Pencil, Trash2, X } from "lucide-react";
 
 interface Supplier {
   id: string;
@@ -21,6 +21,7 @@ interface Supplier {
 
 export function SuppliersManager({ suppliers }: { suppliers: Supplier[] }) {
   const { toast } = useToast();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -28,19 +29,43 @@ export function SuppliersManager({ suppliers }: { suppliers: Supplier[] }) {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const handleCreate = async () => {
+  const resetForm = () => {
+    setEditingId(null);
+    setName("");
+    setEmail("");
+    setPhone("");
+    setCity("");
+  };
+
+  const handleEdit = (s: Supplier) => {
+    setEditingId(s.id);
+    setName(s.name);
+    setEmail(s.email || "");
+    setPhone(s.phone || "");
+    setCity(s.city || "");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSave = async () => {
     if (!name) {
       toast({ title: "Error", description: "El nombre es requerido", variant: "destructive" });
       return;
     }
     setCreating(true);
     try {
-      await createSupplier({ name, email: email || undefined, phone: phone || undefined, city: city || undefined });
-      toast({ title: "Éxito", description: "Proveedor creado" });
-      setName("");
-      setEmail("");
-      setPhone("");
-      setCity("");
+      if (editingId) {
+        await updateSupplier(editingId, {
+          name,
+          email: email || undefined,
+          phone: phone || undefined,
+          city: city || undefined,
+        });
+        toast({ title: "Éxito", description: "Proveedor actualizado" });
+      } else {
+        await createSupplier({ name, email: email || undefined, phone: phone || undefined, city: city || undefined });
+        toast({ title: "Éxito", description: "Proveedor creado" });
+      }
+      resetForm();
       window.location.reload();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -78,7 +103,7 @@ export function SuppliersManager({ suppliers }: { suppliers: Supplier[] }) {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <Card className="lg:col-span-1">
         <CardHeader>
-          <CardTitle>Nuevo Proveedor</CardTitle>
+          <CardTitle>{editingId ? "Editar Proveedor" : "Nuevo Proveedor"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -97,10 +122,23 @@ export function SuppliersManager({ suppliers }: { suppliers: Supplier[] }) {
             <Label>Ciudad</Label>
             <Input value={city} onChange={(e) => setCity(e.target.value)} />
           </div>
-          <Button onClick={handleCreate} disabled={creating} className="w-full">
-            {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-            Agregar Proveedor
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={creating} className="flex-1">
+              {creating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : editingId ? (
+                <Pencil className="mr-2 h-4 w-4" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
+              {editingId ? "Guardar Cambios" : "Agregar Proveedor"}
+            </Button>
+            {editingId && (
+              <Button variant="outline" onClick={resetForm} disabled={creating}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -124,6 +162,10 @@ export function SuppliersManager({ suppliers }: { suppliers: Supplier[] }) {
                     {s._count.materials} {s._count.materials === 1 ? "material" : "materiales"}
                   </p>
                 </div>
+                <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" onClick={() => handleEdit(s)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -133,6 +175,7 @@ export function SuppliersManager({ suppliers }: { suppliers: Supplier[] }) {
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
+                </div>
               </CardContent>
             </Card>
           ))
