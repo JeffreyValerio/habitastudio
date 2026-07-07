@@ -368,14 +368,16 @@ export async function getCRMAnalytics() {
   };
 }
 
-export async function getRecentCustomers(limit: number = 10) {
+// Sin límite, trae todos los clientes para que el selector de cotización
+// pueda buscar sobre la lista completa, no solo sobre los más recientes.
+export async function getRecentCustomers(limit?: number) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     throw new Error("No autorizado");
   }
 
   return await prisma.customer.findMany({
-    take: limit,
+    ...(limit ? { take: limit } : {}),
     orderBy: { lastInteraction: "desc" },
     select: {
       id: true,

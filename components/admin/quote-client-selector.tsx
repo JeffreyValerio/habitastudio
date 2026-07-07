@@ -28,13 +28,14 @@ export function QuoteClientSelector({
   const [searchTerm, setSearchTerm] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>(
-    recentCustomersData
+    recentCustomersData.slice(0, 5)
   );
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!searchTerm.trim()) {
-      setFilteredCustomers(recentCustomersData);
+      // Sin búsqueda: solo los 5 más recientes. Al buscar, sobre todos los clientes.
+      setFilteredCustomers(recentCustomersData.slice(0, 5));
       return;
     }
 

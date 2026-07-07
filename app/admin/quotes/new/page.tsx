@@ -2,7 +2,7 @@ import { QuoteFormImproved } from "@/components/admin/quote-form-improved";
 import { getRecentCustomers } from "@/app/actions/crm";
 
 export default async function NewQuotePage() {
-  const recentCustomers = await getRecentCustomers(10);
+  const recentCustomers = await getRecentCustomers();
 
   return (
     <div>
