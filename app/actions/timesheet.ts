@@ -395,6 +395,10 @@ export async function deleteManualTimeEntry(entryId: string) {
 
   revalidatePath(`/admin/time-management/${entry.userId}`);
   revalidatePath("/admin/time-management");
+  if (entry.workOrderId) {
+    revalidatePath(`/admin/work-orders/${entry.workOrderId}`);
+    revalidatePath("/admin/work-orders");
+  }
   return entry;
 }
 

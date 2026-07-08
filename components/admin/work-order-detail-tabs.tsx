@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { formatCRC } from "@/lib/utils";
 import { WORK_ORDER_TYPE_LABELS } from "@/lib/work-order-types";
 import { WorkOrderControls } from "@/components/admin/work-order-controls";
 import { WorkOrderExpenses } from "@/components/admin/work-order-expenses";
 import { WorkOrderImages } from "@/components/admin/work-order-images";
 import { WorkOrderStages } from "@/components/admin/work-order-stages";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { deleteManualTimeEntry } from "@/app/actions/timesheet";
+import { Trash2, Loader2 } from "lucide-react";
 import type { getWorkOrder } from "@/app/actions/work-orders";
 
 type WorkOrderData = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
@@ -40,6 +45,34 @@ export function WorkOrderDetailTabs({
   personnelCount: number;
 }) {
   const [tab, setTab] = useState<Tab>("general");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const confirmDeleteEntry = async (entryId: string) => {
+    setDeletingId(entryId);
+    try {
+      await deleteManualTimeEntry(entryId);
+      toast({ title: "Éxito", description: "Registro de horas eliminado" });
+      window.location.reload();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeleteEntry = (entryId: string) => {
+    toast({
+      title: "¿Eliminar este registro de horas?",
+      description: "Esta acción no se puede deshacer.",
+      variant: "destructive",
+      action: (
+        <ToastAction altText="Confirmar eliminación" onClick={() => confirmDeleteEntry(entryId)}>
+          Eliminar
+        </ToastAction>
+      ),
+    });
+  };
 
   const TabButton = ({ value, label }: { value: Tab; label: string }) => (
     <button
@@ -244,7 +277,22 @@ export function WorkOrderDetailTabs({
                             {entry.workType && ` · ${WORK_ORDER_TYPE_LABELS[entry.workType] || entry.workType}`}
                           </p>
                         </div>
-                        <p className="font-semibold">{entry.exitTime ? `${hours.toFixed(1)}h` : "Activo"}</p>
+                        <div className="flex items-center gap-3">
+                          <p className="font-semibold">{entry.exitTime ? `${hours.toFixed(1)}h` : "Activo"}</p>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            onClick={() => handleDeleteEntry(entry.id)}
+                            disabled={deletingId === entry.id}
+                          >
+                            {deletingId === entry.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
