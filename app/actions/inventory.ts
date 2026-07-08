@@ -1,14 +1,13 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { getSectionAccess } from "@/app/actions/role-permissions";
 
-async function requireAdmin() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden gestionar el inventario");
+async function requireInventoryAccess() {
+  const { user, allowed } = await getSectionAccess("admin.inventory");
+  if (!user || !allowed) {
+    throw new Error("No autorizado para gestionar el inventario");
   }
   return user;
 }
@@ -16,10 +15,7 @@ async function requireAdmin() {
 // ============ MATERIALES ============
 
 export async function getMaterials() {
-  const { allowed } = await getSectionAccess("admin.inventory");
-  if (!allowed) {
-    throw new Error("No autorizado para ver el inventario");
-  }
+  await requireInventoryAccess();
 
   return await prisma.material.findMany({
     include: {
@@ -30,7 +26,7 @@ export async function getMaterials() {
 }
 
 export async function getMaterialsForSelect() {
-  await requireAdmin();
+  await requireInventoryAccess();
 
   return await prisma.material.findMany({
     select: { id: true, name: true, unit: true, costPerUnit: true, quantity: true },
@@ -39,7 +35,7 @@ export async function getMaterialsForSelect() {
 }
 
 export async function getMaterial(id: string) {
-  await requireAdmin();
+  await requireInventoryAccess();
 
   return await prisma.material.findUnique({
     where: { id },
@@ -62,7 +58,7 @@ export async function createMaterial(data: {
   supplierId?: string;
   notes?: string;
 }) {
-  const user = await requireAdmin();
+  const user = await requireInventoryAccess();
 
   const material = await prisma.material.create({
     data: {
@@ -103,7 +99,7 @@ export async function updateMaterial(
     notes?: string;
   }
 ) {
-  await requireAdmin();
+  await requireInventoryAccess();
 
   const material = await prisma.material.update({
     where: { id },
@@ -123,7 +119,7 @@ export async function updateMaterial(
 }
 
 export async function deleteMaterial(id: string) {
-  await requireAdmin();
+  await requireInventoryAccess();
 
   await prisma.material.delete({ where: { id } });
 
@@ -134,7 +130,7 @@ export async function adjustMaterialStock(
   materialId: string,
   input: { type: "in" | "out"; quantity: number; notes?: string }
 ) {
-  const user = await requireAdmin();
+  const user = await requireInventoryAccess();
 
   if (input.quantity <= 0) {
     throw new Error("La cantidad debe ser mayor a cero");
@@ -178,7 +174,7 @@ export async function adjustMaterialStock(
 // ============ PROVEEDORES ============
 
 export async function getSuppliers() {
-  await requireAdmin();
+  await requireInventoryAccess();
 
   return await prisma.supplier.findMany({
     include: { _count: { select: { materials: true } } },
@@ -194,7 +190,7 @@ export async function createSupplier(data: {
   city?: string;
   paymentTerms?: string;
 }) {
-  await requireAdmin();
+  await requireInventoryAccess();
 
   const supplier = await prisma.supplier.create({
     data: {
@@ -223,7 +219,7 @@ export async function updateSupplier(
     isActive?: boolean;
   }
 ) {
-  await requireAdmin();
+  await requireInventoryAccess();
 
   const supplier = await prisma.supplier.update({
     where: { id },
@@ -243,7 +239,7 @@ export async function updateSupplier(
 }
 
 export async function deleteSupplier(id: string) {
-  await requireAdmin();
+  await requireInventoryAccess();
 
   await prisma.supplier.delete({ where: { id } });
 

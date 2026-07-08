@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { getMaterial } from "@/app/actions/inventory";
 import { getSuppliers } from "@/app/actions/inventory";
-import { getCurrentUser } from "@/lib/auth";
 import { MaterialForm } from "@/components/admin/material-form";
 import { RestrictedAccess } from "@/components/admin/restricted-access";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MATERIAL_UNIT_LABELS } from "@/lib/inventory-types";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 export default async function EditMaterialPage({
   params,
@@ -13,10 +13,10 @@ export default async function EditMaterialPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await getCurrentUser();
+  const { allowed } = await getSectionAccess("admin.inventory");
 
-  if (!user || user.role !== "admin") {
-    return <RestrictedAccess message="Solo los administradores pueden gestionar el inventario." />;
+  if (!allowed) {
+    return <RestrictedAccess message="No tienes permiso para gestionar el inventario." />;
   }
 
   const [material, suppliers] = await Promise.all([

@@ -1,16 +1,16 @@
 import { getSuppliers } from "@/app/actions/inventory";
-import { getCurrentUser } from "@/lib/auth";
 import { MaterialForm } from "@/components/admin/material-form";
 import { RestrictedAccess } from "@/components/admin/restricted-access";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 export default async function NewMaterialPage() {
-  const user = await getCurrentUser();
+  const { allowed } = await getSectionAccess("admin.inventory");
 
-  if (!user || user.role !== "admin") {
+  if (!allowed) {
     return (
       <div>
         <h1 className="text-3xl font-bold mb-6">Nuevo Material</h1>
-        <RestrictedAccess message="Solo los administradores pueden gestionar el inventario." />
+        <RestrictedAccess message="No tienes permiso para gestionar el inventario." />
       </div>
     );
   }
