@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
 import { ClipboardList, Calendar } from "lucide-react";
+import { RestrictedAccess } from "@/components/admin/restricted-access";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 const statusColors: Record<string, string> = {
   pending: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
@@ -17,6 +19,19 @@ export default async function WorkOrdersPage() {
 
   if (!user || user.role !== "collaborator") {
     redirect("/admin/login");
+  }
+
+  const { allowed } = await getSectionAccess("collaborator.work-orders");
+
+  if (!allowed) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Órdenes de Trabajo</h1>
+        </div>
+        <RestrictedAccess message="No tienes permiso para ver las órdenes de trabajo." />
+      </div>
+    );
   }
 
   const workOrders = await getActiveWorkOrders();

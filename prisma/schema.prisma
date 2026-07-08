@@ -469,3 +469,18 @@ model WorkOrderSequence {
   updatedAt  DateTime @updatedAt
   createdAt  DateTime @default(now())
 }
+
+// Overrides explícitos de visibilidad por rol. Si no hay fila para un
+// (role, section), se usa el valor por defecto definido en lib/permissions.ts,
+// así que esta tabla solo guarda lo que el admin cambió desde el default.
+model RolePermission {
+  id        String   @id @default(cuid())
+  role      String
+  section   String
+  enabled   Boolean
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([role, section])
+  @@index([role])
+}

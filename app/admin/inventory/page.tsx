@@ -1,23 +1,23 @@
 import Link from "next/link";
 import { getMaterials } from "@/app/actions/inventory";
-import { getCurrentUser } from "@/lib/auth";
 import { MaterialsTable } from "@/components/admin/materials-table";
 import { RestrictedAccess } from "@/components/admin/restricted-access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCRC } from "@/lib/utils";
 import { Plus, Truck, Package, DollarSign, AlertTriangle } from "lucide-react";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 export default async function InventoryPage() {
-  const user = await getCurrentUser();
+  const { allowed } = await getSectionAccess("admin.inventory");
 
-  if (!user || user.role !== "admin") {
+  if (!allowed) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Materiales</h1>
         </div>
-        <RestrictedAccess message="Solo los administradores pueden gestionar el inventario." />
+        <RestrictedAccess message="No tienes permiso para ver el inventario." />
       </div>
     );
   }

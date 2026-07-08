@@ -3,16 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, Home, User, Clock } from "lucide-react";
+import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-
-const navigation = [
-  { name: "Dashboard", href: "/collaborator", icon: Home },
-  { name: "Órdenes de Trabajo", href: "/collaborator/work-orders", icon: Clock },
-  { name: "Mi Perfil", href: "/collaborator/profile", icon: User },
-];
+import { COLLABORATOR_NAV_ITEMS, isNavItemVisible } from "@/lib/admin-navigation";
 
 interface User {
   id: string;
@@ -25,14 +20,17 @@ export default function CollaboratorLayoutClient({
   user,
   children,
   isSidebar,
+  permissions = {},
 }: {
   user: User;
   children: React.ReactNode;
   isSidebar?: boolean;
+  permissions?: Record<string, boolean>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(false);
+  const navigation = COLLABORATOR_NAV_ITEMS.filter((item) => isNavItemVisible(item, user.role, permissions));
 
   const handleLogout = async () => {
     setLoading(true);

@@ -7,18 +7,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { TALLER_MANAGER_NAV_ITEMS, isNavItemVisible } from "@/lib/admin-navigation";
 
-const navigation = [
-  { name: "Dashboard", href: "/taller-manager", icon: "📊" },
-  { name: "Órdenes de Trabajo", href: "/taller-manager/work-orders", icon: "📋" },
-  { name: "Registrar Horas", href: "/taller-manager/time-management/new", icon: "⏱️" },
-  { name: "Perfil", href: "/taller-manager/profile", icon: "👤" },
-];
-
-export function TallerManagerMobileNav() {
+export function TallerManagerMobileNav({
+  role,
+  permissions = {},
+}: {
+  role?: string | null;
+  permissions?: Record<string, boolean>;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const navigation = TALLER_MANAGER_NAV_ITEMS.filter((item) => isNavItemVisible(item, role, permissions));
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -59,6 +60,7 @@ export function TallerManagerMobileNav() {
         <div className="p-4 space-y-2">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
+            const Icon = item.icon;
             return (
               <Link
                 key={item.name}
@@ -71,7 +73,7 @@ export function TallerManagerMobileNav() {
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
-                <span className="text-base">{item.icon}</span>
+                <Icon className="h-4 w-4" />
                 {item.name}
               </Link>
             );

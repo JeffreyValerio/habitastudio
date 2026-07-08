@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getRolePermissionsMap } from "@/app/actions/role-permissions";
 import { TallerManagerMobileNav } from "@/components/taller-manager/taller-manager-mobile-nav";
 import TallerManagerLayoutClient from "@/components/taller-manager/taller-manager-layout-client";
 
@@ -14,13 +15,15 @@ export default async function TallerManagerLayout({
     redirect("/admin/login");
   }
 
+  const permissions = await getRolePermissionsMap(user.role);
+
   return (
     <>
-      <TallerManagerMobileNav />
+      <TallerManagerMobileNav role={user.role} permissions={permissions} />
       <div className="flex min-h-screen bg-background">
         {/* Desktop Sidebar - Hidden on mobile */}
         <div className="hidden md:block md:w-64 border-r border-border bg-muted/40 flex-shrink-0">
-          <TallerManagerLayoutClient user={user} isSidebar>
+          <TallerManagerLayoutClient user={user} isSidebar permissions={permissions}>
             <div />
           </TallerManagerLayoutClient>
         </div>

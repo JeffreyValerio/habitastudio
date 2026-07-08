@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-costs";
 import { uploadImages } from "@/lib/cloudinary";
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_STAGES, WORK_ORDER_STAGE_LABELS, WorkOrderStage } from "@/lib/work-order-types";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -369,9 +370,9 @@ export async function createWorkOrderForQuote(quoteId: string) {
 }
 
 export async function getWorkOrders() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden ver las órdenes de trabajo");
+  const { allowed } = await getSectionAccess("admin.work-orders");
+  if (!allowed) {
+    throw new Error("No autorizado para ver las órdenes de trabajo");
   }
 
   const workOrders = await prisma.workOrder.findMany({

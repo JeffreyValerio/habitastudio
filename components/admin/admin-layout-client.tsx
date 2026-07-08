@@ -7,9 +7,11 @@ import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
 
 export function AdminLayoutClient({
   role,
+  permissions = {},
   children,
 }: {
   role: string | null;
+  permissions?: Record<string, boolean>;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -23,11 +25,11 @@ export function AdminLayoutClient({
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Mobile Navigation */}
-      <AdminMobileNav role={role} />
+      <AdminMobileNav role={role} permissions={permissions} />
 
       {/* Desktop Sidebar - Hidden on mobile/tablet (they use the hamburger menu) */}
       <div className={`hidden lg:flex flex-col border-r border-border bg-muted/40 transition-all duration-300 ${collapsed ? "w-20" : "w-64"} flex-shrink-0 h-screen`}>
-        <AdminSidebar role={role} collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} />
+        <AdminSidebar role={role} permissions={permissions} collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} />
       </div>
 
       {/* Main Content */}

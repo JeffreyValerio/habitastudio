@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -15,7 +16,10 @@ async function requireAdmin() {
 // ============ MATERIALES ============
 
 export async function getMaterials() {
-  await requireAdmin();
+  const { allowed } = await getSectionAccess("admin.inventory");
+  if (!allowed) {
+    throw new Error("No autorizado para ver el inventario");
+  }
 
   return await prisma.material.findMany({
     include: {

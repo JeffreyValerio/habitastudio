@@ -1,16 +1,15 @@
-import { getCurrentUser } from "@/lib/auth";
 import { UserCreationPanel } from "@/components/admin/user-creation-panel";
 import { PendingInvitationsList } from "@/components/admin/pending-invitations-list";
 import { UsersTable } from "@/components/admin/users-table";
 import { getPendingInvitations } from "@/app/actions/invitations";
 import { getUsers } from "@/app/actions/users";
 import { RestrictedAccess } from "@/components/admin/restricted-access";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 export default async function UsersPage() {
-  const user = await getCurrentUser();
+  const { allowed } = await getSectionAccess("admin.settings.users");
 
-  // Solo administradores pueden gestionar usuarios
-  if (!user || user.role !== "admin") {
+  if (!allowed) {
     return (
       <div className="space-y-8">
         <div>
@@ -20,7 +19,7 @@ export default async function UsersPage() {
           </p>
         </div>
 
-        <RestrictedAccess message="Solo los administradores pueden gestionar usuarios e invitaciones." />
+        <RestrictedAccess message="No tienes permiso para gestionar usuarios e invitaciones." />
       </div>
     );
   }

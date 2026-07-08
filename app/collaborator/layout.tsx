@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getRolePermissionsMap } from "@/app/actions/role-permissions";
 import { CollaboratorMobileNav } from "@/components/collaborator/collaborator-mobile-nav";
 import CollaboratorLayoutClient from "@/components/collaborator/collaborator-layout-client";
 
@@ -14,13 +15,15 @@ export default async function CollaboratorLayout({
     redirect("/admin/login");
   }
 
+  const permissions = await getRolePermissionsMap(user.role);
+
   return (
     <>
-      <CollaboratorMobileNav />
+      <CollaboratorMobileNav role={user.role} permissions={permissions} />
       <div className="flex min-h-screen bg-background">
         {/* Desktop Sidebar - Hidden on mobile */}
         <div className="hidden md:block md:w-64 border-r border-border bg-muted/40 flex-shrink-0">
-          <CollaboratorLayoutClient user={user} isSidebar>
+          <CollaboratorLayoutClient user={user} isSidebar permissions={permissions}>
             <div />
           </CollaboratorLayoutClient>
         </div>

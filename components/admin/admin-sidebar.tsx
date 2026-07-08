@@ -4,76 +4,27 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Package, Wrench, FolderKanban, FileText, Receipt, LogOut, Users, Clock, ChevronLeft, ChevronRight, ChevronDown, FileSpreadsheet, ClipboardList, Boxes } from "lucide-react";
+import { LogOut, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const navigation = [
-  { group: "Principal", items: [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
-  ]},
-
-  { group: "CRM", items: [
-    { name: "Clientes", href: "/admin/crm/customers", icon: Users },
-  ], hiddenForRoles: ["moderator"] },
-
-  // Ventas: solo la etapa de cotizar
-  { group: "Ventas", items: [
-    { name: "Cotizaciones", href: "/admin/quotes", icon: FileText },
-  ]},
-
-  // Producción: lo que usa el taller para fabricar. Los moderadores no gestionan producción.
-  { group: "Producción", items: [
-    { name: "Órdenes de Trabajo", href: "/admin/work-orders", icon: ClipboardList },
-  ], hiddenForRoles: ["moderator"] },
-
-  // Facturación: cobro, separado de vender y de fabricar
-  { group: "Facturación", items: [
-    { name: "Recibos", href: "/admin/receipts", icon: Receipt },
-    { name: "Facturas", href: "/admin/invoices", icon: FileSpreadsheet },
-  ]},
-
-  // Inventario: materia prima y compras a proveedores. Los moderadores no gestionan inventario.
-  { group: "Inventario", items: [
-    { name: "Materiales", href: "/admin/inventory", icon: Boxes },
-  ], hiddenForRoles: ["moderator"] },
-
-  // Página Web: lo que se muestra en el sitio público
-  { group: "Página Web", items: [
-    { name: "Proyectos", href: "/admin/projects", icon: FolderKanban },
-    { name: "Servicios", href: "/admin/services", icon: Wrench },
-    { name: "Productos", href: "/admin/products", icon: Package },
-  ]},
-
-  { group: "Recursos Humanos", items: [
-    { name: "Tiempo & Asistencia", href: "/admin/time-management", icon: Clock },
-  ]},
-
-  { group: "Configuración", items: [
-    { name: "Usuarios", href: "/admin/settings/users", icon: Users },
-  ], hiddenForRoles: ["moderator"] },
-];
-
-function isItemActive(pathname: string, item: { href: string; exact?: boolean }) {
-  return item.exact
-    ? pathname === item.href
-    : pathname === item.href || pathname.startsWith(item.href + "/");
-}
+import { ADMIN_NAV_GROUPS, isNavItemVisible, isItemActive } from "@/lib/admin-navigation";
 
 interface AdminSidebarProps {
   role?: string | null;
+  permissions?: Record<string, boolean>;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }
 
-export function AdminSidebar({ role, collapsed = false, onToggleCollapse }: AdminSidebarProps) {
+export function AdminSidebar({ role, permissions = {}, collapsed = false, onToggleCollapse }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
-  const visibleNavigation = navigation.filter(
-    (g) => !g.hiddenForRoles || !role || !g.hiddenForRoles.includes(role)
-  );
+  const visibleNavigation = ADMIN_NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((item) => isNavItemVisible(item, role, permissions)),
+  })).filter((g) => g.items.length > 0);
 
   useEffect(() => {
     const activeGroup = visibleNavigation.find((g) =>

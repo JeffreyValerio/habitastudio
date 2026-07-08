@@ -3,17 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, Home, User, ClipboardList, Clock } from "lucide-react";
+import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-
-const navigation = [
-  { name: "Dashboard", href: "/taller-manager", icon: Home },
-  { name: "Órdenes de Trabajo", href: "/taller-manager/work-orders", icon: ClipboardList },
-  { name: "Registrar Horas", href: "/taller-manager/time-management/new", icon: Clock },
-  { name: "Mi Perfil", href: "/taller-manager/profile", icon: User },
-];
+import { TALLER_MANAGER_NAV_ITEMS, isNavItemVisible } from "@/lib/admin-navigation";
 
 interface User {
   id: string;
@@ -26,14 +20,17 @@ export default function TallerManagerLayoutClient({
   user,
   children,
   isSidebar,
+  permissions = {},
 }: {
   user: User;
   children: React.ReactNode;
   isSidebar?: boolean;
+  permissions?: Record<string, boolean>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(false);
+  const navigation = TALLER_MANAGER_NAV_ITEMS.filter((item) => isNavItemVisible(item, user.role, permissions));
 
   const handleLogout = async () => {
     setLoading(true);

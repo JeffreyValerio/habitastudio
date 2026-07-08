@@ -2,60 +2,23 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, LayoutDashboard, Users, FileText, Receipt, FileSpreadsheet, ClipboardList, Boxes, FolderKanban, Wrench, Package, Clock } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { ADMIN_NAV_GROUPS, isNavItemVisible, isItemActive } from "@/lib/admin-navigation";
 
-const navigation = [
-  { group: "Principal", items: [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
-  ]},
-  { group: "CRM", items: [
-    { name: "Clientes", href: "/admin/crm/customers", icon: Users },
-  ], hiddenForRoles: ["moderator"] },
-  { group: "Ventas", items: [
-    { name: "Cotizaciones", href: "/admin/quotes", icon: FileText },
-  ]},
-  { group: "Producción", items: [
-    { name: "Órdenes de Trabajo", href: "/admin/work-orders", icon: ClipboardList },
-  ], hiddenForRoles: ["moderator"] },
-  { group: "Facturación", items: [
-    { name: "Recibos", href: "/admin/receipts", icon: Receipt },
-    { name: "Facturas", href: "/admin/invoices", icon: FileSpreadsheet },
-  ]},
-  { group: "Inventario", items: [
-    { name: "Materiales", href: "/admin/inventory", icon: Boxes },
-  ], hiddenForRoles: ["moderator"] },
-  { group: "Página Web", items: [
-    { name: "Proyectos", href: "/admin/projects", icon: FolderKanban },
-    { name: "Servicios", href: "/admin/services", icon: Wrench },
-    { name: "Productos", href: "/admin/products", icon: Package },
-  ]},
-  { group: "Recursos Humanos", items: [
-    { name: "Tiempo & Asistencia", href: "/admin/time-management", icon: Clock },
-  ]},
-  { group: "Configuración", items: [
-    { name: "Usuarios", href: "/admin/settings/users", icon: Users },
-  ], hiddenForRoles: ["moderator"] },
-];
-
-function isItemActive(pathname: string, item: { href: string; exact?: boolean }) {
-  return item.exact
-    ? pathname === item.href
-    : pathname === item.href || pathname.startsWith(item.href + "/");
-}
-
-export function AdminMobileNav({ role }: { role?: string | null }) {
+export function AdminMobileNav({ role, permissions = {} }: { role?: string | null; permissions?: Record<string, boolean> }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
-  const visibleNavigation = navigation.filter(
-    (g) => !g.hiddenForRoles || !role || !g.hiddenForRoles.includes(role)
-  );
+  const visibleNavigation = ADMIN_NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((item) => isNavItemVisible(item, role, permissions)),
+  })).filter((g) => g.items.length > 0);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });

@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 // ============ CUSTOMERS ============
 
@@ -22,9 +23,9 @@ export async function syncCustomerTotalSpent(customerId: string) {
 }
 
 export async function getCustomers() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden ver clientes");
+  const { allowed } = await getSectionAccess("admin.crm.customers");
+  if (!allowed) {
+    throw new Error("No autorizado para ver clientes");
   }
 
   return await prisma.customer.findMany({

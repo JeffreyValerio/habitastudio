@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -15,7 +16,10 @@ async function requireAdmin() {
 }
 
 export async function getUsers() {
-  await requireAdmin();
+  const { allowed } = await getSectionAccess("admin.settings.users");
+  if (!allowed) {
+    throw new Error("No autorizado para ver usuarios");
+  }
 
   return await prisma.user.findMany({
     select: {

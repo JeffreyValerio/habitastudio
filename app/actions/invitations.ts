@@ -7,6 +7,7 @@ import { z } from "zod";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { Resend } from "resend";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -277,8 +278,8 @@ export async function createUserDirectly(data: z.infer<typeof createUserSchema>)
 }
 
 export async function getPendingInvitations() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.settings.users");
+  if (!allowed) {
     return null;
   }
 

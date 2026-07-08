@@ -1,18 +1,18 @@
 import { getWorkOrders } from "@/app/actions/work-orders";
-import { getCurrentUser } from "@/lib/auth";
 import { WorkOrdersGrid } from "@/components/admin/work-orders-grid";
 import { RestrictedAccess } from "@/components/admin/restricted-access";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 export default async function WorkOrdersPage() {
-  const user = await getCurrentUser();
+  const { allowed } = await getSectionAccess("admin.work-orders");
 
-  if (!user || user.role !== "admin") {
+  if (!allowed) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Órdenes de Trabajo</h1>
         </div>
-        <RestrictedAccess message="Solo los administradores pueden ver las órdenes de trabajo." />
+        <RestrictedAccess message="No tienes permiso para ver las órdenes de trabajo." />
       </div>
     );
   }

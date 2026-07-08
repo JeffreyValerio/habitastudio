@@ -3,8 +3,23 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { getProducts } from "@/app/actions/products";
 import { ProductsTable } from "@/components/admin/products-table";
+import { RestrictedAccess } from "@/components/admin/restricted-access";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 export default async function ProductsPage() {
+  const { allowed } = await getSectionAccess("admin.products");
+
+  if (!allowed) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Productos</h1>
+        </div>
+        <RestrictedAccess message="No tienes permiso para ver los productos." />
+      </div>
+    );
+  }
+
   const products = await getProducts();
 
   return (

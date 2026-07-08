@@ -7,17 +7,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { COLLABORATOR_NAV_ITEMS, isNavItemVisible } from "@/lib/admin-navigation";
 
-const navigation = [
-  { name: "Dashboard", href: "/collaborator", icon: "📊" },
-  { name: "Órdenes", href: "/collaborator/work-orders", icon: "📋" },
-  { name: "Perfil", href: "/collaborator/profile", icon: "👤" },
-];
-
-export function CollaboratorMobileNav() {
+export function CollaboratorMobileNav({
+  role,
+  permissions = {},
+}: {
+  role?: string | null;
+  permissions?: Record<string, boolean>;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const navigation = COLLABORATOR_NAV_ITEMS.filter((item) => isNavItemVisible(item, role, permissions));
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -58,6 +60,7 @@ export function CollaboratorMobileNav() {
         <div className="p-4 space-y-2">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
+            const Icon = item.icon;
             return (
               <Link
                 key={item.name}
@@ -70,7 +73,7 @@ export function CollaboratorMobileNav() {
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
-                <span className="text-base">{item.icon}</span>
+                <Icon className="h-4 w-4" />
                 {item.name}
               </Link>
             );
