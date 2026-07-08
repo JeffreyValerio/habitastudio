@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { FilterTabs } from "@/components/admin/filter-tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { setRolePermission } from "@/app/actions/role-permissions";
 import {
@@ -13,44 +20,50 @@ import {
   type ConfigurableRole,
 } from "@/lib/permissions";
 
+interface SectionRow {
+  key: string;
+  label: string;
+  group: string;
+  role: ConfigurableRole;
+}
+
 export function RolePermissionsForm({
   initialPermissions,
 }: {
   initialPermissions: Record<ConfigurableRole, Record<string, boolean>>;
 }) {
   const { toast } = useToast();
-  const [activeRole, setActiveRole] = useState<ConfigurableRole>("moderator");
   const [permissions, setPermissions] = useState(initialPermissions);
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
-  const roleTabs = CONFIGURABLE_ROLES.map((role) => ({
-    key: role,
-    label: CONFIGURABLE_ROLE_LABELS[role],
-    count: PERMISSION_SECTIONS_BY_ROLE[role].length,
-  }));
+  // Cada sección pertenece a un único rol (los portales no se comparten),
+  // así que armamos una sola lista con todas para mostrarlas en una matriz
+  // sección × rol, en vez de una pestaña separada por rol.
+  const allSections: SectionRow[] = CONFIGURABLE_ROLES.flatMap((role) =>
+    PERMISSION_SECTIONS_BY_ROLE[role].map((s) => ({ ...s, role }))
+  );
 
-  const sections = PERMISSION_SECTIONS_BY_ROLE[activeRole];
-  const sectionsByGroup = sections.reduce<Record<string, typeof sections>>((acc, s) => {
+  const sectionsByGroup = allSections.reduce<Record<string, SectionRow[]>>((acc, s) => {
     (acc[s.group] ||= []).push(s);
     return acc;
   }, {});
 
-  const handleToggle = async (section: string, enabled: boolean) => {
-    const savingId = `${activeRole}:${section}`;
+  const handleToggle = async (role: ConfigurableRole, section: string, enabled: boolean) => {
+    const savingId = `${role}:${section}`;
     setSavingKey(savingId);
-    const previous = permissions[activeRole][section];
+    const previous = permissions[role][section];
 
     setPermissions((prev) => ({
       ...prev,
-      [activeRole]: { ...prev[activeRole], [section]: enabled },
+      [role]: { ...prev[role], [section]: enabled },
     }));
 
     try {
-      await setRolePermission(activeRole, section, enabled);
+      await setRolePermission(role, section, enabled);
     } catch (error: any) {
       setPermissions((prev) => ({
         ...prev,
-        [activeRole]: { ...prev[activeRole], [section]: previous },
+        [role]: { ...prev[role], [section]: previous },
       }));
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -59,32 +72,58 @@ export function RolePermissionsForm({
   };
 
   return (
-    <div className="space-y-4">
-      <FilterTabs tabs={roleTabs} active={activeRole} onChange={(key) => setActiveRole(key as ConfigurableRole)} />
-
-      <div className="space-y-4">
-        {Object.entries(sectionsByGroup).map(([group, groupSections]) => (
-          <Card key={group}>
-            <CardContent className="pt-6 space-y-1">
-              <p className="text-sm font-semibold text-muted-foreground mb-3">{group}</p>
-              {groupSections.map((s) => {
-                const savingId = `${activeRole}:${s.key}`;
-                const enabled = permissions[activeRole][s.key] ?? true;
-                return (
-                  <div key={s.key} className="flex items-center justify-between py-2">
-                    <span className="text-sm">{s.label}</span>
-                    <Switch
-                      checked={enabled}
-                      disabled={savingKey === savingId}
-                      onCheckedChange={(checked) => handleToggle(s.key, checked)}
-                    />
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Sección</TableHead>
+              {CONFIGURABLE_ROLES.map((role) => (
+                <TableHead key={role} className="text-center">
+                  {CONFIGURABLE_ROLE_LABELS[role]}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Object.entries(sectionsByGroup).map(([group, groupSections]) => (
+              <Fragment key={group}>
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={CONFIGURABLE_ROLES.length + 1}
+                    className="py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-muted/40"
+                  >
+                    {group}
+                  </TableCell>
+                </TableRow>
+                {groupSections.map((s) => (
+                  <TableRow key={s.key}>
+                    <TableCell className="font-medium">{s.label}</TableCell>
+                    {CONFIGURABLE_ROLES.map((role) => {
+                      const savingId = `${role}:${s.key}`;
+                      const applies = role === s.role;
+                      return (
+                        <TableCell key={role} className="text-center">
+                          {applies ? (
+                            <Switch
+                              checked={permissions[role][s.key] ?? true}
+                              disabled={savingKey === savingId}
+                              onCheckedChange={(checked) => handleToggle(role, s.key, checked)}
+                              className="mx-auto"
+                            />
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </Fragment>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
