@@ -1,9 +1,9 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 const serviceSchema = z.object({
   title: z.string().min(1),
@@ -17,8 +17,8 @@ const serviceSchema = z.object({
 });
 
 export async function createService(data: z.infer<typeof serviceSchema>) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.services");
+  if (!allowed) {
     throw new Error("Unauthorized");
   }
 
@@ -43,8 +43,8 @@ export async function createService(data: z.infer<typeof serviceSchema>) {
 }
 
 export async function updateService(id: string, data: Partial<z.infer<typeof serviceSchema>>) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.services");
+  if (!allowed) {
     throw new Error("Unauthorized");
   }
 
@@ -75,8 +75,8 @@ export async function updateService(id: string, data: Partial<z.infer<typeof ser
 }
 
 export async function deleteService(id: string) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.services");
+  if (!allowed) {
     throw new Error("Unauthorized");
   }
 

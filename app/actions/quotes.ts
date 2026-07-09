@@ -9,6 +9,7 @@ import { Resend } from "resend";
 import { generateQuotePDFBuffer } from "@/lib/generate-pdf-server";
 import { formatCRC } from "@/lib/utils";
 import { syncCustomerTotalSpent } from "@/app/actions/crm";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -49,8 +50,8 @@ const quoteSchema = z.object({
 // Eliminado generador aleatorio; ahora usamos secuencia en DB
 
 export async function createUpdateQuote(formData: FormData) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.quotes");
+  if (!allowed) {
     return { ok: false, message: "Unauthorized" };
   }
 
@@ -258,8 +259,8 @@ export async function createUpdateQuote(formData: FormData) {
 }
 
 export async function deleteQuote(id: string) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.quotes");
+  if (!allowed) {
     throw new Error("Unauthorized");
   }
 
@@ -300,8 +301,8 @@ export async function getQuote(id: string) {
 }
 
 export async function sendQuote(id: string) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.quotes");
+  if (!allowed) {
     return { ok: false, message: "Unauthorized" };
   }
 
@@ -529,8 +530,8 @@ Habita Studio`;
 }
 
 export async function updateQuoteStatus(id: string, status: string) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.quotes");
+  if (!allowed) {
     return { ok: false, message: "Unauthorized" };
   }
 

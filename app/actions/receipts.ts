@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { Resend } from "resend";
@@ -30,8 +30,8 @@ const receiptSchema = z.object({
 });
 
 export async function createUpdateReceipt(formData: FormData) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.receipts");
+  if (!allowed) {
     return { ok: false, message: "Unauthorized" };
   }
 
@@ -183,8 +183,8 @@ export async function createUpdateReceipt(formData: FormData) {
 }
 
 export async function deleteReceipt(id: string) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.receipts");
+  if (!allowed) {
     throw new Error("Unauthorized");
   }
 
@@ -288,8 +288,8 @@ export async function getQuotesWithBalance(excludeReceiptId?: string) {
 }
 
 export async function sendReceipt(id: string) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.receipts");
+  if (!allowed) {
     return { ok: false, message: "Unauthorized" };
   }
 

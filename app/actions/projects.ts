@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
@@ -26,8 +26,8 @@ const projectSchema = z.object({
 });
 
 export async function createProject(data: z.infer<typeof projectSchema>) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.projects");
+  if (!allowed) {
     throw new Error("Unauthorized");
   }
 
@@ -48,8 +48,8 @@ export async function updateProject(
   data: Partial<z.infer<typeof projectSchema>>,
   oldData?: { image?: string; gallery?: string[] }
 ) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.projects");
+  if (!allowed) {
     throw new Error("Unauthorized");
   }
 
@@ -94,8 +94,8 @@ export async function updateProject(
 }
 
 export async function deleteProject(id: string) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.projects");
+  if (!allowed) {
     throw new Error("Unauthorized");
   }
 
@@ -158,8 +158,8 @@ export async function getProject(id: string) {
 
 // Estilo Arktee: crear/actualizar proyecto con FormData (manejo de múltiples imágenes)
 export async function createUpdateProject(formData: FormData) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.projects");
+  if (!allowed) {
     return { ok: false, message: "Unauthorized" };
   }
 

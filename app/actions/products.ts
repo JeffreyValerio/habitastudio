@@ -1,11 +1,11 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { cloudinary } from "@/lib/cloudinary";
 import { getPublicIdFromUrl, uploadImages as uploadMany } from "@/lib/cloudinary";
+import { getSectionAccess } from "@/app/actions/role-permissions";
 
 const productSchema = z.object({
   id: z.string().optional().nullable(),
@@ -66,8 +66,8 @@ const uploadImages = async (files: File[]): Promise<string[]> => {
 };
 
 export async function createUpdateProduct(formData: FormData) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.products");
+  if (!allowed) {
     return { ok: false, message: "Unauthorized" };
   }
 
@@ -289,8 +289,8 @@ export async function createUpdateProduct(formData: FormData) {
 }
 
 export async function deleteProduct(id: string) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
+  const { allowed } = await getSectionAccess("admin.products");
+  if (!allowed) {
     throw new Error("Unauthorized");
   }
 
