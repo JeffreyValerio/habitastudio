@@ -3,7 +3,7 @@ type Props = React.HtmlHTMLAttributes<SVGElement>
 export const Icons = {
     whatsapp: (props: Props) => (
         <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"
-            viewBox="0 0 175.216 175.552"><defs>
+            viewBox="0 0 175.216 175.552" {...props}><defs>
                 <linearGradient id="b" x1="85.915" x2="86.535" y1="32.567" y2="137.092" gradientUnits="userSpaceOnUse">
                     <stop offset="0" stopColor="#57d163" /><stop offset="1" stopColor="#23b33a" />
                 </linearGradient><filter id="a" width="1.115" height="1.114" x="-.057" y="-.057" colorInterpolationFilters="sRGB"><feGaussianBlur stdDeviation="3.531" /></filter></defs>

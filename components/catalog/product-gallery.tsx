@@ -11,7 +11,7 @@ type ProductGalleryProps = {
   fit?: "cover" | "contain";
 };
 
-export function ProductGallery({ image, gallery = [], name, aspect = "square", fit = "cover" }: ProductGalleryProps) {
+export function ProductGallery({ image, gallery = [], name, aspect = "square", fit = "contain" }: ProductGalleryProps) {
   const initial = image || gallery[0] || "";
   const [current, setCurrent] = useState<string>(initial);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -35,7 +35,7 @@ export function ProductGallery({ image, gallery = [], name, aspect = "square", f
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className={`group relative ${aspect === "video" ? "aspect-video" : "aspect-square"} w-full overflow-hidden rounded-lg border bg-muted focus:outline-none focus:ring-2 focus:ring-primary`}
+        className={`group relative ${aspect === "video" ? "aspect-video" : "aspect-square"} w-full overflow-hidden rounded-xl border bg-gradient-to-br from-muted/50 to-muted shadow-sm focus:outline-none focus:ring-2 focus:ring-primary`}
       >
         {current && (
           <Image
@@ -43,7 +43,7 @@ export function ProductGallery({ image, gallery = [], name, aspect = "square", f
             alt={name}
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
-            className={`${fit === "contain" ? "object-contain" : "object-cover"} transition-transform duration-300 group-hover:scale-105`}
+            className={`${fit === "contain" ? "object-contain p-6" : "object-cover"} transition-transform duration-300 group-hover:scale-105`}
             unoptimized
           />
         )}
@@ -56,14 +56,14 @@ export function ProductGallery({ image, gallery = [], name, aspect = "square", f
               type="button"
               key={`${url}-${idx}`}
               onClick={() => setCurrent(url)}
-              className={`relative aspect-square w-full overflow-hidden rounded-md border focus:outline-none focus:ring-2 focus:ring-primary ${current === url ? "ring-2 ring-primary" : ""}`}
+              className={`relative aspect-square w-full overflow-hidden rounded-md border bg-gradient-to-br from-muted/50 to-muted focus:outline-none focus:ring-2 focus:ring-primary ${current === url ? "ring-2 ring-primary" : ""}`}
             >
               <Image
                 src={url}
                 alt={`${name} ${idx + 1}`}
                 fill
                 sizes="(max-width: 768px) 33vw, 25vw"
-                className="object-cover"
+                className="object-contain p-2"
                 unoptimized
               />
             </button>

@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { ChevronRight, CheckCircle2, Ruler, Palette, ShieldCheck, Layers } from "lucide-react";
 import { getProductBySlug } from "@/lib/data/products";
 import { ProductGallery } from "@/components/catalog/product-gallery";
+import { Icons } from "@/components/icons";
 
 const WHATSAPP_NUMBER = "50663644915";
 
@@ -99,10 +100,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <div className="hidden md:flex gap-3">
               <Button
                 size="lg"
-                className="flex-1 bg-[#25D366] hover:bg-[#1fb855] text-white"
+                className="flex-1 gap-2 bg-[#25D366] hover:bg-[#1fb855] text-white"
                 asChild
               >
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                  <Icons.whatsapp className="h-5 w-5" />
                   Cotizar por WhatsApp
                 </a>
               </Button>
@@ -156,10 +158,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur p-4 md:hidden">
         <Button
           size="lg"
-          className="w-full bg-[#25D366] hover:bg-[#1fb855] text-white"
+          className="w-full gap-2 bg-[#25D366] hover:bg-[#1fb855] text-white"
           asChild
         >
           <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+            <Icons.whatsapp className="h-5 w-5" />
             Cotizar por WhatsApp
           </a>
         </Button>
