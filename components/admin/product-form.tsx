@@ -137,9 +137,54 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
 
   const margin = calculateMargin();
 
+  const uploadToCloudinary = async (file: File, folder: string): Promise<string> => {
+    const body = new FormData();
+    body.append("file", file);
+    body.append("folder", folder);
+    const res = await fetch("/api/upload", { method: "POST", body });
+    if (!res.ok) {
+      throw new Error(`No se pudo subir la imagen "${file.name}"`);
+    }
+    const json = await res.json();
+    return json.url as string;
+  };
+
   const onSubmit = async (data: ProductFormData, event?: React.BaseSyntheticEvent) => {
     setIsSubmitting(true);
     try {
+      // Subir imágenes directo a Cloudinary vía /api/upload ANTES de llamar
+      // al Server Action: si los archivos viajan dentro del body del Server
+      // Action, pueden superar el límite de payload de la plataforma
+      // (~4.5MB en Vercel) y la acción falla con una respuesta no-RSC que
+      // el cliente no puede interpretar ("unexpected response").
+      const fileInput = (event?.target as HTMLFormElement)?.querySelector("#image") as HTMLInputElement | null;
+      const mainImageFile = fileInput?.files?.[0] || null;
+
+      let uploadedImageUrl: string | null = null;
+      if (mainImageFile) {
+        uploadedImageUrl = await uploadToCloudinary(mainImageFile, "habita-studio/products");
+      }
+
+      const uploadedGalleryUrls: string[] = [];
+      if (newFiles.length > 0) {
+        const results = await Promise.allSettled(
+          newFiles.map((f) => uploadToCloudinary(f, "habita-studio/products/gallery"))
+        );
+        const failed = results.filter((r) => r.status === "rejected").length;
+        for (const r of results) {
+          if (r.status === "fulfilled") uploadedGalleryUrls.push(r.value);
+        }
+        if (failed > 0) {
+          toast({
+            title: "Aviso",
+            description: `${failed} imagen(es) de la galería no se pudieron subir.`,
+            variant: "destructive",
+          });
+        }
+      }
+
+      const finalGallery = [...gallery, ...uploadedGalleryUrls];
+
       const formData = new FormData();
 
       if (product?.id) {
@@ -157,18 +202,10 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
       if (data.color) formData.append("color", data.color);
       if (data.warranty) formData.append("warranty", data.warranty);
 
-      if (product?.image) {
-        formData.append("imageUrl", product.image);
+      if (uploadedImageUrl || product?.image) {
+        formData.append("imageUrl", uploadedImageUrl || product!.image);
       }
-      formData.append("gallery", JSON.stringify(gallery));
-      gallery.forEach((url) => formData.append("imageUrls", url));
-
-      const fileInput = (event?.target as HTMLFormElement)?.querySelector("#image") as HTMLInputElement | null;
-      if (fileInput?.files?.[0]) {
-        formData.append("image", fileInput.files[0]);
-      }
-
-      newFiles.forEach((f) => formData.append("images", f));
+      formData.append("gallery", JSON.stringify(finalGallery));
 
       const result = await createUpdateProduct(formData);
 

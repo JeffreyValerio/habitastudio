@@ -107,32 +107,70 @@ export function ProjectForm({ project }: ProjectFormProps) {
     // Slug se genera en el servidor; no es necesario en el formulario
   }, [title, project, setValue]);
 
+  const uploadToCloudinary = async (file: File, folder: string): Promise<string> => {
+    const body = new FormData();
+    body.append("file", file);
+    body.append("folder", folder);
+    const res = await fetch("/api/upload", { method: "POST", body });
+    if (!res.ok) {
+      throw new Error(`No se pudo subir la imagen "${file.name}"`);
+    }
+    const json = await res.json();
+    return json.url as string;
+  };
+
   const onSubmit = async (data: ProjectFormData) => {
     setIsSubmitting(true);
     try {
+      // Subir imágenes directo a Cloudinary vía /api/upload ANTES de llamar
+      // al Server Action: si los archivos viajan dentro del body del Server
+      // Action, pueden superar el límite de payload de la plataforma
+      // (~4.5MB en Vercel) y la acción falla con una respuesta no-RSC que
+      // el cliente no puede interpretar ("unexpected response").
+      const fileInput = document.getElementById("image") as HTMLInputElement | null;
+      const mainImageFile = fileInput?.files?.[0] || null;
+
+      let uploadedImageUrl: string | null = null;
+      if (mainImageFile) {
+        uploadedImageUrl = await uploadToCloudinary(mainImageFile, "habita-studio/projects");
+      }
+
+      const uploadedGalleryUrls: string[] = [];
+      if (newFiles.length > 0) {
+        const results = await Promise.allSettled(
+          newFiles.map((f) => uploadToCloudinary(f, "habita-studio/projects"))
+        );
+        const failed = results.filter((r) => r.status === "rejected").length;
+        for (const r of results) {
+          if (r.status === "fulfilled") uploadedGalleryUrls.push(r.value);
+        }
+        if (failed > 0) {
+          toast({
+            title: "Aviso",
+            description: `${failed} imagen(es) de la galería no se pudieron subir.`,
+            variant: "destructive",
+          });
+        }
+      }
+
+      const finalGallery = [...gallery, ...uploadedGalleryUrls];
+
       const formData = new FormData();
       if (project?.id) formData.append("id", project.id);
       formData.append("title", data.title);
       formData.append("description", data.description);
       formData.append("longDescription", data.longDescription);
       // Mantener imagen actual si no se sube una nueva
-      if (project?.image) formData.append("imageUrl", project.image);
+      if (uploadedImageUrl || project?.image) {
+        formData.append("imageUrl", uploadedImageUrl || project!.image);
+      }
       formData.append("category", data.category);
       formData.append("year", data.year);
       if (data.location) formData.append("location", data.location);
       if (data.duration) formData.append("duration", data.duration);
       if (data.challenges) formData.append("challenges", data.challenges);
       if (data.solutions) formData.append("solutions", data.solutions);
-      // Galería existente (URLs) y como JSON + imageUrls compat Arktee
-      formData.append("gallery", JSON.stringify(gallery));
-      gallery.forEach((url) => formData.append("imageUrls", url));
-      // Archivos nuevos
-      newFiles.forEach((f) => formData.append("images", f));
-      // Archivo de imagen principal si se seleccionó
-      const fileInput = document.getElementById("image") as HTMLInputElement | null;
-      if (fileInput?.files?.[0]) {
-        formData.append("image", fileInput.files[0]);
-      }
+      formData.append("gallery", JSON.stringify(finalGallery));
 
       const result = await createUpdateProject(formData);
 

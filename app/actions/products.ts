@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { cloudinary } from "@/lib/cloudinary";
-import { getPublicIdFromUrl, uploadImages as uploadMany } from "@/lib/cloudinary";
+import { getPublicIdFromUrl } from "@/lib/cloudinary";
 import { getSectionAccess } from "@/app/actions/role-permissions";
 
 const productSchema = z.object({
@@ -39,31 +39,6 @@ const productSchema = z.object({
   warranty: z.string().optional(),
   gallery: z.string().optional(), // JSON string de URLs
 });
-
-const uploadImages = async (files: File[]): Promise<string[]> => {
-  try {
-    const uploadPromises = files.map(async (file) => {
-      try {
-        const buffer = await file.arrayBuffer();
-        const base64Image = Buffer.from(buffer).toString("base64");
-        const result = await cloudinary.uploader.upload(
-          `data:${file.type};base64,${base64Image}`,
-          { folder: "habita-studio/products" }
-        );
-        return result.secure_url;
-      } catch (error) {
-        console.error("Error al subir imagen:", error);
-        return null;
-      }
-    });
-
-    const uploadedImages = await Promise.all(uploadPromises);
-    return uploadedImages.filter((url): url is string => url !== null);
-  } catch (error) {
-    console.error("Error:", error);
-    return [];
-  }
-};
 
 export async function createUpdateProduct(formData: FormData) {
   const { allowed } = await getSectionAccess("admin.products");
@@ -108,10 +83,6 @@ export async function createUpdateProduct(formData: FormData) {
   const priceNumber = price || 0;
   const costNumber = cost || 0;
 
-  // Variables para tracking de subida de imágenes
-  let uploadedCount = 0;
-  let failedCount = 0;
-
   try {
     const prismaTx = await prisma.$transaction(async (tx) => {
       const featuresArray = features
@@ -120,14 +91,10 @@ export async function createUpdateProduct(formData: FormData) {
 
       let dbProduct;
 
-      // Manejo de imágenes (estilo arktee): múltiples archivos 'images' y múltiples 'imageUrls'
-      const imageFile = formData.get("image") as File;
+      // Las imágenes ya se subieron a Cloudinary desde el cliente (vía
+      // /api/upload) antes de llamar a esta acción; aquí solo llegan URLs.
       let imageUrl = formData.get("imageUrl") as string | null;
 
-      const files = formData.getAll("images") as File[]; // múltiples
-      const directUrls = formData.getAll("imageUrls") as string[]; // múltiples
-
-      // Priorizar el JSON del formulario que ya tiene las eliminaciones aplicadas
       const galleryForm = formData.get("gallery") as string | null;
       if (galleryForm) {
         try {
@@ -136,36 +103,6 @@ export async function createUpdateProduct(formData: FormData) {
             galleryUrls = parsed.filter((u) => typeof u === "string");
           }
         } catch (_e) {}
-      }
-      
-      // Si no hay JSON, usar imageUrls como fallback (compatibilidad)
-      if (galleryUrls.length === 0 && directUrls && directUrls.length > 0) {
-        galleryUrls = [...directUrls];
-      }
-
-      // Agregar archivos nuevos subidos
-      if (files && files.length > 0) {
-        try {
-          const uploaded = await uploadMany(files, "habita-studio/products/gallery");
-          uploadedCount = uploaded.length;
-          failedCount = files.length - uploaded.length;
-          galleryUrls = [...galleryUrls, ...uploaded];
-          
-          if (failedCount > 0) {
-            console.warn(`${failedCount} de ${files.length} imágenes no se pudieron subir`);
-          }
-        } catch (error) {
-          console.error("Error al subir imágenes:", error);
-          failedCount = files.length;
-          // Continuar con el proceso aunque algunas imágenes fallen
-        }
-      }
-
-      if (imageFile && imageFile.size > 0) {
-        const uploaded = await uploadImages([imageFile]);
-        if (uploaded.length > 0) {
-          imageUrl = uploaded[0];
-        }
       }
 
       if (id) {
@@ -264,14 +201,7 @@ export async function createUpdateProduct(formData: FormData) {
     revalidatePath(`/catalogo/${prismaTx.slug}`);
     revalidatePath("/");
 
-    let message = id ? "Producto actualizado" : "Producto creado";
-    if (uploadedCount > 0 && failedCount > 0) {
-      message += `. ${uploadedCount} imagen(es) subida(s) exitosamente, ${failedCount} fallaron.`;
-    } else if (uploadedCount > 0) {
-      message += `. ${uploadedCount} imagen(es) subida(s) exitosamente.`;
-    } else if (failedCount > 0) {
-      message += `. Advertencia: ${failedCount} imagen(es) no se pudieron subir.`;
-    }
+    const message = id ? "Producto actualizado" : "Producto creado";
 
     return {
       ok: true,

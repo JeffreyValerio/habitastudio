@@ -4,11 +4,7 @@ import prisma from "@/lib/prisma";
 import { getSectionAccess } from "@/app/actions/role-permissions";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import {
-  getPublicIdFromUrl,
-  deleteImage,
-  uploadImages as uploadMany,
-} from "@/lib/cloudinary";
+import { getPublicIdFromUrl, deleteImage } from "@/lib/cloudinary";
 
 const projectSchema = z.object({
   slug: z.string().min(1),
@@ -168,8 +164,9 @@ export async function createUpdateProject(formData: FormData) {
   const title = (formData.get("title") as string) || "";
   const description = (formData.get("description") as string) || "";
   const longDescription = (formData.get("longDescription") as string) || "";
+  // Las imágenes ya se subieron a Cloudinary desde el cliente (vía
+  // /api/upload) antes de llamar a esta acción; aquí solo llegan URLs.
   const imageUrlExisting = (formData.get("imageUrl") as string) || "";
-  const imageFile = formData.get("image") as File | null;
   const category = (formData.get("category") as string) || "";
   const year = (formData.get("year") as string) || "";
   const location = (formData.get("location") as string) || null;
@@ -180,8 +177,7 @@ export async function createUpdateProject(formData: FormData) {
   const challenges = challengesStr ? challengesStr.split("\n").filter((c) => c.trim()) : [];
   const solutions = solutionsStr ? solutionsStr.split("\n").filter((s) => s.trim()) : [];
 
-  // Galería existente (URLs) y nuevas entradas
-  // Priorizar el JSON del formulario que ya tiene las eliminaciones aplicadas
+  // Galería (URLs), ya con las eliminaciones y las subidas nuevas aplicadas
   let galleryUrls: string[] = [];
   const galleryJson = formData.get("gallery") as string | null;
   if (galleryJson) {
@@ -190,39 +186,17 @@ export async function createUpdateProject(formData: FormData) {
       if (Array.isArray(parsed)) galleryUrls = parsed.filter((u) => typeof u === "string");
     } catch {}
   }
-  
-  // Si no hay JSON, usar imageUrls como fallback (compatibilidad)
-  if (galleryUrls.length === 0) {
-    const directUrls = formData.getAll("imageUrls") as string[];
-    if (directUrls?.length) galleryUrls.push(...directUrls);
-  }
-
-  // Agregar archivos nuevos subidos
-  const files = formData.getAll("images") as File[];
-  if (files?.length) {
-    const uploaded = await uploadMany(files, "habita-studio/projects");
-    galleryUrls.push(...uploaded);
-  }
-
-  // Unificados y sin duplicados
   galleryUrls = [...new Set(galleryUrls)];
 
   try {
     const project = await prisma.$transaction(async (tx) => {
-      // Subir imagen principal si vino archivo
-      let uploadedMain: string | null = null;
-      if (imageFile && typeof imageFile !== "string" && (imageFile as any).size > 0) {
-        const uploaded = await uploadMany([imageFile], "habita-studio/projects");
-        uploadedMain = uploaded[0] || null;
-      }
-
       if (id) {
         const existing = await tx.project.findUnique({ where: { id } });
         if (!existing) throw new Error("Proyecto no encontrado");
 
-        // Definir imagen principal: priorizar archivo nuevo, luego imageUrl existente, luego existente o primera de galería
-        let mainImage = uploadedMain || imageUrlExisting || existing.image;
-        if (uploadedMain && existing.image && uploadedMain !== existing.image) {
+        // Definir imagen principal: priorizar la nueva imageUrl, luego existente o primera de galería
+        let mainImage = imageUrlExisting || existing.image;
+        if (imageUrlExisting && existing.image && imageUrlExisting !== existing.image) {
           try {
             const publicId = getPublicIdFromUrl(existing.image);
             if (publicId) await deleteImage(publicId);
@@ -268,7 +242,7 @@ export async function createUpdateProject(formData: FormData) {
         return updated;
       } else {
         // Crear
-        const mainImage = uploadedMain || imageUrlExisting || (galleryUrls.length ? galleryUrls[0] : "");
+        const mainImage = imageUrlExisting || (galleryUrls.length ? galleryUrls[0] : "");
         if (!mainImage) throw new Error("La imagen principal es requerida");
 
         const computedSlug =
