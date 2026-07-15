@@ -51,7 +51,11 @@ export function WorkOrderDetailTabs({
   const confirmDeleteEntry = async (entryId: string) => {
     setDeletingId(entryId);
     try {
-      await deleteManualTimeEntry(entryId);
+      const result = await deleteManualTimeEntry(entryId);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Registro de horas eliminado" });
       window.location.reload();
     } catch (error: any) {

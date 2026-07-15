@@ -58,7 +58,7 @@ export async function createUpdateProduct(formData: FormData) {
   }
 
   const product = parsedData.data;
-  const slug = product.name
+  const baseSlug = product.name
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -66,6 +66,22 @@ export async function createUpdateProduct(formData: FormData) {
     .replace(/(^-|-$)/g, "");
 
   const { id, cost, price, features, gallery, ...rest } = product;
+
+  // Evitar el choque de unicidad en slug (P2002) cuando dos productos
+  // generan el mismo slug a partir del nombre: se le agrega un sufijo
+  // numerico hasta encontrar uno libre, en vez de fallar al guardar.
+  let slug = baseSlug;
+  let suffix = 2;
+  while (
+    await prisma.product.findFirst({
+      where: { slug, ...(id ? { id: { not: id } } : {}) },
+      select: { id: true },
+    })
+  ) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix++;
+  }
+
   // Parsear galería si viene como JSON string
   let galleryUrls: string[] = [];
   if (gallery) {

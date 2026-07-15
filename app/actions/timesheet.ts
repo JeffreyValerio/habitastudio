@@ -269,7 +269,7 @@ export async function createManualTimeEntry(input: {
 }) {
   const user = await getCurrentUser();
   if (!user || (user.role !== "admin" && user.role !== "taller-manager" && user.role !== "moderator")) {
-    throw new Error("No autorizado para registrar horas manualmente");
+    return { ok: false as const, message: "No autorizado para registrar horas manualmente" };
   }
 
   // El jefe de taller siempre registra horas de producción contra una orden de
@@ -280,16 +280,16 @@ export async function createManualTimeEntry(input: {
 
   if (isTallerManager) {
     if (!input.workOrderId) {
-      throw new Error("Debes seleccionar una orden de trabajo");
+      return { ok: false as const, message: "Debes seleccionar una orden de trabajo" };
     }
     if (!input.workType) {
-      throw new Error("Debes seleccionar un tipo de labor");
+      return { ok: false as const, message: "Debes seleccionar un tipo de labor" };
     }
   }
 
   const collaborator = await prisma.user.findUnique({ where: { id: input.userId } });
   if (!collaborator) {
-    throw new Error("Colaborador no encontrado");
+    return { ok: false as const, message: "Colaborador no encontrado" };
   }
 
   const entryDateTime = new Date(`${input.entryDate}T${input.entryTime}`);
@@ -298,7 +298,7 @@ export async function createManualTimeEntry(input: {
     : null;
 
   if (exitDateTime && exitDateTime <= entryDateTime) {
-    throw new Error("La hora de salida debe ser posterior a la hora de entrada");
+    return { ok: false as const, message: "La hora de salida debe ser posterior a la hora de entrada" };
   }
 
   const timeEntry = await prisma.timeEntry.create({
@@ -338,7 +338,7 @@ export async function createManualTimeEntry(input: {
 
   revalidatePath(`/admin/time-management/${input.userId}`);
   revalidatePath("/admin/time-management");
-  return timeEntry;
+  return { ok: true as const, timeEntry };
 }
 
 export async function updateManualTimeEntry(
@@ -354,7 +354,7 @@ export async function updateManualTimeEntry(
 ) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden editar registros");
+    return { ok: false as const, message: "Solo administradores pueden editar registros" };
   }
 
   const entryDateTime = new Date(`${input.entryDate}T${input.entryTime}`);
@@ -363,7 +363,7 @@ export async function updateManualTimeEntry(
     : null;
 
   if (exitDateTime && exitDateTime <= entryDateTime) {
-    throw new Error("La hora de salida debe ser posterior a la hora de entrada");
+    return { ok: false as const, message: "La hora de salida debe ser posterior a la hora de entrada" };
   }
 
   const entry = await prisma.timeEntry.update({
@@ -380,13 +380,13 @@ export async function updateManualTimeEntry(
 
   revalidatePath(`/admin/time-management/${entry.userId}`);
   revalidatePath("/admin/time-management");
-  return entry;
+  return { ok: true as const, entry };
 }
 
 export async function deleteManualTimeEntry(entryId: string) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden eliminar registros");
+    return { ok: false as const, message: "Solo administradores pueden eliminar registros" };
   }
 
   const entry = await prisma.timeEntry.delete({
@@ -399,6 +399,6 @@ export async function deleteManualTimeEntry(entryId: string) {
     revalidatePath(`/admin/work-orders/${entry.workOrderId}`);
     revalidatePath("/admin/work-orders");
   }
-  return entry;
+  return { ok: true as const, entry };
 }
 

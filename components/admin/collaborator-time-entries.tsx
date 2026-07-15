@@ -72,7 +72,7 @@ export function CollaboratorTimeEntries({ entries, entryRates, workOrders, canEd
   const saveEdit = async (id: string) => {
     setSaving(true);
     try {
-      await updateManualTimeEntry(id, {
+      const result = await updateManualTimeEntry(id, {
         entryDate,
         entryTime,
         exitTime: exitTime || undefined,
@@ -80,6 +80,10 @@ export function CollaboratorTimeEntries({ entries, entryRates, workOrders, canEd
         workType: workType || undefined,
         description: description || undefined,
       });
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Registro actualizado" });
       setEditingId(null);
       window.location.reload();
@@ -93,7 +97,11 @@ export function CollaboratorTimeEntries({ entries, entryRates, workOrders, canEd
   const confirmDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      await deleteManualTimeEntry(id);
+      const result = await deleteManualTimeEntry(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Registro eliminado" });
       window.location.reload();
     } catch (error: any) {

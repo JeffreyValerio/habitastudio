@@ -75,7 +75,7 @@ export function ManualTimeEntryForm({
 
     setIsSubmitting(true);
     try {
-      await createManualTimeEntry({
+      const result = await createManualTimeEntry({
         userId,
         workOrderId: workOrderId || undefined,
         workType: workType || undefined,
@@ -84,6 +84,11 @@ export function ManualTimeEntryForm({
         exitTime: exitTime || undefined,
         description: description || undefined,
       });
+
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
 
       toast({ title: "Éxito", description: "Horas registradas correctamente" });
       router.push(onSuccessRedirect || `/admin/time-management/${userId}`);
