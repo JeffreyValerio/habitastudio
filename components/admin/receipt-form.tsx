@@ -185,6 +185,10 @@ export function ReceiptForm({ receipt }: ReceiptFormProps) {
 
   const availableAmount = calculateAvailableAmount();
   const amountNum = parseFloat(amount || "0");
+  // Redondear a centavos antes de comparar: restas de floats pueden dejar
+  // residuos (ej. 137999.9999999997) que se muestran redondeados pero
+  // fallan una comparación estricta contra el monto ingresado.
+  const amountExceedsAvailable = Math.round(amountNum * 100) > Math.round(availableAmount * 100);
 
   const onSubmit = async (data: ReceiptFormData) => {
     setIsSubmitting(true);
@@ -362,8 +366,8 @@ export function ReceiptForm({ receipt }: ReceiptFormProps) {
             <p className="text-sm text-destructive">{errors.amount.message}</p>
           )}
           {selectedQuote && amountNum > 0 && (
-            <p className={`text-sm ${amountNum > availableAmount ? "text-destructive" : "text-muted-foreground"}`}>
-              {amountNum > availableAmount
+            <p className={`text-sm ${amountExceedsAvailable ? "text-destructive" : "text-muted-foreground"}`}>
+              {amountExceedsAvailable
                 ? `El monto no puede ser mayor al disponible (${formatCRC(availableAmount)})`
                 : `Monto válido. Saldo restante: ${formatCRC(availableAmount - amountNum)}`}
             </p>

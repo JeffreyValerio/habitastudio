@@ -71,8 +71,11 @@ export async function createUpdateReceipt(formData: FormData) {
     const totalPaid = existingReceipts.reduce((sum, r) => sum + r.amount, 0);
     const availableAmount = quote.total - totalPaid;
 
-    // Validar que el monto no sea mayor al disponible
-    if (validated.amount > availableAmount) {
+    // Validar que el monto no sea mayor al disponible. Se redondea a
+    // centavos antes de comparar: restas de floats pueden dejar residuos
+    // (ej. 137999.9999999997) que se muestran redondeados en el UI pero
+    // fallan una comparación estricta contra el monto ingresado.
+    if (Math.round(validated.amount * 100) > Math.round(availableAmount * 100)) {
       return {
         ok: false,
         message: `El monto no puede ser mayor al disponible (${formatCRC(availableAmount)})`,

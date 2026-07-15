@@ -94,7 +94,9 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
     return receipts.map((receipt) => {
       const totalPaid = receiptsByQuote.get(receipt.quote.id) || 0;
       const balance = receipt.quote.total - totalPaid;
-      const isPaid = balance <= 0;
+      // Tolerancia de 1 centavo: restas de floats pueden dejar residuos
+      // (ej. 0.0000001) que harían ver como "pendiente" algo ya pagado.
+      const isPaid = balance <= 0.01;
       return {
         ...receipt,
         totalPaid,
