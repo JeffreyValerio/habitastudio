@@ -55,7 +55,7 @@ export function MaterialForm({ material, suppliers }: MaterialFormProps) {
     setIsSubmitting(true);
     try {
       if (material) {
-        await updateMaterial(material.id, {
+        const result = await updateMaterial(material.id, {
           name,
           unit,
           costPerUnit: parseFloat(costPerUnit),
@@ -63,9 +63,13 @@ export function MaterialForm({ material, suppliers }: MaterialFormProps) {
           supplierId: supplierId || undefined,
           notes: notes || undefined,
         });
+        if (!result.ok) {
+          toast({ title: "Error", description: result.message, variant: "destructive" });
+          return;
+        }
         toast({ title: "Éxito", description: "Material actualizado" });
       } else {
-        await createMaterial({
+        const result = await createMaterial({
           name,
           unit,
           costPerUnit: parseFloat(costPerUnit),
@@ -74,6 +78,10 @@ export function MaterialForm({ material, suppliers }: MaterialFormProps) {
           supplierId: supplierId || undefined,
           notes: notes || undefined,
         });
+        if (!result.ok) {
+          toast({ title: "Error", description: result.message, variant: "destructive" });
+          return;
+        }
         toast({ title: "Éxito", description: "Material creado" });
       }
       router.push("/admin/inventory");

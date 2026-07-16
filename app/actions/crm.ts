@@ -70,7 +70,7 @@ export async function createCustomer(data: {
 }) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden crear clientes");
+    return { ok: false as const, message: "Solo administradores pueden crear clientes" };
   }
 
   const customer = await prisma.customer.create({
@@ -88,7 +88,7 @@ export async function createCustomer(data: {
   });
 
   revalidatePath("/admin/crm/customers");
-  return customer;
+  return { ok: true as const, customer };
 }
 
 export async function updateCustomer(
@@ -108,7 +108,7 @@ export async function updateCustomer(
 ) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden editar clientes");
+    return { ok: false as const, message: "Solo administradores pueden editar clientes" };
   }
 
   const customer = await prisma.customer.update({
@@ -118,13 +118,13 @@ export async function updateCustomer(
 
   revalidatePath("/admin/crm/customers");
   revalidatePath(`/admin/crm/customers/${id}`);
-  return customer;
+  return { ok: true as const, customer };
 }
 
 export async function deleteCustomer(id: string) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden eliminar clientes");
+    return { ok: false as const, message: "Solo administradores pueden eliminar clientes" };
   }
 
   await prisma.customer.delete({
@@ -132,6 +132,7 @@ export async function deleteCustomer(id: string) {
   });
 
   revalidatePath("/admin/crm/customers");
+  return { ok: true as const };
 }
 
 // ============ INTERACTIONS ============
@@ -146,7 +147,7 @@ export async function addInteraction(customerId: string, data: {
 }) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden agregar interacciones");
+    return { ok: false as const, message: "Solo administradores pueden agregar interacciones" };
   }
 
   const interaction = await prisma.customerInteraction.create({
@@ -168,7 +169,7 @@ export async function addInteraction(customerId: string, data: {
   });
 
   revalidatePath(`/admin/crm/customers/${customerId}`);
-  return interaction;
+  return { ok: true as const, interaction };
 }
 
 export async function getInteractions(customerId: string) {
@@ -211,7 +212,7 @@ export async function addNote(customerId: string, data: {
 }) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden agregar notas");
+    return { ok: false as const, message: "Solo administradores pueden agregar notas" };
   }
 
   const note = await prisma.customerNote.create({
@@ -224,7 +225,7 @@ export async function addNote(customerId: string, data: {
   });
 
   revalidatePath(`/admin/crm/customers/${customerId}`);
-  return note;
+  return { ok: true as const, note };
 }
 
 export async function getNotes(customerId: string) {

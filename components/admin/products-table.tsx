@@ -44,7 +44,15 @@ export function ProductsTable({ products }: { products: Product[] }) {
   const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
-      await deleteProduct(id);
+      const result = await deleteProduct(id);
+      if (!result.ok) {
+        toast({
+          title: "Error",
+          description: result.message,
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
         title: "Éxito",
         description: "Producto eliminado correctamente",

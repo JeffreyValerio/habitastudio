@@ -78,7 +78,11 @@ export function CollaboratorsTable({
 
     setSaving(true);
     try {
-      await setCollaboratorRate(userId, rateYear, rateMonth, rate);
+      const result = await setCollaboratorRate(userId, rateYear, rateMonth, rate);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: `Tarifa fijada para ${MONTH_NAMES[rateMonth - 1]} ${rateYear} en adelante` });
       setEditingId(null);
       window.location.reload();

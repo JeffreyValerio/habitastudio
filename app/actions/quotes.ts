@@ -261,7 +261,7 @@ export async function createUpdateQuote(formData: FormData) {
 export async function deleteQuote(id: string) {
   const { allowed } = await getSectionAccess("admin.quotes");
   if (!allowed) {
-    throw new Error("Unauthorized");
+    return { ok: false as const, message: "Unauthorized" };
   }
 
   const quote = await prisma.quote.findUnique({
@@ -279,6 +279,7 @@ export async function deleteQuote(id: string) {
 
   revalidatePath("/admin/quotes");
   revalidatePath("/admin/crm");
+  return { ok: true as const };
 }
 
 export async function getQuotes() {

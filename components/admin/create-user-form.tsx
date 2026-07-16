@@ -63,7 +63,7 @@ export function CreateUserForm() {
     setLoading(true);
     try {
       const isCollaborator = selectedRole === "collaborator" || selectedRole === "taller-manager";
-      await createUserDirectly({
+      const result = await createUserDirectly({
         name: data.name,
         email: data.email,
         password: data.password,
@@ -71,6 +71,10 @@ export function CreateUserForm() {
         isCollaborator,
         hourlyRate: data.hourlyRate ? parseFloat(data.hourlyRate) : undefined,
       });
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({
         title: "Usuario creado",
         description: `${data.name} ya puede iniciar sesión con la contraseña que definiste. Compártesela por un medio seguro.`,

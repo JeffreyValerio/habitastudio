@@ -59,7 +59,14 @@ export function RolePermissionsForm({
     }));
 
     try {
-      await setRolePermission(role, section, enabled);
+      const result = await setRolePermission(role, section, enabled);
+      if (!result.ok) {
+        setPermissions((prev) => ({
+          ...prev,
+          [role]: { ...prev[role], [section]: previous },
+        }));
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+      }
     } catch (error: any) {
       setPermissions((prev) => ({
         ...prev,

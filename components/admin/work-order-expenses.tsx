@@ -69,7 +69,11 @@ export function WorkOrderExpenses({
 
     setAdding(true);
     try {
-      await addWorkOrderExpense(workOrderId, { materialId, quantity: qty });
+      const result = await addWorkOrderExpense(workOrderId, { materialId, quantity: qty });
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Gasto registrado y stock descontado" });
       setMaterialId("");
       setQuantity("");
@@ -90,7 +94,11 @@ export function WorkOrderExpenses({
 
     setAdding(true);
     try {
-      await addWorkOrderExpense(workOrderId, { category, description, amount: amountNum });
+      const result = await addWorkOrderExpense(workOrderId, { category, description, amount: amountNum });
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Gasto registrado" });
       setCategory("");
       setDescription("");
@@ -106,7 +114,11 @@ export function WorkOrderExpenses({
   const confirmRemove = async (id: string) => {
     setRemovingId(id);
     try {
-      await deleteWorkOrderExpense(id);
+      const result = await deleteWorkOrderExpense(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Gasto eliminado" });
       window.location.reload();
     } catch (error: any) {

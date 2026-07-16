@@ -47,7 +47,11 @@ export function UsersTable({ users }: { users: User[] }) {
   const confirmDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      await deleteUser(id);
+      const result = await deleteUser(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Usuario eliminado" });
       window.location.reload();
     } catch (error: any) {

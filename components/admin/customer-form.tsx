@@ -70,7 +70,7 @@ export function CustomerForm({ customer }: CustomerFormProps) {
     setIsSubmitting(true);
     try {
       if (customer) {
-        await updateCustomer(customer.id, {
+        const result = await updateCustomer(customer.id, {
           name,
           email,
           phone: phone || undefined,
@@ -82,10 +82,14 @@ export function CustomerForm({ customer }: CustomerFormProps) {
           status,
           source: source || undefined,
         });
+        if (!result.ok) {
+          toast({ title: "Error", description: result.message, variant: "destructive" });
+          return;
+        }
         toast({ title: "Éxito", description: "Cliente actualizado" });
         router.push(`/admin/crm/customers/${customer.id}`);
       } else {
-        const created = await createCustomer({
+        const result = await createCustomer({
           name,
           email,
           phone: phone || undefined,
@@ -96,8 +100,12 @@ export function CustomerForm({ customer }: CustomerFormProps) {
           country: country || undefined,
           source: source || undefined,
         });
+        if (!result.ok) {
+          toast({ title: "Error", description: result.message, variant: "destructive" });
+          return;
+        }
         toast({ title: "Éxito", description: "Cliente creado" });
-        router.push(`/admin/crm/customers/${created.id}`);
+        router.push(`/admin/crm/customers/${result.customer.id}`);
       }
       router.refresh();
     } catch (error: any) {

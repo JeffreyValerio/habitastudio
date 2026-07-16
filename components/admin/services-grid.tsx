@@ -37,7 +37,11 @@ export function ServicesGrid({ services }: { services: Service[] }) {
   const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
-      await deleteService(id);
+      const result = await deleteService(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({
         title: "Éxito",
         description: "Servicio eliminado correctamente",

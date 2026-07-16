@@ -51,7 +51,11 @@ export function CollaboratorRateHistory({
 
     setSaving(true);
     try {
-      await setCollaboratorRate(userId, year, month, rateNum);
+      const result = await setCollaboratorRate(userId, year, month, rateNum);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({
         title: "Éxito",
         description: `Tarifa fijada desde ${MONTH_NAMES[month - 1]} ${year} en adelante`,
@@ -68,7 +72,11 @@ export function CollaboratorRateHistory({
   const confirmDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      await deleteCollaboratorRate(id);
+      const result = await deleteCollaboratorRate(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Tarifa eliminada del historial" });
       window.location.reload();
     } catch (error: any) {

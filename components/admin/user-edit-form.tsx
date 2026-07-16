@@ -47,13 +47,17 @@ export function UserEditForm({ user }: UserEditFormProps) {
 
     setIsSubmitting(true);
     try {
-      await updateUser(user.id, {
+      const result = await updateUser(user.id, {
         name,
         email,
         role: role as "admin" | "moderator" | "collaborator" | "taller-manager",
         hourlyRate: showRate && hourlyRate ? parseFloat(hourlyRate) : undefined,
         password: password || undefined,
       });
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Usuario actualizado" });
       router.push("/admin/settings/users");
       router.refresh();

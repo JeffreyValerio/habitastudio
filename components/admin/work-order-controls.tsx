@@ -29,7 +29,11 @@ export function WorkOrderControls({
   const handleSaveDate = async () => {
     setSavingDate(true);
     try {
-      await setWorkOrderDeliveryDate(workOrderId, dateValue || null);
+      const result = await setWorkOrderDeliveryDate(workOrderId, dateValue || null);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({
         title: "Éxito",
         description: dateValue ? "Orden liberada al taller" : "Fecha de entrega removida",
@@ -45,7 +49,11 @@ export function WorkOrderControls({
   const handleStatusChange = async (newStatus: string) => {
     setSavingStatus(true);
     try {
-      await updateWorkOrderStatus(workOrderId, newStatus as "pending" | "in_progress" | "completed");
+      const result = await updateWorkOrderStatus(workOrderId, newStatus as "pending" | "in_progress" | "completed");
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Estado actualizado" });
       window.location.reload();
     } catch (error: any) {

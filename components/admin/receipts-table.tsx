@@ -109,7 +109,15 @@ export function ReceiptsTable({ receipts }: { receipts: Receipt[] }) {
   const confirmDeleteReceipt = async (id: string) => {
     setDeleting(id);
     try {
-      await deleteReceipt(id);
+      const result = await deleteReceipt(id);
+      if (!result.ok) {
+        toast({
+          title: "Error",
+          description: result.message,
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
         title: "Éxito",
         description: "Recibo eliminado correctamente",

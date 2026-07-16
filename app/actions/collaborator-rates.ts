@@ -4,14 +4,6 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
-async function requireAdmin() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden gestionar tarifas");
-  }
-  return user;
-}
-
 // El moderador puede ver tarifas (parte de Tiempo & Asistencia) pero no gestionarlas.
 async function requireAdminOrModerator() {
   const user = await getCurrentUser();
@@ -29,10 +21,13 @@ export async function setCollaboratorRate(
   month: number,
   hourlyRate: number
 ) {
-  await requireAdmin();
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    return { ok: false as const, message: "Solo administradores pueden gestionar tarifas" };
+  }
 
   if (hourlyRate < 0) {
-    throw new Error("La tarifa no puede ser negativa");
+    return { ok: false as const, message: "La tarifa no puede ser negativa" };
   }
 
   const rate = await prisma.collaboratorRate.upsert({
@@ -55,7 +50,7 @@ export async function setCollaboratorRate(
   revalidatePath("/admin/time-management");
   revalidatePath(`/admin/time-management/${userId}`);
   revalidatePath("/admin/settings/users");
-  return rate;
+  return { ok: true as const, rate };
 }
 
 export async function getCollaboratorRateHistory(userId: string) {
@@ -68,13 +63,16 @@ export async function getCollaboratorRateHistory(userId: string) {
 }
 
 export async function deleteCollaboratorRate(id: string) {
-  await requireAdmin();
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    return { ok: false as const, message: "Solo administradores pueden gestionar tarifas" };
+  }
 
   const rate = await prisma.collaboratorRate.delete({ where: { id } });
 
   revalidatePath("/admin/time-management");
   revalidatePath(`/admin/time-management/${rate.userId}`);
-  return rate;
+  return { ok: true as const, rate };
 }
 
 // Tarifa vigente de un colaborador para un año/mes específico: la más

@@ -41,7 +41,11 @@ export function WorkOrderStages({
   const handleMark = async (stage: WorkOrderStage) => {
     setMarking(stage);
     try {
-      await markWorkOrderStage(workOrderId, stage);
+      const result = await markWorkOrderStage(workOrderId, stage);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: `Etapa "${stage}" marcada como completada` });
       window.location.reload();
     } catch (error: any) {
@@ -54,7 +58,11 @@ export function WorkOrderStages({
   const handleRevert = async (stage: WorkOrderStage) => {
     setReverting(stage);
     try {
-      await revertWorkOrderStage(workOrderId, stage);
+      const result = await revertWorkOrderStage(workOrderId, stage);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: `Se revirtió la etapa "${stage}"` });
       window.location.reload();
     } catch (error: any) {

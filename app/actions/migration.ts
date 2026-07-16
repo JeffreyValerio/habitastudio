@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 export async function migrateAcceptedQuotesToCustomers() {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden ejecutar migraciones");
+    return { success: false as const, message: "Solo administradores pueden ejecutar migraciones" };
   }
 
   try {
@@ -76,7 +76,7 @@ export async function migrateAcceptedQuotesToCustomers() {
     revalidatePath("/admin/quotes");
 
     return {
-      success: true,
+      success: true as const,
       message: `Migración completada: ${createdCount} nuevos clientes creados, ${updatedCount} cotizaciones asociadas`,
       stats: {
         total: acceptedQuotes.length,
@@ -86,7 +86,7 @@ export async function migrateAcceptedQuotesToCustomers() {
     };
   } catch (error: any) {
     console.error("Error en migración:", error);
-    throw new Error(`Error en migración: ${error.message}`);
+    return { success: false as const, message: `Error en migración: ${error.message}` };
   }
 }
 

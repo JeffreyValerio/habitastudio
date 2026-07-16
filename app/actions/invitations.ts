@@ -21,7 +21,7 @@ const inviteSchema = z.object({
 export async function inviteUser(data: z.infer<typeof inviteSchema>) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden invitar usuarios");
+    return { ok: false as const, message: "Solo administradores pueden invitar usuarios" };
   }
 
   const validated = inviteSchema.parse(data);
@@ -32,7 +32,7 @@ export async function inviteUser(data: z.infer<typeof inviteSchema>) {
   });
 
   if (existingUser) {
-    throw new Error("Este usuario ya existe");
+    return { ok: false as const, message: "Este usuario ya existe" };
   }
 
   // Verificar si ya tiene una invitación activa
@@ -45,7 +45,7 @@ export async function inviteUser(data: z.infer<typeof inviteSchema>) {
   });
 
   if (existingInvitation) {
-    throw new Error("Ya existe una invitación activa para este correo");
+    return { ok: false as const, message: "Ya existe una invitación activa para este correo" };
   }
 
   // Generar token
@@ -158,15 +158,15 @@ export async function inviteUser(data: z.infer<typeof inviteSchema>) {
 
     if (error) {
       console.error("Error enviando email:", error);
-      throw new Error("Error al enviar el email de invitación");
+      return { ok: false as const, message: "Error al enviar el email de invitación" };
     }
   } catch (error) {
     console.error("Error en inviteUser:", error);
-    throw error;
+    return { ok: false as const, message: "Error al enviar el email de invitación" };
   }
 
   revalidatePath("/admin/settings/users");
-  return invitation;
+  return { ok: true as const, invitation };
 }
 
 export async function acceptInvitation(
@@ -188,15 +188,15 @@ export async function acceptInvitation(
   });
 
   if (!invitation) {
-    throw new Error("Invitación no encontrada");
+    return { ok: false as const, message: "Invitación no encontrada" };
   }
 
   if (invitation.accepted) {
-    throw new Error("Esta invitación ya ha sido usada");
+    return { ok: false as const, message: "Esta invitación ya ha sido usada" };
   }
 
   if (invitation.expiresAt < new Date()) {
-    throw new Error("Esta invitación ha expirado");
+    return { ok: false as const, message: "Esta invitación ha expirado" };
   }
 
   // Verificar si el usuario ya existe
@@ -205,7 +205,7 @@ export async function acceptInvitation(
   });
 
   if (existingUser) {
-    throw new Error("Este usuario ya existe");
+    return { ok: false as const, message: "Este usuario ya existe" };
   }
 
   // Hash password con bcrypt
@@ -230,7 +230,7 @@ export async function acceptInvitation(
   });
 
   revalidatePath("/admin");
-  return newUser;
+  return { ok: true as const, user: newUser };
 }
 
 const createUserSchema = z.object({
@@ -245,7 +245,7 @@ const createUserSchema = z.object({
 export async function createUserDirectly(data: z.infer<typeof createUserSchema>) {
   const admin = await getCurrentUser();
   if (!admin || admin.role !== "admin") {
-    throw new Error("Solo administradores pueden crear usuarios");
+    return { ok: false as const, message: "Solo administradores pueden crear usuarios" };
   }
 
   const validated = createUserSchema.parse(data);
@@ -255,7 +255,7 @@ export async function createUserDirectly(data: z.infer<typeof createUserSchema>)
   });
 
   if (existingUser) {
-    throw new Error("Ya existe un usuario con este correo");
+    return { ok: false as const, message: "Ya existe un usuario con este correo" };
   }
 
   const hashedPassword = await bcrypt.hash(validated.password, 10);
@@ -274,7 +274,7 @@ export async function createUserDirectly(data: z.infer<typeof createUserSchema>)
 
   revalidatePath("/admin/settings/users");
   revalidatePath("/admin/time-management");
-  return newUser;
+  return { ok: true as const, user: newUser };
 }
 
 export async function getPendingInvitations() {
@@ -292,7 +292,7 @@ export async function getPendingInvitations() {
 export async function deleteInvitation(id: string) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden eliminar invitaciones");
+    return { ok: false as const, message: "Solo administradores pueden eliminar invitaciones" };
   }
 
   await prisma.userInvitation.delete({
@@ -300,4 +300,5 @@ export async function deleteInvitation(id: string) {
   });
 
   revalidatePath("/admin/settings/users");
+  return { ok: true as const };
 }

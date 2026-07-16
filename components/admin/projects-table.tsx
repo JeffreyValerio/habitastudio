@@ -42,7 +42,11 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
   const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
-      await deleteProject(id);
+      const result = await deleteProject(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({
         title: "Éxito",
         description: "Proyecto eliminado correctamente",

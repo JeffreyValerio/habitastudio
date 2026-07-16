@@ -237,7 +237,7 @@ export async function createUpdateProduct(formData: FormData) {
 export async function deleteProduct(id: string) {
   const { allowed } = await getSectionAccess("admin.products");
   if (!allowed) {
-    throw new Error("Unauthorized");
+    return { ok: false as const, message: "No autorizado" };
   }
 
   // Obtener el producto para eliminar su imagen
@@ -276,6 +276,8 @@ export async function deleteProduct(id: string) {
 
   revalidatePath("/catalogo");
   revalidatePath("/");
+
+  return { ok: true as const };
 }
 
 export async function getProducts() {

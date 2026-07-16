@@ -49,7 +49,11 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
   const saveDeliveryDate = async (id: string) => {
     setSaving(true);
     try {
-      await setWorkOrderDeliveryDate(id, dateValue || null);
+      const result = await setWorkOrderDeliveryDate(id, dateValue || null);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({
         title: "Éxito",
         description: dateValue ? "Orden liberada al taller" : "Fecha de entrega removida",

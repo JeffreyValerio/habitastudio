@@ -19,7 +19,7 @@ const serviceSchema = z.object({
 export async function createService(data: z.infer<typeof serviceSchema>) {
   const { allowed } = await getSectionAccess("admin.services");
   if (!allowed) {
-    throw new Error("Unauthorized");
+    return { ok: false as const, message: "Unauthorized" };
   }
 
   const validated = serviceSchema.parse(data);
@@ -39,18 +39,18 @@ export async function createService(data: z.infer<typeof serviceSchema>) {
   revalidatePath("/servicios");
   revalidatePath(`/servicios/${service.slug}`);
   revalidatePath("/");
-  return service;
+  return { ok: true as const, service };
 }
 
 export async function updateService(id: string, data: Partial<z.infer<typeof serviceSchema>>) {
   const { allowed } = await getSectionAccess("admin.services");
   if (!allowed) {
-    throw new Error("Unauthorized");
+    return { ok: false as const, message: "Unauthorized" };
   }
 
   const existing = await prisma.service.findUnique({ where: { id } });
   if (!existing) {
-    throw new Error("Servicio no encontrado");
+    return { ok: false as const, message: "Servicio no encontrado" };
   }
 
   const computedSlug =
@@ -71,13 +71,13 @@ export async function updateService(id: string, data: Partial<z.infer<typeof ser
   revalidatePath("/servicios");
   revalidatePath(`/servicios/${service.slug}`);
   revalidatePath("/");
-  return service;
+  return { ok: true as const, service };
 }
 
 export async function deleteService(id: string) {
   const { allowed } = await getSectionAccess("admin.services");
   if (!allowed) {
-    throw new Error("Unauthorized");
+    return { ok: false as const, message: "Unauthorized" };
   }
 
   await prisma.service.delete({
@@ -86,6 +86,7 @@ export async function deleteService(id: string) {
 
   revalidatePath("/servicios");
   revalidatePath("/");
+  return { ok: true as const };
 }
 
 export async function getServices() {

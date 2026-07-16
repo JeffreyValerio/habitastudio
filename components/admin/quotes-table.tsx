@@ -85,7 +85,11 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
   const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
-      await deleteQuote(id);
+      const result = await deleteQuote(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Cotización eliminada" });
       window.location.reload();
     } catch (error: any) {

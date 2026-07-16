@@ -55,7 +55,11 @@ export function InviteUserForm({ hideCard = false }: { hideCard?: boolean } = {}
         isCollaborator: selectedRole === "collaborator" || selectedRole === "taller-manager",
         hourlyRate: data.hourlyRate ? parseFloat(data.hourlyRate) : undefined,
       };
-      await inviteUser(payload);
+      const result = await inviteUser(payload);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({
         title: "Éxito",
         description: `Invitación enviada a ${data.email}`,

@@ -17,6 +17,14 @@ export default function MigrationsPage() {
     setLoading(true);
     try {
       const res = await migrateAcceptedQuotesToCustomers();
+      if (!res.success) {
+        toast({
+          title: "Error",
+          description: res.message,
+          variant: "destructive",
+        });
+        return;
+      }
       setResult(res);
       toast({
         title: "Éxito",

@@ -92,7 +92,7 @@ export async function updateProject(
 export async function deleteProject(id: string) {
   const { allowed } = await getSectionAccess("admin.projects");
   if (!allowed) {
-    throw new Error("Unauthorized");
+    return { ok: false as const, message: "Unauthorized" };
   }
 
   // Obtener el proyecto para eliminar sus imágenes
@@ -135,6 +135,7 @@ export async function deleteProject(id: string) {
 
   revalidatePath("/proyectos");
   revalidatePath("/");
+  return { ok: true as const };
 }
 
 export async function getProjects() {

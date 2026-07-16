@@ -142,13 +142,21 @@ export function ServiceForm({ service }: ServiceFormProps) {
       };
 
       if (service) {
-        await updateService(service.id, serviceData);
+        const result = await updateService(service.id, serviceData);
+        if (!result.ok) {
+          toast({ title: "Error", description: result.message, variant: "destructive" });
+          return;
+        }
         toast({
           title: "Éxito",
           description: "Servicio actualizado correctamente",
         });
       } else {
-        await createService(serviceData);
+        const result = await createService(serviceData);
+        if (!result.ok) {
+          toast({ title: "Error", description: result.message, variant: "destructive" });
+          return;
+        }
         toast({
           title: "Éxito",
           description: "Servicio creado correctamente",

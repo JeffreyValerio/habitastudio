@@ -74,10 +74,10 @@ export async function getAllRolePermissions(): Promise<Record<ConfigurableRole, 
 export async function setRolePermission(role: string, section: string, enabled: boolean) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden configurar permisos");
+    return { ok: false as const, message: "Solo administradores pueden configurar permisos" };
   }
   if (!isConfigurableRole(role)) {
-    throw new Error("Rol no configurable");
+    return { ok: false as const, message: "Rol no configurable" };
   }
 
   await prisma.rolePermission.upsert({
@@ -89,4 +89,5 @@ export async function setRolePermission(role: string, section: string, enabled: 
   revalidatePath("/admin", "layout");
   revalidatePath("/taller-manager", "layout");
   revalidatePath("/collaborator", "layout");
+  return { ok: true as const };
 }

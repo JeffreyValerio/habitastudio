@@ -188,7 +188,7 @@ export async function createUpdateReceipt(formData: FormData) {
 export async function deleteReceipt(id: string) {
   const { allowed } = await getSectionAccess("admin.receipts");
   if (!allowed) {
-    throw new Error("Unauthorized");
+    return { ok: false as const, message: "No autorizado" };
   }
 
   await prisma.receipt.delete({
@@ -196,6 +196,8 @@ export async function deleteReceipt(id: string) {
   });
 
   revalidatePath("/admin/receipts");
+
+  return { ok: true as const };
 }
 
 export async function getReceipts() {

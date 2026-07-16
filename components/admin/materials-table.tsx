@@ -87,7 +87,11 @@ export function MaterialsTable({ materials }: { materials: Material[] }) {
     }
     setSaving(true);
     try {
-      await adjustMaterialStock(id, { type: adjustType, quantity: qty });
+      const result = await adjustMaterialStock(id, { type: adjustType, quantity: qty });
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Stock actualizado" });
       setAdjustingId(null);
       window.location.reload();
@@ -101,7 +105,11 @@ export function MaterialsTable({ materials }: { materials: Material[] }) {
   const confirmDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      await deleteMaterial(id);
+      const result = await deleteMaterial(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Material eliminado" });
       window.location.reload();
     } catch (error: any) {

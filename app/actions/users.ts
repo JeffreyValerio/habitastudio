@@ -67,7 +67,7 @@ export async function updateUser(id: string, data: z.infer<typeof updateUserSche
 
   const existing = await prisma.user.findUnique({ where: { email: validated.email } });
   if (existing && existing.id !== id) {
-    throw new Error("Ya existe otro usuario con ese correo");
+    return { ok: false as const, message: "Ya existe otro usuario con ese correo" };
   }
 
   const isCollaborator = validated.role === "collaborator" || validated.role === "taller-manager";
@@ -98,25 +98,25 @@ export async function updateUser(id: string, data: z.infer<typeof updateUserSche
   });
 
   revalidatePath("/admin/settings/users");
-  return user;
+  return { ok: true as const, user };
 }
 
 export async function deleteUser(id: string) {
   const admin = await requireAdmin();
 
   if (admin.id === id) {
-    throw new Error("No puedes eliminar tu propia cuenta");
+    return { ok: false as const, message: "No puedes eliminar tu propia cuenta" };
   }
 
   const target = await prisma.user.findUnique({ where: { id } });
   if (!target) {
-    throw new Error("Usuario no encontrado");
+    return { ok: false as const, message: "Usuario no encontrado" };
   }
 
   if (target.role === "admin") {
     const adminCount = await prisma.user.count({ where: { role: "admin" } });
     if (adminCount <= 1) {
-      throw new Error("No puedes eliminar al único administrador");
+      return { ok: false as const, message: "No puedes eliminar al único administrador" };
     }
   }
 
@@ -133,12 +133,15 @@ export async function deleteUser(id: string) {
     timeEntries > 0 || expenses > 0 || movements > 0 || payrolls > 0;
 
   if (hasHistory) {
-    throw new Error(
-      "Este usuario tiene historial asociado (horas, gastos u otros registros) y no se puede eliminar sin perder esos registros. Cambia su rol en su lugar si ya no debe tener acceso."
-    );
+    return {
+      ok: false as const,
+      message:
+        "Este usuario tiene historial asociado (horas, gastos u otros registros) y no se puede eliminar sin perder esos registros. Cambia su rol en su lugar si ya no debe tener acceso.",
+    };
   }
 
   await prisma.user.delete({ where: { id } });
 
   revalidatePath("/admin/settings/users");
+  return { ok: true as const };
 }

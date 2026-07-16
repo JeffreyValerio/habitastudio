@@ -29,7 +29,11 @@ export function PendingInvitationsList({
   const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
-      await deleteInvitation(id);
+      const result = await deleteInvitation(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({
         title: "Éxito",
         description: "Invitación eliminada",

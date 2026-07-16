@@ -65,7 +65,11 @@ export function CrmCustomersTable({ customers }: { customers: Customer[] }) {
   const confirmDelete = async (id: string) => {
     setDeleting(id);
     try {
-      await deleteCustomer(id);
+      const result = await deleteCustomer(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Cliente eliminado" });
       window.location.reload();
     } catch (error: any) {

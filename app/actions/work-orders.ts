@@ -208,7 +208,7 @@ async function sendWorkOrderStageEmail(
 export async function markWorkOrderStage(workOrderId: string, stage: WorkOrderStage) {
   const user = await getCurrentUser();
   if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
-    throw new Error("No autorizado");
+    return { ok: false as const, message: "No autorizado" };
   }
 
   const workOrder = await prisma.workOrder.findUnique({
@@ -223,7 +223,7 @@ export async function markWorkOrderStage(workOrderId: string, stage: WorkOrderSt
       },
     },
   });
-  if (!workOrder) throw new Error("Orden de trabajo no encontrada");
+  if (!workOrder) return { ok: false as const, message: "Orden de trabajo no encontrada" };
 
   const stageIndex = WORK_ORDER_STAGES.findIndex((s) => s.key === stage);
   const targetStage = WORK_ORDER_STAGES[stageIndex];
@@ -232,12 +232,12 @@ export async function markWorkOrderStage(workOrderId: string, stage: WorkOrderSt
   for (let i = 0; i < stageIndex; i++) {
     const priorField = WORK_ORDER_STAGES[i].field;
     if (!workOrder[priorField]) {
-      throw new Error(`Debes completar "${WORK_ORDER_STAGES[i].label}" antes de marcar "${targetStage.label}"`);
+      return { ok: false as const, message: `Debes completar "${WORK_ORDER_STAGES[i].label}" antes de marcar "${targetStage.label}"` };
     }
   }
 
   if (workOrder[targetStage.field]) {
-    throw new Error(`"${targetStage.label}" ya fue marcada como completada`);
+    return { ok: false as const, message: `"${targetStage.label}" ya fue marcada como completada` };
   }
 
   const updated = await prisma.workOrder.update({
@@ -265,7 +265,7 @@ export async function markWorkOrderStage(workOrderId: string, stage: WorkOrderSt
   revalidatePath(`/admin/work-orders/${workOrderId}`);
   revalidatePath("/taller-manager/work-orders");
   revalidatePath(`/taller-manager/work-orders/${workOrderId}`);
-  return updated;
+  return { ok: true as const, workOrder: updated };
 }
 
 // Permite al admin corregir una etapa marcada por error. Solo se puede
@@ -274,22 +274,22 @@ export async function markWorkOrderStage(workOrderId: string, stage: WorkOrderSt
 export async function revertWorkOrderStage(workOrderId: string, stage: WorkOrderStage) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo un administrador puede reversar una etapa");
+    return { ok: false as const, message: "Solo un administrador puede reversar una etapa" };
   }
 
   const workOrder = await prisma.workOrder.findUnique({ where: { id: workOrderId } });
-  if (!workOrder) throw new Error("Orden de trabajo no encontrada");
+  if (!workOrder) return { ok: false as const, message: "Orden de trabajo no encontrada" };
 
   const stageIndex = WORK_ORDER_STAGES.findIndex((s) => s.key === stage);
   const targetStage = WORK_ORDER_STAGES[stageIndex];
 
   if (!workOrder[targetStage.field]) {
-    throw new Error(`"${targetStage.label}" no está marcada como completada`);
+    return { ok: false as const, message: `"${targetStage.label}" no está marcada como completada` };
   }
 
   for (let i = stageIndex + 1; i < WORK_ORDER_STAGES.length; i++) {
     if (workOrder[WORK_ORDER_STAGES[i].field]) {
-      throw new Error(`Debes reversar primero "${WORK_ORDER_STAGES[i].label}"`);
+      return { ok: false as const, message: `Debes reversar primero "${WORK_ORDER_STAGES[i].label}"` };
     }
   }
 
@@ -306,7 +306,7 @@ export async function revertWorkOrderStage(workOrderId: string, stage: WorkOrder
   revalidatePath(`/admin/work-orders/${workOrderId}`);
   revalidatePath("/taller-manager/work-orders");
   revalidatePath(`/taller-manager/work-orders/${workOrderId}`);
-  return updated;
+  return { ok: true as const, workOrder: updated };
 }
 
 async function generateWorkOrderNumber() {
@@ -472,7 +472,7 @@ export async function getWorkOrder(id: string) {
 export async function setWorkOrderDeliveryDate(id: string, deliveryDate: string | null) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden liberar órdenes de trabajo");
+    return { ok: false as const, message: "Solo administradores pueden liberar órdenes de trabajo" };
   }
 
   const workOrder = await prisma.workOrder.update({
@@ -484,7 +484,7 @@ export async function setWorkOrderDeliveryDate(id: string, deliveryDate: string 
   revalidatePath(`/admin/work-orders/${id}`);
   revalidatePath("/taller-manager/work-orders");
   revalidatePath("/collaborator/work-orders");
-  return workOrder;
+  return { ok: true as const, workOrder };
 }
 
 export async function updateWorkOrderStatus(
@@ -493,7 +493,7 @@ export async function updateWorkOrderStatus(
 ) {
   const user = await getCurrentUser();
   if (!user || (user.role !== "admin" && user.role !== "taller-manager")) {
-    throw new Error("No autorizado");
+    return { ok: false as const, message: "No autorizado" };
   }
 
   const workOrder = await prisma.workOrder.update({
@@ -516,7 +516,7 @@ export async function updateWorkOrderStatus(
   revalidatePath(`/admin/work-orders/${id}`);
   revalidatePath("/taller-manager/work-orders");
   revalidatePath("/collaborator/work-orders");
-  return workOrder;
+  return { ok: true as const, workOrder };
 }
 
 // Órdenes visibles en el panel de "activas". El admin ve cualquier orden en
@@ -595,26 +595,26 @@ export async function addWorkOrderExpense(
 ) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden registrar gastos");
+    return { ok: false as const, message: "Solo administradores pueden registrar gastos" };
   }
 
   // Gasto desde inventario: descuenta stock y calcula el monto automáticamente
   if ("materialId" in input) {
     if (input.quantity <= 0) {
-      throw new Error("La cantidad debe ser mayor a cero");
+      return { ok: false as const, message: "La cantidad debe ser mayor a cero" };
     }
 
-    return await prisma.$transaction(async (tx) => {
-      const material = await tx.material.findUnique({ where: { id: input.materialId } });
-      if (!material) throw new Error("Material no encontrado");
-      if (material.quantity < input.quantity) {
-        throw new Error(`Stock insuficiente de ${material.name} (disponible: ${material.quantity} ${material.unit})`);
-      }
+    const material = await prisma.material.findUnique({ where: { id: input.materialId } });
+    if (!material) return { ok: false as const, message: "Material no encontrado" };
+    if (material.quantity < input.quantity) {
+      return { ok: false as const, message: `Stock insuficiente de ${material.name} (disponible: ${material.quantity} ${material.unit})` };
+    }
 
+    const expense = await prisma.$transaction(async (tx) => {
       const amount = material.costPerUnit * input.quantity;
       const workOrder = await tx.workOrder.findUnique({ where: { id: workOrderId }, select: { workOrderNumber: true } });
 
-      const expense = await tx.workOrderExpense.create({
+      const created = await tx.workOrderExpense.create({
         data: {
           workOrderId,
           category: "materiales",
@@ -641,16 +641,18 @@ export async function addWorkOrderExpense(
         },
       });
 
-      revalidatePath(`/admin/work-orders/${workOrderId}`);
-      revalidatePath("/admin/work-orders");
-      revalidatePath("/admin/inventory");
-      return expense;
+      return created;
     });
+
+    revalidatePath(`/admin/work-orders/${workOrderId}`);
+    revalidatePath("/admin/work-orders");
+    revalidatePath("/admin/inventory");
+    return { ok: true as const, expense };
   }
 
   // Gasto manual
   if (input.amount <= 0) {
-    throw new Error("El monto debe ser mayor a cero");
+    return { ok: false as const, message: "El monto debe ser mayor a cero" };
   }
 
   const expense = await prisma.workOrderExpense.create({
@@ -666,59 +668,61 @@ export async function addWorkOrderExpense(
 
   revalidatePath(`/admin/work-orders/${workOrderId}`);
   revalidatePath("/admin/work-orders");
-  return expense;
+  return { ok: true as const, expense };
 }
 
 export async function deleteWorkOrderExpense(id: string) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden eliminar gastos");
+    return { ok: false as const, message: "Solo administradores pueden eliminar gastos" };
   }
 
-  return await prisma.$transaction(async (tx) => {
-    const expense = await tx.workOrderExpense.delete({ where: { id } });
+  const expense = await prisma.$transaction(async (tx) => {
+    const deleted = await tx.workOrderExpense.delete({ where: { id } });
 
     // Si el gasto venía de inventario, devolver el stock consumido
-    if (expense.materialId && expense.quantity) {
+    if (deleted.materialId && deleted.quantity) {
       await tx.material.update({
-        where: { id: expense.materialId },
-        data: { quantity: { increment: expense.quantity } },
+        where: { id: deleted.materialId },
+        data: { quantity: { increment: deleted.quantity } },
       });
 
       await tx.materialMovement.create({
         data: {
-          materialId: expense.materialId,
+          materialId: deleted.materialId,
           type: "in",
-          quantity: expense.quantity,
+          quantity: deleted.quantity,
           reference: "Reversión por eliminación de gasto",
           createdBy: user.id,
         },
       });
     }
 
-    revalidatePath(`/admin/work-orders/${expense.workOrderId}`);
-    revalidatePath("/admin/work-orders");
-    revalidatePath("/admin/inventory");
-    return expense;
+    return deleted;
   });
+
+  revalidatePath(`/admin/work-orders/${expense.workOrderId}`);
+  revalidatePath("/admin/work-orders");
+  revalidatePath("/admin/inventory");
+  return { ok: true as const, expense };
 }
 
 export async function addWorkOrderImages(workOrderId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden subir imágenes");
+    return { ok: false as const, message: "Solo administradores pueden subir imágenes" };
   }
 
   const files = formData.getAll("images") as File[];
   if (files.length === 0) {
-    throw new Error("No se recibieron imágenes");
+    return { ok: false as const, message: "No se recibieron imágenes" };
   }
 
   const workOrder = await prisma.workOrder.findUnique({
     where: { id: workOrderId },
     select: { images: true },
   });
-  if (!workOrder) throw new Error("Orden de trabajo no encontrada");
+  if (!workOrder) return { ok: false as const, message: "Orden de trabajo no encontrada" };
 
   const uploaded = await uploadImages(files, "habita-studio/work-orders");
 
@@ -729,20 +733,20 @@ export async function addWorkOrderImages(workOrderId: string, formData: FormData
 
   revalidatePath(`/admin/work-orders/${workOrderId}`);
   revalidatePath(`/taller-manager/work-orders/${workOrderId}`);
-  return updated;
+  return { ok: true as const, workOrder: updated };
 }
 
 export async function removeWorkOrderImage(workOrderId: string, imageUrl: string) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    throw new Error("Solo administradores pueden eliminar imágenes");
+    return { ok: false as const, message: "Solo administradores pueden eliminar imágenes" };
   }
 
   const workOrder = await prisma.workOrder.findUnique({
     where: { id: workOrderId },
     select: { images: true },
   });
-  if (!workOrder) throw new Error("Orden de trabajo no encontrada");
+  if (!workOrder) return { ok: false as const, message: "Orden de trabajo no encontrada" };
 
   const updated = await prisma.workOrder.update({
     where: { id: workOrderId },
@@ -751,5 +755,5 @@ export async function removeWorkOrderImage(workOrderId: string, imageUrl: string
 
   revalidatePath(`/admin/work-orders/${workOrderId}`);
   revalidatePath(`/taller-manager/work-orders/${workOrderId}`);
-  return updated;
+  return { ok: true as const, workOrder: updated };
 }

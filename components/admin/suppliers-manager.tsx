@@ -54,15 +54,23 @@ export function SuppliersManager({ suppliers }: { suppliers: Supplier[] }) {
     setCreating(true);
     try {
       if (editingId) {
-        await updateSupplier(editingId, {
+        const result = await updateSupplier(editingId, {
           name,
           email: email || undefined,
           phone: phone || undefined,
           city: city || undefined,
         });
+        if (!result.ok) {
+          toast({ title: "Error", description: result.message, variant: "destructive" });
+          return;
+        }
         toast({ title: "Éxito", description: "Proveedor actualizado" });
       } else {
-        await createSupplier({ name, email: email || undefined, phone: phone || undefined, city: city || undefined });
+        const result = await createSupplier({ name, email: email || undefined, phone: phone || undefined, city: city || undefined });
+        if (!result.ok) {
+          toast({ title: "Error", description: result.message, variant: "destructive" });
+          return;
+        }
         toast({ title: "Éxito", description: "Proveedor creado" });
       }
       resetForm();
@@ -77,7 +85,11 @@ export function SuppliersManager({ suppliers }: { suppliers: Supplier[] }) {
   const confirmDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      await deleteSupplier(id);
+      const result = await deleteSupplier(id);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Proveedor eliminado" });
       window.location.reload();
     } catch (error: any) {

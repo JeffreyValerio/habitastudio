@@ -53,7 +53,11 @@ export function WorkOrderImages({
     try {
       const formData = new FormData();
       newFiles.forEach((f) => formData.append("images", f));
-      await addWorkOrderImages(workOrderId, formData);
+      const result = await addWorkOrderImages(workOrderId, formData);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Imágenes agregadas" });
       setNewFiles([]);
       setPreviews([]);
@@ -68,7 +72,11 @@ export function WorkOrderImages({
   const handleRemove = async (url: string) => {
     setRemovingUrl(url);
     try {
-      await removeWorkOrderImage(workOrderId, url);
+      const result = await removeWorkOrderImage(workOrderId, url);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       toast({ title: "Éxito", description: "Imagen eliminada" });
       window.location.reload();
     } catch (error: any) {

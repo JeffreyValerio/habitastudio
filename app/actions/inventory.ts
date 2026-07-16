@@ -58,7 +58,10 @@ export async function createMaterial(data: {
   supplierId?: string;
   notes?: string;
 }) {
-  const user = await requireInventoryAccess();
+  const { user, allowed } = await getSectionAccess("admin.inventory");
+  if (!allowed || !user) {
+    return { ok: false as const, message: "No autorizado para gestionar el inventario" };
+  }
 
   const material = await prisma.material.create({
     data: {
@@ -85,7 +88,7 @@ export async function createMaterial(data: {
   }
 
   revalidatePath("/admin/inventory");
-  return material;
+  return { ok: true as const, material };
 }
 
 export async function updateMaterial(
@@ -99,7 +102,10 @@ export async function updateMaterial(
     notes?: string;
   }
 ) {
-  await requireInventoryAccess();
+  const { allowed } = await getSectionAccess("admin.inventory");
+  if (!allowed) {
+    return { ok: false as const, message: "No autorizado para gestionar el inventario" };
+  }
 
   const material = await prisma.material.update({
     where: { id },
@@ -115,36 +121,43 @@ export async function updateMaterial(
 
   revalidatePath("/admin/inventory");
   revalidatePath(`/admin/inventory/${id}`);
-  return material;
+  return { ok: true as const, material };
 }
 
 export async function deleteMaterial(id: string) {
-  await requireInventoryAccess();
+  const { allowed } = await getSectionAccess("admin.inventory");
+  if (!allowed) {
+    return { ok: false as const, message: "No autorizado para gestionar el inventario" };
+  }
 
   await prisma.material.delete({ where: { id } });
 
   revalidatePath("/admin/inventory");
+  return { ok: true as const };
 }
 
 export async function adjustMaterialStock(
   materialId: string,
   input: { type: "in" | "out"; quantity: number; notes?: string }
 ) {
-  const user = await requireInventoryAccess();
-
-  if (input.quantity <= 0) {
-    throw new Error("La cantidad debe ser mayor a cero");
+  const { user, allowed } = await getSectionAccess("admin.inventory");
+  if (!allowed || !user) {
+    return { ok: false as const, message: "No autorizado para gestionar el inventario" };
   }
 
-  return await prisma.$transaction(async (tx) => {
-    const material = await tx.material.findUnique({ where: { id: materialId } });
-    if (!material) throw new Error("Material no encontrado");
+  if (input.quantity <= 0) {
+    return { ok: false as const, message: "La cantidad debe ser mayor a cero" };
+  }
 
-    if (input.type === "out" && material.quantity < input.quantity) {
-      throw new Error(`Stock insuficiente (disponible: ${material.quantity} ${material.unit})`);
-    }
+  const material = await prisma.material.findUnique({ where: { id: materialId } });
+  if (!material) return { ok: false as const, message: "Material no encontrado" };
 
-    const updated = await tx.material.update({
+  if (input.type === "out" && material.quantity < input.quantity) {
+    return { ok: false as const, message: `Stock insuficiente (disponible: ${material.quantity} ${material.unit})` };
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.material.update({
       where: { id: materialId },
       data: {
         quantity:
@@ -165,10 +178,12 @@ export async function adjustMaterialStock(
       },
     });
 
-    revalidatePath("/admin/inventory");
-    revalidatePath(`/admin/inventory/${materialId}`);
-    return updated;
+    return result;
   });
+
+  revalidatePath("/admin/inventory");
+  revalidatePath(`/admin/inventory/${materialId}`);
+  return { ok: true as const, material: updated };
 }
 
 // ============ PROVEEDORES ============
@@ -190,7 +205,10 @@ export async function createSupplier(data: {
   city?: string;
   paymentTerms?: string;
 }) {
-  await requireInventoryAccess();
+  const { allowed } = await getSectionAccess("admin.inventory");
+  if (!allowed) {
+    return { ok: false as const, message: "No autorizado para gestionar el inventario" };
+  }
 
   const supplier = await prisma.supplier.create({
     data: {
@@ -204,7 +222,7 @@ export async function createSupplier(data: {
   });
 
   revalidatePath("/admin/inventory/suppliers");
-  return supplier;
+  return { ok: true as const, supplier };
 }
 
 export async function updateSupplier(
@@ -219,7 +237,10 @@ export async function updateSupplier(
     isActive?: boolean;
   }
 ) {
-  await requireInventoryAccess();
+  const { allowed } = await getSectionAccess("admin.inventory");
+  if (!allowed) {
+    return { ok: false as const, message: "No autorizado para gestionar el inventario" };
+  }
 
   const supplier = await prisma.supplier.update({
     where: { id },
@@ -235,13 +256,17 @@ export async function updateSupplier(
   });
 
   revalidatePath("/admin/inventory/suppliers");
-  return supplier;
+  return { ok: true as const, supplier };
 }
 
 export async function deleteSupplier(id: string) {
-  await requireInventoryAccess();
+  const { allowed } = await getSectionAccess("admin.inventory");
+  if (!allowed) {
+    return { ok: false as const, message: "No autorizado para gestionar el inventario" };
+  }
 
   await prisma.supplier.delete({ where: { id } });
 
   revalidatePath("/admin/inventory/suppliers");
+  return { ok: true as const };
 }

@@ -64,12 +64,16 @@ export function CustomerDetailActions({ customerId }: { customerId: string }) {
 
     setLoading(true);
     try {
-      await addInteraction(customerId, {
+      const result = await addInteraction(customerId, {
         type: interactionForm.type,
         subject: interactionForm.subject,
         notes: interactionForm.notes || undefined,
         outcome: interactionForm.outcome || undefined,
       });
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
 
       toast({ title: "Éxito", description: "Interacción agregada" });
       setInteractionForm({ type: "email", subject: "", notes: "", outcome: "" });
@@ -93,11 +97,15 @@ export function CustomerDetailActions({ customerId }: { customerId: string }) {
 
     setLoading(true);
     try {
-      await addNote(customerId, {
+      const result = await addNote(customerId, {
         title: noteForm.title,
         content: noteForm.content,
         priority: noteForm.priority,
       });
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
 
       toast({ title: "Éxito", description: "Nota agregada" });
       setNoteForm({ title: "", content: "", priority: "normal" });

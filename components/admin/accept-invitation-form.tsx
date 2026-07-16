@@ -68,7 +68,11 @@ export function AcceptInvitationForm() {
   const onSubmit = async (data: AcceptFormData) => {
     setLoading(true);
     try {
-      await acceptInvitation(token, data.password, data.name);
+      const result = await acceptInvitation(token, data.password, data.name);
+      if (!result.ok) {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        return;
+      }
       setSuccess(true);
       toast({
         title: "Éxito",
