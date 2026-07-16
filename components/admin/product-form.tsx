@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createUpdateProduct } from "@/app/actions/products";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Package } from "lucide-react";
+import { AiSuggestButton } from "@/components/admin/ai-suggest-button";
 
 const productSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -104,6 +105,7 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -127,6 +129,8 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
   const price = watch("price");
   const name = watch("name");
   const category = watch("category");
+  const description = watch("description");
+  const features = watch("features");
 
   const calculateMargin = (): number => {
     const costNum = parseCurrency(cost || "0");
@@ -267,7 +271,17 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Nombre *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="name">Nombre *</Label>
+                  <AiSuggestButton
+                    field="name"
+                    body={{ text: name, category }}
+                    disabled={!name?.trim()}
+                    onResult={(v) =>
+                      setValue("name", v.charAt(0).toUpperCase() + v.slice(1), { shouldValidate: true })
+                    }
+                  />
+                </div>
                 <Input id="name" {...register("name")} placeholder="Sofá Moderno 3 Plazas" />
                 {errors.name && (
                   <p className="text-sm text-destructive">{errors.name.message}</p>
@@ -284,7 +298,15 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Descripción *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="description">Descripción *</Label>
+                <AiSuggestButton
+                  field="description"
+                  body={{ text: description, category }}
+                  disabled={!description?.trim()}
+                  onResult={(v) => setValue("description", v, { shouldValidate: true })}
+                />
+              </div>
               <Textarea
                 id="description"
                 rows={5}
@@ -446,7 +468,16 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
         {activeTab === "details" && (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="features">Características (una por línea)</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="features">Características (una por línea)</Label>
+                <AiSuggestButton
+                  field="features"
+                  label="Generar con IA"
+                  body={{ text: features, category, name }}
+                  disabled={!name?.trim()}
+                  onResult={(v) => setValue("features", v, { shouldValidate: true })}
+                />
+              </div>
               <Textarea
                 id="features"
                 rows={6}
