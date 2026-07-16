@@ -27,27 +27,40 @@ export async function FeaturedProducts() {
 
         <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {featuredProducts.map((product) => (
-            <Card key={product.id} className="group overflow-hidden transition-shadow hover:shadow-lg">
-              <div className="relative h-64 w-full overflow-hidden bg-muted flex items-center justify-center">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  width={256}
-                  height={256}
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                  className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-110"
-                  unoptimized
-                />
-              </div>
-              <CardHeader>
-                <div className="text-sm text-muted-foreground">{product.category}</div>
-                <CardTitle className="text-lg">{product.name}</CardTitle>
+            <Card
+              key={product.id}
+              className="group overflow-hidden border-transparent bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
+            >
+              <Link href={`/catalogo/${product.id}`}>
+                <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-b from-muted/40 to-muted/80">
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    className="object-contain p-6 transition-transform duration-500 group-hover:scale-105"
+                    unoptimized
+                  />
+                  <span className="absolute left-3 top-3 rounded-full bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
+                    {product.category}
+                  </span>
+                </div>
+              </Link>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">
+                  <Link href={`/catalogo/${product.id}`} className="hover:text-primary">
+                    {product.name}
+                  </Link>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold">{product.price}</span>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/catalogo/${product.id}`}>Ver Detalles</Link>
+                  <span className="text-2xl font-bold text-primary">{product.price}</span>
+                  <Button asChild variant="ghost" size="sm" className="group/link -mr-2">
+                    <Link href={`/catalogo/${product.id}`}>
+                      Ver Detalles
+                      <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" />
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
