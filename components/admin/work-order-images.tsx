@@ -47,18 +47,53 @@ export function WorkOrderImages({
     setNewFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const body = new FormData();
+    body.append("file", file);
+    body.append("folder", "habita-studio/work-orders");
+    const res = await fetch("/api/upload", { method: "POST", body });
+    if (!res.ok) {
+      throw new Error(`No se pudo subir la imagen "${file.name}"`);
+    }
+    const json = await res.json();
+    return json.url as string;
+  };
+
   const handleUpload = async () => {
     if (newFiles.length === 0) return;
     setUploading(true);
     try {
-      const formData = new FormData();
-      newFiles.forEach((f) => formData.append("images", f));
-      const result = await addWorkOrderImages(workOrderId, formData);
+      // Subir imágenes directo a Cloudinary vía /api/upload ANTES de llamar
+      // al Server Action: si los archivos viajan dentro del body del Server
+      // Action, pueden superar el límite de payload de la plataforma
+      // (~4.5MB en Vercel) y la acción falla con una respuesta no-RSC que
+      // el cliente no puede interpretar ("unexpected response").
+      const results = await Promise.allSettled(newFiles.map((f) => uploadToCloudinary(f)));
+      const uploadedUrls: string[] = [];
+      let failed = 0;
+      for (const r of results) {
+        if (r.status === "fulfilled") uploadedUrls.push(r.value);
+        else failed++;
+      }
+      if (uploadedUrls.length === 0) {
+        toast({ title: "Error", description: "No se pudo subir ninguna imagen", variant: "destructive" });
+        return;
+      }
+
+      const result = await addWorkOrderImages(workOrderId, uploadedUrls);
       if (!result.ok) {
         toast({ title: "Error", description: result.message, variant: "destructive" });
         return;
       }
-      toast({ title: "Éxito", description: "Imágenes agregadas" });
+      if (failed > 0) {
+        toast({
+          title: "Aviso",
+          description: `${failed} imagen(es) no se pudieron subir. El resto se agregó correctamente.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Éxito", description: "Imágenes agregadas" });
+      }
       setNewFiles([]);
       setPreviews([]);
       window.location.reload();

@@ -4,7 +4,6 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-costs";
-import { uploadImages } from "@/lib/cloudinary";
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_STAGES, WORK_ORDER_STAGE_LABELS, WorkOrderStage } from "@/lib/work-order-types";
 import { getSectionAccess } from "@/app/actions/role-permissions";
 import { Resend } from "resend";
@@ -707,14 +706,13 @@ export async function deleteWorkOrderExpense(id: string) {
   return { ok: true as const, expense };
 }
 
-export async function addWorkOrderImages(workOrderId: string, formData: FormData) {
+export async function addWorkOrderImages(workOrderId: string, imageUrls: string[]) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     return { ok: false as const, message: "Solo administradores pueden subir imágenes" };
   }
 
-  const files = formData.getAll("images") as File[];
-  if (files.length === 0) {
+  if (imageUrls.length === 0) {
     return { ok: false as const, message: "No se recibieron imágenes" };
   }
 
@@ -724,11 +722,9 @@ export async function addWorkOrderImages(workOrderId: string, formData: FormData
   });
   if (!workOrder) return { ok: false as const, message: "Orden de trabajo no encontrada" };
 
-  const uploaded = await uploadImages(files, "habita-studio/work-orders");
-
   const updated = await prisma.workOrder.update({
     where: { id: workOrderId },
-    data: { images: [...workOrder.images, ...uploaded] },
+    data: { images: [...workOrder.images, ...imageUrls] },
   });
 
   revalidatePath(`/admin/work-orders/${workOrderId}`);
