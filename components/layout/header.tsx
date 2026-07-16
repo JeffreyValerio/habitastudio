@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,11 +24,24 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <nav className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center space-x-2">
-          <span className="text-2xl font-bold">
-            <span className="text-foreground">Habita</span>
-            <span className="text-primary">Studio</span>
-          </span>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/images/logo.png"
+            alt="Habita Studio"
+            width={600}
+            height={280}
+            priority
+            className="h-9 w-auto dark:hidden"
+          />
+          <Image
+            src="/images/logo.svg"
+            alt="Habita Studio"
+            width={600}
+            height={280}
+            priority
+            unoptimized
+            className="hidden h-9 w-auto dark:block"
+          />
         </Link>
 
         <div className="hidden md:flex md:items-center md:space-x-6">
