@@ -210,6 +210,7 @@ export function WorkOrderDetailTabs({
                 encintadoCompletedAt={workOrder.encintadoCompletedAt}
                 armadoCompletedAt={workOrder.armadoCompletedAt}
                 instaladoCompletedAt={workOrder.instaladoCompletedAt}
+                entregadoCompletedAt={workOrder.entregadoCompletedAt}
                 canEdit
                 canRevert
               />

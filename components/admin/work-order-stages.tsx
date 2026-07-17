@@ -13,6 +13,7 @@ export function WorkOrderStages({
   encintadoCompletedAt,
   armadoCompletedAt,
   instaladoCompletedAt,
+  entregadoCompletedAt,
   canEdit,
   canRevert = false,
 }: {
@@ -21,6 +22,7 @@ export function WorkOrderStages({
   encintadoCompletedAt: Date | null;
   armadoCompletedAt: Date | null;
   instaladoCompletedAt: Date | null;
+  entregadoCompletedAt: Date | null;
   canEdit: boolean;
   canRevert?: boolean;
 }) {
@@ -33,6 +35,7 @@ export function WorkOrderStages({
     encintado: encintadoCompletedAt,
     armado: armadoCompletedAt,
     instalado: instaladoCompletedAt,
+    entregado: entregadoCompletedAt,
   };
 
   const nextIndex = WORK_ORDER_STAGES.findIndex((s) => !completedAtByStage[s.key]);

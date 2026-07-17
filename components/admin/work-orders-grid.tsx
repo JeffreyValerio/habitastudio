@@ -9,13 +9,14 @@ import { formatCRC } from "@/lib/utils";
 import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
 import { setWorkOrderDeliveryDate } from "@/app/actions/work-orders";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Eye } from "lucide-react";
+import { Calendar, Eye, PackageCheck } from "lucide-react";
 
 interface WorkOrder {
   id: string;
   workOrderNumber: string;
   status: string;
   deliveryDate: Date | null;
+  entregadoCompletedAt: Date | null;
   createdAt: Date;
   quote: {
     quoteNumber: string;
@@ -40,6 +41,12 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dateValue, setDateValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showDelivered, setShowDelivered] = useState(false);
+
+  const deliveredCount = workOrders.filter((w) => w.entregadoCompletedAt).length;
+  const visibleWorkOrders = showDelivered
+    ? workOrders
+    : workOrders.filter((w) => !w.entregadoCompletedAt);
 
   const startEdit = (wo: WorkOrder) => {
     setEditingId(wo.id);
@@ -78,8 +85,27 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {workOrders.map((wo) => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <Button
+          variant={showDelivered ? "secondary" : "outline"}
+          size="sm"
+          onClick={() => setShowDelivered((v) => !v)}
+        >
+          <PackageCheck className="mr-2 h-4 w-4" />
+          {showDelivered ? "Ocultar entregadas" : `Mostrar entregadas (${deliveredCount})`}
+        </Button>
+      </div>
+
+      {visibleWorkOrders.length === 0 ? (
+        <Card>
+          <CardContent className="pt-12 pb-12 text-center text-muted-foreground">
+            No hay órdenes pendientes de entrega.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {visibleWorkOrders.map((wo) => (
         <Card key={wo.id} className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-2">
@@ -88,9 +114,17 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
                 <p className="text-sm font-medium">{wo.quote.customer?.name || wo.quote.clientName}</p>
                 <p className="text-xs text-muted-foreground">{wo.quote.projectName}</p>
               </div>
-              <Badge className={statusColors[wo.status]}>
-                {WORK_ORDER_STATUS_LABELS[wo.status]}
-              </Badge>
+              <div className="flex flex-col items-end gap-1">
+                <Badge className={statusColors[wo.status]}>
+                  {WORK_ORDER_STATUS_LABELS[wo.status]}
+                </Badge>
+                {wo.entregadoCompletedAt && (
+                  <Badge variant="outline" className="text-xs gap-1">
+                    <PackageCheck className="h-3 w-3" />
+                    Entregado
+                  </Badge>
+                )}
+              </div>
             </div>
           </CardHeader>
 
@@ -162,7 +196,9 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
             </Button>
           </CardContent>
         </Card>
-      ))}
+          ))}
+        </div>
+      )}
     </div>
   );
 }

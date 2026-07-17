@@ -20,6 +20,7 @@ interface WorkOrder {
   encintadoCompletedAt: Date | null;
   armadoCompletedAt: Date | null;
   instaladoCompletedAt: Date | null;
+  entregadoCompletedAt: Date | null;
 }
 
 function formatDate(date: Date): string {
@@ -240,6 +241,7 @@ export async function generateWorkOrderPDF(workOrder: WorkOrder) {
     encintado: workOrder.encintadoCompletedAt,
     armado: workOrder.armadoCompletedAt,
     instalado: workOrder.instaladoCompletedAt,
+    entregado: workOrder.entregadoCompletedAt,
   };
 
   doc.setFontSize(10);

@@ -98,6 +98,7 @@ export function TallerManagerWorkOrderDetailTabs({
                 encintadoCompletedAt={workOrder.encintadoCompletedAt}
                 armadoCompletedAt={workOrder.armadoCompletedAt}
                 instaladoCompletedAt={workOrder.instaladoCompletedAt}
+                entregadoCompletedAt={workOrder.entregadoCompletedAt}
                 canEdit
               />
             </CardContent>

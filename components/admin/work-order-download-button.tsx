@@ -21,6 +21,7 @@ interface WorkOrder {
   encintadoCompletedAt: Date | null;
   armadoCompletedAt: Date | null;
   instaladoCompletedAt: Date | null;
+  entregadoCompletedAt: Date | null;
   quote: {
     clientName: string;
     projectName: string;
@@ -48,6 +49,7 @@ export function WorkOrderDownloadButton({ workOrder }: { workOrder: WorkOrder })
         encintadoCompletedAt: workOrder.encintadoCompletedAt,
         armadoCompletedAt: workOrder.armadoCompletedAt,
         instaladoCompletedAt: workOrder.instaladoCompletedAt,
+        entregadoCompletedAt: workOrder.entregadoCompletedAt,
       });
       toast({ title: "Éxito", description: "PDF generado correctamente" });
     } catch (error) {

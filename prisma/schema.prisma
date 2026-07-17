@@ -431,11 +431,12 @@ model WorkOrder {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  // Cierre por etapas de producción, en orden estricto: corte -> encintado -> armado -> instalado
+  // Cierre por etapas de producción, en orden estricto: corte -> encintado -> armado -> instalado -> entregado
   corteCompletedAt     DateTime?
   encintadoCompletedAt DateTime?
   armadoCompletedAt    DateTime?
   instaladoCompletedAt DateTime?
+  entregadoCompletedAt DateTime?
 
   timeEntries     TimeEntry[]
   expenses        WorkOrderExpense[]

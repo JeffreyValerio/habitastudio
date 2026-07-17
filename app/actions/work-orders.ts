@@ -255,8 +255,9 @@ export async function markWorkOrderStage(workOrderId: string, stage: WorkOrderSt
 
   await sendWorkOrderStageEmail(updated, stage, user);
 
-  // La última etapa (instalado) cierra automáticamente la orden.
-  if (stage === "instalado") {
+  // La última etapa cierra automáticamente la orden.
+  const isLastStage = stage === WORK_ORDER_STAGES[WORK_ORDER_STAGES.length - 1].key;
+  if (isLastStage) {
     await updateWorkOrderStatus(workOrderId, "completed");
   }
 
@@ -292,12 +293,13 @@ export async function revertWorkOrderStage(workOrderId: string, stage: WorkOrder
     }
   }
 
+  // La última etapa completa automáticamente la OT; al reversarla, reabrirla.
+  const isLastStage = stage === WORK_ORDER_STAGES[WORK_ORDER_STAGES.length - 1].key;
   const updated = await prisma.workOrder.update({
     where: { id: workOrderId },
     data: {
       [targetStage.field]: null,
-      // Instalado completa automáticamente la OT; al reversarla, reabrirla.
-      ...(stage === "instalado" && workOrder.status === "completed" ? { status: "in_progress" } : {}),
+      ...(isLastStage && workOrder.status === "completed" ? { status: "in_progress" } : {}),
     },
   });
 

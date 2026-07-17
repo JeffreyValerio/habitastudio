@@ -24,6 +24,7 @@ export const WORK_ORDER_STAGES = [
   { key: "encintado", label: "Encintado", field: "encintadoCompletedAt" },
   { key: "armado", label: "Armado", field: "armadoCompletedAt" },
   { key: "instalado", label: "Instalado", field: "instaladoCompletedAt" },
+  { key: "entregado", label: "Entregado", field: "entregadoCompletedAt" },
 ] as const;
 
 export type WorkOrderStage = (typeof WORK_ORDER_STAGES)[number]["key"];
