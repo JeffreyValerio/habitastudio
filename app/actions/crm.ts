@@ -372,10 +372,13 @@ export async function getCRMAnalytics() {
 
 // Sin límite, trae todos los clientes para que el selector de cotización
 // pueda buscar sobre la lista completa, no solo sobre los más recientes.
+// Se usa durante el render de /admin/quotes/new (no solo desde un botón), así
+// que un usuario sin acceso a CRM/Clientes no debe hacer fallar la página
+// completa: simplemente no obtiene la lista de clientes recientes.
 export async function getRecentCustomers(limit?: number) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") {
-    throw new Error("No autorizado");
+  const { allowed } = await getSectionAccess("admin.crm.customers");
+  if (!allowed) {
+    return [];
   }
 
   return await prisma.customer.findMany({
