@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { formatCRC } from "@/lib/utils";
+import { formatCRC, todayInCostaRica, addDaysToDateString } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -211,11 +211,7 @@ export function QuoteForm({
   // Establecer fecha de vencimiento automáticamente a 15 días cuando se crea una nueva cotización
   useEffect(() => {
     if (!quote) {
-      const today = new Date();
-      const validUntilDate = new Date(today);
-      validUntilDate.setDate(today.getDate() + 15);
-      const formattedDate = validUntilDate.toISOString().split("T")[0];
-      setValue("validUntil", formattedDate);
+      setValue("validUntil", addDaysToDateString(todayInCostaRica(), 15));
     }
   }, [quote, setValue]);
 

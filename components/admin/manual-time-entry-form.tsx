@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { createManualTimeEntry } from "@/app/actions/timesheet";
 import { WORK_ORDER_TYPES } from "@/lib/work-order-types";
+import { todayInCostaRica } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 interface Collaborator {
@@ -43,7 +44,7 @@ export function ManualTimeEntryForm({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayInCostaRica();
 
   const [userId, setUserId] = useState(defaultUserId || "");
   const [workOrderId, setWorkOrderId] = useState("");

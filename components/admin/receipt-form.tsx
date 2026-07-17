@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { formatCRC } from "@/lib/utils";
+import { formatCRC, todayInCostaRica } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -98,7 +98,7 @@ export function ReceiptForm({ receipt }: ReceiptFormProps) {
       paymentMethod: (receipt?.paymentMethod as "efectivo" | "transferencia" | "sinpe" | "cheque" | "otro") || "efectivo",
       receiptDate: receipt
         ? new Date(receipt.receiptDate).toISOString().split("T")[0]
-        : new Date().toISOString().split("T")[0],
+        : todayInCostaRica(),
       concept: receipt?.concept || "",
       notes: receipt?.notes || "",
     },

@@ -238,6 +238,7 @@ export function CollaboratorTimeEntries({ entries, entryRates, workOrders, canEd
                 {new Date(entry.entryTime).toLocaleTimeString("es-CR", {
                   hour: "2-digit",
                   minute: "2-digit",
+                  timeZone: "America/Costa_Rica",
                 })}
                 <span className="mx-2">
                   <ArrowRight className="inline h-4 w-4" />
@@ -246,6 +247,7 @@ export function CollaboratorTimeEntries({ entries, entryRates, workOrders, canEd
                   ? new Date(entry.exitTime).toLocaleTimeString("es-CR", {
                       hour: "2-digit",
                       minute: "2-digit",
+                      timeZone: "America/Costa_Rica",
                     })
                   : "Activo"}
               </p>

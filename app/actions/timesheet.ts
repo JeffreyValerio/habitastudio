@@ -292,9 +292,13 @@ export async function createManualTimeEntry(input: {
     return { ok: false as const, message: "Colaborador no encontrado" };
   }
 
-  const entryDateTime = new Date(`${input.entryDate}T${input.entryTime}`);
+  // Costa Rica no observa horario de verano: UTC-6 todo el año. El servidor
+  // (Vercel) corre en UTC, así que sin el offset explícito "09:00" se
+  // interpretaría como 09:00 UTC (3:00 a.m. hora de Costa Rica) en vez de
+  // las 9:00 a.m. que el usuario realmente ingresó.
+  const entryDateTime = new Date(`${input.entryDate}T${input.entryTime}:00-06:00`);
   const exitDateTime = input.exitTime
-    ? new Date(`${input.entryDate}T${input.exitTime}`)
+    ? new Date(`${input.entryDate}T${input.exitTime}:00-06:00`)
     : null;
 
   if (exitDateTime && exitDateTime <= entryDateTime) {
@@ -357,9 +361,13 @@ export async function updateManualTimeEntry(
     return { ok: false as const, message: "Solo administradores pueden editar registros" };
   }
 
-  const entryDateTime = new Date(`${input.entryDate}T${input.entryTime}`);
+  // Costa Rica no observa horario de verano: UTC-6 todo el año. El servidor
+  // (Vercel) corre en UTC, así que sin el offset explícito "09:00" se
+  // interpretaría como 09:00 UTC (3:00 a.m. hora de Costa Rica) en vez de
+  // las 9:00 a.m. que el usuario realmente ingresó.
+  const entryDateTime = new Date(`${input.entryDate}T${input.entryTime}:00-06:00`);
   const exitDateTime = input.exitTime
-    ? new Date(`${input.entryDate}T${input.exitTime}`)
+    ? new Date(`${input.entryDate}T${input.exitTime}:00-06:00`)
     : null;
 
   if (exitDateTime && exitDateTime <= entryDateTime) {
