@@ -117,7 +117,16 @@ Dos APIs distintas, no confundir:
 >
 > **Con esto, el objetivo de "primero la prueba" queda cumplido**: se demostró un flujo end-to-end real y funcional — construcción del XML v4.4 contra el XSD oficial, firma XAdES-EPES con la política v4.4 correcta, envío al API de recepción, y aceptación por Hacienda — todo en el ambiente sandbox, con el script `scripts/hacienda-fe-test.js` como prueba de concepto (no forma parte de la app todavía).
 >
-> **Siguiente paso**: Fase 1 — modelado de datos en Prisma, para trasladar esta lógica de prueba a la app real.
+> **✅ Progreso 2026-07-18 (parte 4) — Fase 1 completada: modelado en Prisma.** Se agregaron a `prisma/schema.prisma` y ya están aplicados en producción (`db push`):
+> - `ElectronicDocument` — ciclo de vida de cada comprobante (clave, consecutivo, estado, XML firmado, respuesta de Hacienda), relacionado opcionalmente a `Quote` y/o `Receipt`.
+> - `ElectronicDocumentSequence` — numeración consecutiva por tipo de documento (no se reinicia por año).
+> - `EmisorConfig` — datos fiscales de Habita Studio (singleton). Las credenciales (usuario/contraseña OAuth, `.p12`, PIN) siguen fuera de la base de datos, en variables de entorno.
+> - `Customer.identificacionTipo` / `identificacionNumero` — identificación fiscal del receptor.
+> - `QuoteItem.cabysCode` / `unidadMedida` — requeridos por línea al generar un comprobante.
+>
+> Todos los campos nuevos son opcionales o tienen valor por defecto, así que no rompe nada existente.
+>
+> **Siguiente paso**: Fase 2 — llevar la lógica ya probada en `scripts/hacienda-fe-test.js` a Server Actions reales de la app (`app/actions/electronic-documents.ts` o similar), construyendo el XML a partir de una `Quote` real en vez de datos hardcodeados.
 - **Enviar un comprobante**: `POST /recepcion`
   - Body JSON: `clave` (la de 50 dígitos), `fecha` (ISO 8601), `emisor` (tipo+número de identificación), `receptor` (opcional), `comprobanteXml` (el XML firmado con XAdES-EPES, codificado en Base64), `callbackUrl` (opcional, para notificación asíncrona).
   - Respuesta `201`: recibido, queda en validación (no significa aceptado todavía).

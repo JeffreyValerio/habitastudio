@@ -10,24 +10,24 @@ datasource db {
 }
 
 model User {
-  id              String        @id @default(cuid())
-  email           String        @unique
-  name            String?
-  password        String
-  role            String        @default("moderator") // admin, moderator, collaborator
-  isCollaborator  Boolean       @default(false)
-  hourlyRate      Float?        // Tarifa por hora (si es colaborador)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  password       String
+  role           String   @default("moderator") // admin, moderator, collaborator
+  isCollaborator Boolean  @default(false)
+  hourlyRate     Float? // Tarifa por hora (si es colaborador)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relaciones
-  timeEntries          TimeEntry[]
-  assignments          ProjectAssignment[]
-  payrolls             Payroll[]
-  approvals            TimeApproval[]
-  workOrderExpenses    WorkOrderExpense[]
-  materialMovements    MaterialMovement[]
-  rateHistory          CollaboratorRate[]
+  timeEntries       TimeEntry[]
+  assignments       ProjectAssignment[]
+  payrolls          Payroll[]
+  approvals         TimeApproval[]
+  workOrderExpenses WorkOrderExpense[]
+  materialMovements MaterialMovement[]
+  rateHistory       CollaboratorRate[]
 }
 
 // Tarifa por hora vigente a partir de un mes específico (y hasta que se
@@ -38,7 +38,7 @@ model CollaboratorRate {
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   year       Int
-  month      Int      // 1-12
+  month      Int // 1-12
   hourlyRate Float
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -48,37 +48,37 @@ model CollaboratorRate {
 }
 
 model UserInvitation {
-  id             String    @id @default(cuid())
+  id             String   @id @default(cuid())
   email          String
-  role           String    @default("moderator")
-  token          String    @unique
-  accepted       Boolean   @default(false)
-  isCollaborator Boolean   @default(false)
+  role           String   @default("moderator")
+  token          String   @unique
+  accepted       Boolean  @default(false)
+  isCollaborator Boolean  @default(false)
   hourlyRate     Float?
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime @default(now())
   expiresAt      DateTime
-  updatedAt      DateTime  @updatedAt
+  updatedAt      DateTime @updatedAt
 
   @@unique([email, token])
 }
 
 model TimeEntry {
-  id           String     @id @default(cuid())
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workOrderId  String?
-  workOrder    WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
-  workType     String?    // corte, encintado, instalacion, armado
-  entryDate    DateTime  // Fecha de entrada
-  entryTime    DateTime  // Hora de entrada
-  exitTime     DateTime? // Hora de salida
-  description  String?   // Descripción del trabajo
-  purpose      String    @default("salary") // "budget" (rebaja presupuesto de la OT, no cuenta para salario) | "salary" (cuenta para salario, no afecta presupuesto)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workOrderId String?
+  workOrder   WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  workType    String? // corte, encintado, instalacion, armado
+  entryDate   DateTime // Fecha de entrada
+  entryTime   DateTime // Hora de entrada
+  exitTime    DateTime? // Hora de salida
+  description String? // Descripción del trabajo
+  purpose     String     @default("salary") // "budget" (rebaja presupuesto de la OT, no cuenta para salario) | "salary" (cuenta para salario, no afecta presupuesto)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   // Relación con aprobación
-  approvals    TimeApproval[]
+  approvals TimeApproval[]
 
   @@index([userId])
   @@index([workOrderId])
@@ -86,16 +86,16 @@ model TimeEntry {
 }
 
 model TimeApproval {
-  id           String    @id @default(cuid())
-  timeEntryId  String
-  timeEntry    TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
-  type         String    // "entry" o "exit"
-  status       String    @default("pending") // pending, approved, rejected
-  approvedBy   String?
-  approver     User?     @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
+  id              String    @id @default(cuid())
+  timeEntryId     String
+  timeEntry       TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  type            String // "entry" o "exit"
+  status          String    @default("pending") // pending, approved, rejected
+  approvedBy      String?
+  approver        User?     @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
   rejectionReason String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@unique([timeEntryId, type])
   @@index([status])
@@ -108,7 +108,7 @@ model ProjectAssignment {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   // ej: "carpintero", "pintor", "ensamblador"
+  role      String // ej: "carpintero", "pintor", "ensamblador"
   status    String   @default("assigned") // assigned, in-progress, completed
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -118,20 +118,20 @@ model ProjectAssignment {
 }
 
 model Payroll {
-  id              String    @id @default(cuid())
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  period          String    // "2024-06" formato año-mes
-  totalHours      Float     @default(0)
-  hourlyRate      Float
-  grossPay        Float     @default(0)
-  deductions      Float     @default(0)
-  netPay          Float     @default(0)
-  status          String    @default("pending") // pending, approved, paid
-  paidDate        DateTime?
-  notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period     String // "2024-06" formato año-mes
+  totalHours Float     @default(0)
+  hourlyRate Float
+  grossPay   Float     @default(0)
+  deductions Float     @default(0)
+  netPay     Float     @default(0)
+  status     String    @default("pending") // pending, approved, paid
+  paidDate   DateTime?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@unique([userId, period])
   @@index([userId])
@@ -140,33 +140,38 @@ model Payroll {
 // ============ CRM MODELS ============
 
 model Customer {
-  id               String    @id @default(cuid())
-  name             String
-  email            String    @unique
-  phone            String?
-  company          String?
-  position         String?
-  address          String?   @db.Text
-  city             String?
-  country          String?
+  id       String  @id @default(cuid())
+  name     String
+  email    String  @unique
+  phone    String?
+  company  String?
+  position String?
+  address  String? @db.Text
+  city     String?
+  country  String?
 
   // CRM Fields
-  status           String    @default("prospect") // prospect, qualified, negotiation, customer, inactive
-  source           String?   // website, referral, cold-call, social, event, etc
-  totalSpent       Float     @default(0)
-  estimatedValue   Float     @default(0)
-  lastInteraction  DateTime?
-  nextFollowUp     DateTime?
-  score            Int       @default(0) // 0-100 scoring
+  status          String    @default("prospect") // prospect, qualified, negotiation, customer, inactive
+  source          String? // website, referral, cold-call, social, event, etc
+  totalSpent      Float     @default(0)
+  estimatedValue  Float     @default(0)
+  lastInteraction DateTime?
+  nextFollowUp    DateTime?
+  score           Int       @default(0) // 0-100 scoring
+
+  // Identificación fiscal (requerida por Hacienda para facturación electrónica,
+  // excepto tiquete a consumidor final sin identificar)
+  identificacionTipo   String? // 01 Física, 02 Jurídica, 03 DIMEX, 04 NITE, 05 Extranjero, 06 No Contribuyente
+  identificacionNumero String?
 
   // Relationships
-  quotes           Quote[]
-  interactions     CustomerInteraction[]
-  notes            CustomerNote[]
-  tags             CustomerTag[]
+  quotes       Quote[]
+  interactions CustomerInteraction[]
+  notes        CustomerNote[]
+  tags         CustomerTag[]
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([email])
@@ -174,20 +179,20 @@ model Customer {
 }
 
 model CustomerInteraction {
-  id               String    @id @default(cuid())
-  customerId       String
-  customer         Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  type             String    // email, call, meeting, proposal, demo, etc
-  subject          String
-  notes            String?   @db.Text
-  outcome          String?   // interested, not-interested, follow-up-needed, closed
+  type    String // email, call, meeting, proposal, demo, etc
+  subject String
+  notes   String? @db.Text
+  outcome String? // interested, not-interested, follow-up-needed, closed
 
-  duration         Int?      // minutes (for calls/meetings)
-  participants     String[]  @default([]) // emails of participants
+  duration     Int? // minutes (for calls/meetings)
+  participants String[] @default([]) // emails of participants
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([customerId])
   @@index([type])
@@ -195,29 +200,29 @@ model CustomerInteraction {
 }
 
 model CustomerNote {
-  id               String    @id @default(cuid())
-  customerId       String
-  customer         Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  title            String
-  content          String    @db.Text
-  priority         String    @default("normal") // low, normal, high
+  title    String
+  content  String @db.Text
+  priority String @default("normal") // low, normal, high
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([customerId])
   @@index([priority])
 }
 
 model CustomerTag {
-  id               String    @id @default(cuid())
-  name             String    @unique
-  color            String    @default("#3b82f6")
-  customers        Customer[]
+  id        String     @id @default(cuid())
+  name      String     @unique
+  color     String     @default("#3b82f6")
+  customers Customer[]
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ============ END CRM MODELS ============
@@ -225,20 +230,20 @@ model CustomerTag {
 // ============ INVENTARIO (materia prima) ============
 
 model Supplier {
-  id           String    @id @default(cuid())
+  id           String  @id @default(cuid())
   name         String
   email        String?
   phone        String?
-  address      String?   @db.Text
+  address      String? @db.Text
   city         String?
   country      String?
-  paymentTerms String?   // net30, net60, etc
-  isActive     Boolean   @default(true)
+  paymentTerms String? // net30, net60, etc
+  isActive     Boolean @default(true)
 
-  materials    Material[]
+  materials Material[]
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive])
 }
@@ -246,7 +251,7 @@ model Supplier {
 model Material {
   id           String    @id @default(cuid())
   name         String
-  unit         String    // unidad, m2, ml, kg
+  unit         String // unidad, m2, ml, kg
   costPerUnit  Float     @default(0)
   quantity     Float     @default(0)
   minimumStock Float     @default(0)
@@ -254,11 +259,11 @@ model Material {
   supplier     Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   notes        String?   @db.Text
 
-  movements    MaterialMovement[]
-  expenses     WorkOrderExpense[]
+  movements MaterialMovement[]
+  expenses  WorkOrderExpense[]
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([supplierId])
 }
@@ -268,15 +273,15 @@ model MaterialMovement {
   materialId String
   material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
 
-  type       String   // in (compra/ajuste), out (consumo/ajuste)
-  quantity   Float
-  reference  String?  // ej. número de orden de trabajo, o "Compra manual"
-  notes      String?  @db.Text
+  type      String // in (compra/ajuste), out (consumo/ajuste)
+  quantity  Float
+  reference String? // ej. número de orden de trabajo, o "Compra manual"
+  notes     String? @db.Text
 
-  createdBy  String
-  creator    User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdBy String
+  creator   User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([materialId])
   @@index([type])
@@ -336,38 +341,39 @@ model Project {
   updatedAt       DateTime @updatedAt
 
   // Relaciones
-  assignments     ProjectAssignment[]
+  assignments ProjectAssignment[]
 }
 
 model Quote {
-  id                 String      @id @default(cuid())
-  quoteNumber        String      @unique
+  id          String @id @default(cuid())
+  quoteNumber String @unique
 
   // Customer relationship
-  customerId         String?
-  customer           Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   // Legacy fields (for backward compatibility)
-  clientName         String
-  clientEmail        String?
-  clientPhone        String?
-  clientAddress      String?     @db.Text
-  projectName        String
-  projectDescription String?     @db.Text
-  status             String      @default("draft") // draft, sent, accepted, rejected, expired
-  validUntil         DateTime?
-  subtotal           Float       @default(0)
-  tax                Float       @default(0)
-  discount           Float       @default(0)
-  total              Float       @default(0)
-  notes              String?     @db.Text
-  images             String[]    @default([])
-  sentAt             DateTime?
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  items              QuoteItem[]
-  receipts           Receipt[]
-  workOrder          WorkOrder?
+  clientName          String
+  clientEmail         String?
+  clientPhone         String?
+  clientAddress       String?              @db.Text
+  projectName         String
+  projectDescription  String?              @db.Text
+  status              String               @default("draft") // draft, sent, accepted, rejected, expired
+  validUntil          DateTime?
+  subtotal            Float                @default(0)
+  tax                 Float                @default(0)
+  discount            Float                @default(0)
+  total               Float                @default(0)
+  notes               String?              @db.Text
+  images              String[]             @default([])
+  sentAt              DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  items               QuoteItem[]
+  receipts            Receipt[]
+  workOrder           WorkOrder?
+  electronicDocuments ElectronicDocument[]
 
   @@index([customerId])
 }
@@ -382,6 +388,10 @@ model QuoteItem {
   total       Float
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Requeridos por Hacienda al generar un comprobante electrónico a partir de esta línea
+  cabysCode    String? // Código CABYS, 13 dígitos
+  unidadMedida String  @default("Unid") // ej. "Unid", "Sp" (servicio), según catálogo RTC 443:2010
 
   @@index([quoteId])
 }
@@ -401,13 +411,15 @@ model Receipt {
   clientName    String
   clientEmail   String?
   amount        Float
-  paymentMethod String    // efectivo, transferencia, sinpe, cheque, otro
+  paymentMethod String // efectivo, transferencia, sinpe, cheque, otro
   receiptDate   DateTime  @default(now())
   concept       String    @db.Text
   notes         String?   @db.Text
   sentAt        DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  electronicDocuments ElectronicDocument[]
 
   @@index([quoteId])
 }
@@ -438,8 +450,8 @@ model WorkOrder {
   instaladoCompletedAt DateTime?
   entregadoCompletedAt DateTime?
 
-  timeEntries     TimeEntry[]
-  expenses        WorkOrderExpense[]
+  timeEntries TimeEntry[]
+  expenses    WorkOrderExpense[]
 
   @@index([status])
 }
@@ -448,10 +460,10 @@ model WorkOrderExpense {
   id          String    @id @default(cuid())
   workOrderId String
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  category    String    // materiales, transporte, mano_obra_externa, otros
+  category    String // materiales, transporte, mano_obra_externa, otros
   description String
   amount      Float
-  quantity    Float?    // cantidad usada, si el gasto viene de un material de inventario
+  quantity    Float? // cantidad usada, si el gasto viene de un material de inventario
   materialId  String?
   material    Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
   expenseDate DateTime  @default(now())
@@ -484,4 +496,67 @@ model RolePermission {
 
   @@unique([role, section])
   @@index([role])
+}
+
+// ============ FACTURACIÓN ELECTRÓNICA (Hacienda / TribuCR) ============
+// Ver FACTURACION_ELECTRONICA.md para el contexto completo de esta integración.
+
+// Ciclo de vida de un comprobante electrónico individual (factura, tiquete,
+// nota de crédito/débito, recibo de pago). Se genera a partir de una Quote
+// (factura) o un Receipt (recibo de pago), se firma, se envía a Hacienda y
+// se registra su respuesta.
+model ElectronicDocument {
+  id           String   @id @default(cuid())
+  tipo         String // factura, tiquete, notaCredito, notaDebito, reciboPago
+  clave        String   @unique // 50 dígitos
+  consecutivo  String // 20 dígitos
+  estado       String   @default("pendiente") // pendiente, procesando, aceptado, rechazado, error
+  xmlFirmado   String   @db.Text
+  respuestaXml String?  @db.Text
+  fechaEmision DateTime
+
+  quoteId   String?
+  quote     Quote?   @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  receiptId String?
+  receipt   Receipt? @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([estado])
+  @@index([quoteId])
+  @@index([receiptId])
+}
+
+// Numeración consecutiva de comprobantes electrónicos, independiente por tipo
+// de documento (no se reinicia por año, a diferencia de QuoteSequence/ReceiptSequence).
+model ElectronicDocumentSequence {
+  tipoDocumento String   @id // "01" Factura, "03" Nota Crédito, "04" Tiquete, etc.
+  lastNumber    Int      @default(0)
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+}
+
+// Datos fiscales del emisor (Habita Studio) usados para generar comprobantes.
+// Fila única (singleton, aplicado por convención en la capa de aplicación).
+// Las credenciales (usuario/contraseña OAuth, llave criptográfica .p12 y PIN)
+// NO viven aquí — son secretos y se manejan por variable de entorno.
+model EmisorConfig {
+  id                   String  @id @default(cuid())
+  nombre               String
+  nombreComercial      String?
+  identificacionTipo   String // 01 Física, 02 Jurídica, etc.
+  identificacionNumero String
+  actividadEconomica   String // ej. "4719.9", tal como Hacienda lo espera (con el punto)
+  provincia            String
+  canton               String
+  distrito             String
+  barrio               String?
+  otrasSenas           String  @db.Text
+  telefonoCodigoPais   String  @default("506")
+  telefono             String
+  correoElectronico    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
