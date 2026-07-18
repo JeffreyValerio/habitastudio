@@ -74,6 +74,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
   { group: "Configuración", items: [
     { name: "Usuarios", href: "/admin/settings/users", icon: Users, section: "admin.settings.users" },
     { name: "Permisos", href: "/admin/settings/permissions", icon: Shield, adminOnly: true },
+    { name: "Facturación Electrónica", href: "/admin/settings/facturacion-electronica", icon: FileSpreadsheet, adminOnly: true },
   ]},
 ];
 

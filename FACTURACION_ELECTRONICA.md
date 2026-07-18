@@ -126,7 +126,30 @@ Dos APIs distintas, no confundir:
 >
 > Todos los campos nuevos son opcionales o tienen valor por defecto, así que no rompe nada existente.
 >
-> **Siguiente paso**: Fase 2 — llevar la lógica ya probada en `scripts/hacienda-fe-test.js` a Server Actions reales de la app (`app/actions/electronic-documents.ts` o similar), construyendo el XML a partir de una `Quote` real en vez de datos hardcodeados.
+> **✅ Progreso 2026-07-18 (parte 5) — Fase 2 completada: generar y enviar Factura desde la OT.**
+>
+> Implementado según el flujo definido por el usuario: la Factura nace de la Orden de Trabajo una vez llega a la etapa **Entregado**, con dos botones separados y manuales — "Generar Factura" (arma y firma el XML, no lo envía) y "Enviar a Hacienda" (solo entonces se hace el `POST /recepcion`).
+>
+> - `lib/hacienda/{clave,xml,sign,api}.ts` — la lógica del script de prueba, parametrizada y reutilizable.
+> - `app/actions/electronic-documents.ts` — Server Actions (`generateFacturaForWorkOrder`, `sendElectronicDocument`, `checkElectronicDocumentStatus`, `getElectronicDocuments`, `getEmisorConfig`/`saveEmisorConfig`, `searchCabys`).
+> - `components/admin/work-order-invoice-card.tsx` — se agrega al detalle de la OT (visible solo si `entregadoCompletedAt` está definido); el diálogo de "Generar Factura" pide la identificación del cliente y el código CABYS/unidad de medida por ítem (con buscador contra el catálogo público de Hacienda), y guarda esos datos de vuelta en `Customer`/`QuoteItem` para no volver a pedirlos.
+> - `/admin/invoices` — ya no es un placeholder, lista los comprobantes generados.
+> - `/admin/settings/facturacion-electronica` — pantalla nueva para los datos fiscales del emisor (`EmisorConfig`). Ya se dejó poblada con la identidad de prueba (Jeffrey/sandbox) para poder probar el flujo real.
+> - Se agregó `components/ui/dialog.tsx` (no existía en el proyecto).
+>
+> **Verificación realizada**: se confirmó que los módulos `lib/hacienda/*` ya integrados producen exactamente el mismo resultado exitoso (`Aceptado`) que el script de prueba original (`scripts/verify-lib-hacienda.ts`, `npx tsx scripts/verify-lib-hacienda.ts`), y `npx tsc --noEmit` + `npx next build` pasan limpios. **No se pudo probar el flujo completo haciendo clic en la UI real** (el botón "Generar Factura" en una OT, el diálogo, "Enviar a Hacienda") porque no hay credenciales de administrador disponibles para iniciar sesión contra la base de datos de producción — queda pendiente que el usuario lo pruebe directamente.
+>
+> **⚠️ Hallazgo importante para el despliegue**: `readP12Base64()` originalmente leía el archivo `.p12` desde `.secrets/` (carpeta en `.gitignore`, nunca se sube a git) — eso **no habría funcionado en Vercel**, donde ese archivo no existe en el filesystem del deploy. Se corrigió para leer primero `HACIENDA_FE_P12_BASE64` (el certificado en base64 directo en una variable de entorno), con el archivo local como respaldo solo para desarrollo. **Pendiente**: antes de que esta función sirva en producción (aunque sea contra sandbox), hay que configurar en Vercel las mismas variables `HACIENDA_FE_*` que ya están en `.env` local (incluyendo `HACIENDA_FE_P12_BASE64`).
+>
+> **✅ Progreso 2026-07-18 (parte 6) — reubicación al módulo de Facturas + PDF + bug real corregido.**
+>
+> Por indicación del usuario, "Generar Factura" y "Enviar a Hacienda" se movieron del detalle de la OT al módulo `/admin/invoices`: ahí aparece una fila por cada OT entregada (con o sin factura generada todavía), con las acciones correspondientes según el estado. Se eliminó `work-order-invoice-card.tsx` (ya no se usa). Se agregó descarga de PDF (`lib/generate-invoice-pdf.ts`, mismo patrón que cotizaciones/recibos) y descarga del XML firmado / respuesta de Hacienda, disponibles en cuanto la factura se genera, sin necesidad de enviarla a Hacienda.
+>
+> **Bug real encontrado y corregido probando con datos reales**: al generar la factura de una OT real (OT-2026-0002, Laura Miranda — un clóset + transporte), Hacienda rechazó con `-111`/`-110`: el resumen del XML metía todo bajo `TotalServGravados`, pero un clóset físico es **mercancía**, no servicio, y Hacienda exige separarlos en campos distintos (`TotalServGravados` vs `TotalMercanciasGravadas`). Se agregó `lib/hacienda/cabys.ts` (`isCabysMercancia`), que clasifica cada código CABYS usando `categorias[0]` del catálogo público ("Bienes..." vs "Servicios..."), y se corrigió `lib/hacienda/xml.ts` y `generateFacturaForWorkOrder` para separar los totales correctamente. **Verificado**: reenviando la misma factura corregida a Hacienda, los errores -111/-110 desaparecieron por completo. Dado que Habita Studio vende principalmente muebles físicos, este bug habría afectado casi todas las facturas reales — quedó descubierto y corregido antes de que el usuario lo viera.
+>
+> Queda un `ElectronicDocument` en estado `borrador` para **OT-2026-0002** (clave `50618072600011481042500100001010000000004144899825`), listo para que el usuario pruebe el botón "Enviar a Hacienda" desde `/admin/invoices`. La identificación de Laura Miranda quedó con el valor de prueba `01-000000000` (confirmado con el usuario) — hay que corregirla con su cédula real antes de que esta factura específica tenga sentido enviarla de verdad (aunque sea a sandbox, Hacienda la rechazará por identificación inválida hasta corregirla).
+>
+> **Siguiente paso**: que el usuario pruebe el flujo real en la UI (`/admin/invoices`) y reporte qué encuentra. Fase 3 (fuera de alcance, ya identificada): decidir si los Recibos existentes también se vuelven Recibo Electrónico de Pago ante Hacienda.
 - **Enviar un comprobante**: `POST /recepcion`
   - Body JSON: `clave` (la de 50 dígitos), `fecha` (ISO 8601), `emisor` (tipo+número de identificación), `receptor` (opcional), `comprobanteXml` (el XML firmado con XAdES-EPES, codificado en Base64), `callbackUrl` (opcional, para notificación asíncrona).
   - Respuesta `201`: recibido, queda en validación (no significa aceptado todavía).
