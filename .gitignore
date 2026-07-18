@@ -28,6 +28,9 @@ yarn-error.log*
 .env
 .env*.local
 
+# secretos de facturación electrónica (llave criptográfica .p12, etc.)
+/.secrets/
+
 # vercel
 .vercel
 
