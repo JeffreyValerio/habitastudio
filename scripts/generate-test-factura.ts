@@ -20,7 +20,7 @@ const CABYS_BY_DESCRIPTION: Record<string, string> = {
 };
 
 const RECEPTOR_IDENTIFICACION_TIPO = "01";
-const RECEPTOR_IDENTIFICACION_NUMERO = "000000000"; // valor de prueba obvio, confirmado con el usuario
+const RECEPTOR_IDENTIFICACION_NUMERO = "114810425"; // cédula real de Jeffrey, para probar un envío que sí pueda ser aceptado
 
 async function main() {
   const workOrderNumber = process.argv[2];

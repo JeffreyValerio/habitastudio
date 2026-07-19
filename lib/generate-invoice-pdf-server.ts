@@ -1,4 +1,8 @@
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
+import sizeOf from 'image-size';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
+import sharp from 'sharp';
 
 interface InvoiceItem {
   descripcion: string;
@@ -14,7 +18,7 @@ interface InvoiceItem {
 interface Invoice {
   clave: string;
   consecutivo: string;
-  estado: string; // borrador, procesando, aceptado, rechazado, error
+  estado: string;
   fechaEmision: Date;
   emisorNombre: string;
   emisorIdentificacion: string;
@@ -53,51 +57,54 @@ function formatCurrency(amount: number): string {
   return `CRC ${formatted}`;
 }
 
-// Carga el logo desde /images (PNG o SVG) y lo devuelve como base64 listo
-// para jsPDF. Compartido por ambas variantes de PDF de factura.
+// Carga el logo desde el filesystem (build de servidor) y, si no está
+// disponible localmente, cae a la URL pública — igual que generate-pdf-server.ts.
 async function loadLogoBase64(): Promise<string | null> {
-  const logoPaths = ['/images/logo.png', '/images/logo-png.png', '/images/logo-pdf.png', '/images/logo-pdf.svg', '/images/logo.svg'];
+  const logoCandidates = [
+    { name: 'logo.png', type: 'png' as const },
+    { name: 'logo-png.png', type: 'png' as const },
+    { name: 'logo-pdf.png', type: 'png' as const },
+    { name: 'logo-pdf.svg', type: 'svg' as const },
+    { name: 'logo.svg', type: 'svg' as const },
+  ];
 
-  for (const logoPath of logoPaths) {
+  for (const logo of logoCandidates) {
     try {
-      const response = await fetch(logoPath);
-      if (!response.ok) continue;
-      const blob = await response.blob();
+      const logoPath = join(process.cwd(), 'public', 'images', logo.name);
+      const fileBuffer = await readFile(logoPath);
 
-      if (logoPath.endsWith('.svg')) {
-        const svgText = await response.text();
-        const img = new Image();
-        const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svgBlob);
-        return await new Promise<string>((resolve, reject) => {
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width || 600;
-            canvas.height = img.height || 280;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              reject(new Error('No se pudo obtener contexto del canvas'));
-              return;
-            }
-            ctx.drawImage(img, 0, 0);
-            const base64 = canvas.toDataURL('image/png');
-            URL.revokeObjectURL(url);
-            resolve(base64);
-          };
-          img.onerror = () => {
-            URL.revokeObjectURL(url);
-            reject(new Error('Error cargando SVG'));
-          };
-          img.src = url;
-        });
+      if (logo.type === 'svg') {
+        const pngBuffer = await sharp(fileBuffer, { density: 300 })
+          .resize({ width: 1200, height: 560, fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+          .flatten({ background: { r: 255, g: 255, b: 255 } })
+          .png({ quality: 100, compressionLevel: 6 })
+          .toBuffer();
+        return `data:image/png;base64,${pngBuffer.toString('base64')}`;
       }
+      return `data:image/png;base64,${fileBuffer.toString('base64')}`;
+    } catch {
+      // probar la siguiente ruta local
+    }
 
-      const reader = new FileReader();
-      return await new Promise<string>((resolve, reject) => {
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+    try {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+        'https://habitastudio.online';
+      const response = await fetch(`${baseUrl}/images/${logo.name}`);
+      if (!response.ok) continue;
+
+      if (logo.type === 'svg') {
+        const svgText = await response.text();
+        const pngBuffer = await sharp(Buffer.from(svgText, 'utf-8'), { density: 300 })
+          .resize({ width: 1200, height: 560, fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+          .flatten({ background: { r: 255, g: 255, b: 255 } })
+          .png({ quality: 100, compressionLevel: 6 })
+          .toBuffer();
+        return `data:image/png;base64,${pngBuffer.toString('base64')}`;
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      return `data:image/png;base64,${buffer.toString('base64')}`;
     } catch {
       // probar la siguiente ruta
     }
@@ -105,21 +112,18 @@ async function loadLogoBase64(): Promise<string | null> {
   return null;
 }
 
-async function drawLogo(doc: jsPDF, x: number, y: number, width: number): Promise<number> {
+function drawLogo(doc: jsPDF, logoBase64: string | null, x: number, y: number, width: number): number {
   let height = 25;
-  const logoBase64 = await loadLogoBase64();
 
   if (logoBase64) {
     try {
-      const img = new Image();
-      img.src = logoBase64;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-      const aspectRatio = img.width / img.height;
-      height = width / aspectRatio;
-      doc.addImage(logoBase64, 'PNG', x, y, width, height);
+      const base64Data = logoBase64.includes(',') ? logoBase64.split(',')[1] : logoBase64;
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+      const dimensions = sizeOf(imageBuffer);
+      if (dimensions.width && dimensions.height) {
+        height = width / (dimensions.width / dimensions.height);
+      }
+      doc.addImage(base64Data, 'PNG', x, y, width, height);
       return height;
     } catch {
       // cae al rectángulo de reemplazo
@@ -132,32 +136,28 @@ async function drawLogo(doc: jsPDF, x: number, y: number, width: number): Promis
 }
 
 /**
- * Factura electrónica formal: incluye clave, consecutivo, estado ante
- * Hacienda y código CABYS por línea — para cuando el comprobante ya se
- * generó (y opcionalmente envió) a través del flujo de Hacienda.
+ * Versión servidor (Buffer) de la factura electrónica formal — para
+ * adjuntarla en el email al cliente. Misma disposición que la versión
+ * cliente en lib/generate-invoice-pdf.ts.
  */
-export async function generateInvoicePDF(invoice: Invoice) {
+export async function generateInvoicePDFBuffer(invoice: Invoice): Promise<Buffer> {
   const doc = new jsPDF();
-
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
   const contentWidth = pageWidth - margin * 2;
-
   let yPosition = margin;
 
-  const logoWidth = 60;
-  const logoHeight = await drawLogo(doc, margin, yPosition, logoWidth);
+  const logoBase64 = await loadLogoBase64();
+  const logoHeight = drawLogo(doc, logoBase64, margin, yPosition, 60);
   yPosition += logoHeight + 10;
 
-  // === TÍTULO ===
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
   doc.text('FACTURA ELECTRÓNICA', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 14;
 
-  // === CLAVE / CONSECUTIVO ===
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
@@ -172,7 +172,6 @@ export async function generateInvoicePDF(invoice: Invoice) {
   );
   yPosition += 12;
 
-  // === EMISOR / RECEPTOR ===
   const gridGap = 20;
   const leftColWidth = (contentWidth - gridGap) / 2;
   const rightColStart = margin + leftColWidth + gridGap;
@@ -206,17 +205,12 @@ export async function generateInvoicePDF(invoice: Invoice) {
 
   yPosition = Math.max(emisorY, receptorY) + 14;
 
-  // === DETALLE DE ITEMS ===
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
   doc.text('DETALLE DE ITEMS', margin, yPosition);
   yPosition += 8;
 
-  // Los montos en colones ("CRC 207 964,60") son más anchos de lo que parece
-  // a 9pt — si Cant./P. Unit./Total quedan muy juntas, el texto right-aligned
-  // de una columna se monta sobre el de la siguiente. Se deja suficiente
-  // ancho a cada una para el caso de montos grandes.
   const colCabys = margin;
   const colDesc = margin + 28;
   const colCant = margin + contentWidth * 0.52;
@@ -262,8 +256,6 @@ export async function generateInvoicePDF(invoice: Invoice) {
   }
 
   yPosition += 8;
-
-  // === TOTALES ===
   if (yPosition > pageHeight - 60) {
     doc.addPage();
     yPosition = margin;
@@ -285,7 +277,6 @@ export async function generateInvoicePDF(invoice: Invoice) {
   doc.text(formatCurrency(invoice.totalComprobante), colTotal, yPosition, { align: 'right' });
   yPosition += 16;
 
-  // === PIE ===
   if (yPosition > pageHeight - 30) {
     doc.addPage();
     yPosition = margin;
@@ -295,32 +286,26 @@ export async function generateInvoicePDF(invoice: Invoice) {
   doc.setTextColor(130, 130, 130);
   doc.text('Habita Studio — info@habitastudio.online — +506 6364 4915', margin, pageHeight - 15);
 
-  doc.save(`Factura-${invoice.consecutivo}.pdf`);
+  return Buffer.from(doc.output('arraybuffer'));
 }
 
 /**
- * Factura simple, sin datos de Hacienda: mismo estilo visual que la
- * cotización (proforma) — logo, datos de la empresa, cliente, número y
- * fecha, detalle de ítems y totales — pero rotulado como Factura. Para
- * cuando no se necesita (o no se ha generado todavía) el comprobante
- * electrónico formal ante Hacienda.
+ * Versión servidor (Buffer) de la factura simple (sin datos de Hacienda) —
+ * para adjuntarla en el email al cliente. Misma disposición que la versión
+ * cliente en lib/generate-invoice-pdf.ts.
  */
-export async function generateSimpleInvoicePDF(invoice: SimpleInvoice) {
+export async function generateSimpleInvoicePDFBuffer(invoice: SimpleInvoice): Promise<Buffer> {
   const doc = new jsPDF();
-
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
   const contentWidth = pageWidth - margin * 2;
-
   let yPosition = margin;
 
-  // === LOGO ===
-  const logoWidth = 60;
+  const logoBase64 = await loadLogoBase64();
   const logoY = yPosition;
-  const logoHeight = await drawLogo(doc, margin, logoY, logoWidth);
+  const logoHeight = drawLogo(doc, logoBase64, margin, logoY, 60);
 
-  // === INFORMACIÓN DE LA EMPRESA ===
   let companyY = logoY + logoHeight + 8;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -333,7 +318,6 @@ export async function generateSimpleInvoicePDF(invoice: SimpleInvoice) {
   doc.text('Email: info@habitastudio.online', margin, companyY + 4);
   doc.text('Tel: +506 6364 4915', margin, companyY + 8);
 
-  // === CLIENTE / FACTURA (grid de 2 columnas) ===
   const gridGap = 20;
   const leftColWidth = (contentWidth - gridGap) / 2;
   const rightColStart = margin + leftColWidth + gridGap;
@@ -372,7 +356,6 @@ export async function generateSimpleInvoicePDF(invoice: SimpleInvoice) {
 
   yPosition = Math.max(clientY, facturaY) + 20;
 
-  // === DETALLE DE ITEMS ===
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
@@ -418,7 +401,6 @@ export async function generateSimpleInvoicePDF(invoice: SimpleInvoice) {
     yPosition += 3;
   }
 
-  // === TOTALES ===
   yPosition += 5;
   if (yPosition > pageHeight - 60) {
     doc.addPage();
@@ -448,7 +430,6 @@ export async function generateSimpleInvoicePDF(invoice: SimpleInvoice) {
   doc.text('TOTAL:', totalsX, yPosition, { align: 'right' });
   doc.text(formatCurrency(invoice.total), pageWidth - margin - 2, yPosition, { align: 'right' });
 
-  // === PIE ===
   const footerY = pageHeight - 15;
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
@@ -459,5 +440,5 @@ export async function generateSimpleInvoicePDF(invoice: SimpleInvoice) {
     { align: 'center', maxWidth: contentWidth }
   );
 
-  doc.save(`Factura-${invoice.numero}.pdf`);
+  return Buffer.from(doc.output('arraybuffer'));
 }

@@ -19,6 +19,8 @@ const quoteItemSchema = z.object({
   quantity: z.number().min(0),
   unitPrice: z.number().min(0),
   total: z.number().min(0),
+  cabysCode: z.string().optional().nullable(),
+  unidadMedida: z.string().optional(),
 });
 
 const quoteSchema = z.object({
@@ -224,6 +226,8 @@ export async function createUpdateQuote(formData: FormData) {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             total: item.total,
+            cabysCode: item.cabysCode || null,
+            unidadMedida: item.unidadMedida || "Unid",
           },
         });
       }

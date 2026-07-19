@@ -1,6 +1,8 @@
 import { ProductForm } from "@/components/admin/product-form";
+import { getCategories } from "@/app/actions/categories";
 
-export default function NewProductPage() {
+export default async function NewProductPage() {
+  const categories = await getCategories();
   const cloudinaryUrl = process.env.CLOUDINARY_URL || "";
   const publicCloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   let cloudName: string | undefined = publicCloud;
@@ -12,7 +14,7 @@ export default function NewProductPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Nuevo Producto</h1>
-      <ProductForm cloudName={cloudName} uploadPreset={uploadPreset} />
+      <ProductForm cloudName={cloudName} uploadPreset={uploadPreset} categories={categories} />
     </div>
   );
 }

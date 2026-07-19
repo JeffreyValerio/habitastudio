@@ -22,6 +22,7 @@ export interface Product {
 
 export async function getProducts(): Promise<Product[]> {
   const products = await prisma.product.findMany({
+    include: { category: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -29,7 +30,7 @@ export async function getProducts(): Promise<Product[]> {
     id: p.id,
     name: p.name,
     slug: p.slug,
-    category: p.category,
+    category: p.category.name,
     price: typeof p.price === 'number' ? formatCRC(p.price, 0) : p.price,
     image: p.image,
     gallery: p.gallery ?? [],
@@ -47,6 +48,7 @@ export async function getProducts(): Promise<Product[]> {
 export async function getProductById(id: string): Promise<Product | null> {
   const product = await prisma.product.findUnique({
     where: { id },
+    include: { category: true },
   });
 
   if (!product) return null;
@@ -55,7 +57,7 @@ export async function getProductById(id: string): Promise<Product | null> {
     id: product.id,
     name: product.name,
     slug: product.slug,
-    category: product.category,
+    category: product.category.name,
     price: typeof product.price === 'number' ? formatCRC(product.price, 0) : product.price,
     image: product.image,
     gallery: product.gallery ?? [],
@@ -73,6 +75,7 @@ export async function getProductById(id: string): Promise<Product | null> {
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   const product = await prisma.product.findUnique({
     where: { slug },
+    include: { category: true },
   });
 
   if (!product) return null;
@@ -81,7 +84,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     id: product.id,
     name: product.name,
     slug: product.slug,
-    category: product.category,
+    category: product.category.name,
     price: typeof product.price === 'number' ? formatCRC(product.price, 0) : product.price,
     image: product.image,
     gallery: product.gallery ?? [],

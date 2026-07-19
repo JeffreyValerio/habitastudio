@@ -33,6 +33,8 @@ interface QuoteItem {
   unitPrice: number;
   total: number;
   productId?: string;
+  cabysCode?: string | null;
+  unidadMedida?: string;
 }
 
 interface ProductForQuote {
@@ -40,6 +42,8 @@ interface ProductForQuote {
   name: string;
   price: number;
   category: string;
+  cabysCode: string | null;
+  unidadMedida: string;
 }
 
 interface Customer {
@@ -231,6 +235,8 @@ export function QuoteFormImproved({
         item.description = product.name;
         item.unitPrice = product.price;
         item.total = item.quantity * item.unitPrice;
+        item.cabysCode = product.cabysCode;
+        item.unidadMedida = product.unidadMedida;
       }
     }
 

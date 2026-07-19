@@ -21,23 +21,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatCRC } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   generateFacturaForWorkOrder,
   sendElectronicDocument,
   checkElectronicDocumentStatus,
-  searchCabys,
+  sendSimpleInvoiceEmail,
+  sendElectronicInvoiceEmail,
 } from "@/app/actions/electronic-documents";
-import { generateInvoicePDF } from "@/lib/generate-invoice-pdf";
+import { CabysField } from "@/components/admin/cabys-field";
+import { generateInvoicePDF, generateSimpleInvoicePDF } from "@/lib/generate-invoice-pdf";
 import {
   FileText,
   Loader2,
-  Search,
   Send,
   RefreshCw,
   Download,
   FileCode,
+  Mail,
 } from "lucide-react";
 
 interface QuoteItemData {
@@ -95,65 +104,6 @@ const ESTADO_COLORS: Record<string, string> = {
   error: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
-function CabysField({ value, onChange }: { value: string; onChange: (code: string) => void }) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ codigo: string; descripcion: string }[]>([]);
-  const [searching, setSearching] = useState(false);
-
-  const search = async () => {
-    if (query.trim().length < 3) return;
-    setSearching(true);
-    try {
-      const result = await searchCabys(query);
-      setResults(result.ok ? result.results : []);
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  return (
-    <div className="space-y-1">
-      <div className="flex gap-2">
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Código CABYS (13 dígitos)"
-          maxLength={13}
-          className="font-mono text-sm"
-        />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), search())}
-          placeholder="Buscar por descripción..."
-          className="text-sm"
-        />
-        <Button type="button" variant="outline" size="icon" onClick={search} disabled={searching}>
-          {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-        </Button>
-      </div>
-      {results.length > 0 && (
-        <div className="max-h-32 overflow-y-auto rounded-md border text-sm">
-          {results.map((r) => (
-            <button
-              type="button"
-              key={r.codigo}
-              onClick={() => {
-                onChange(r.codigo);
-                setResults([]);
-                setQuery("");
-              }}
-              className="block w-full px-2 py-1.5 text-left hover:bg-accent"
-            >
-              <span className="font-mono text-xs text-muted-foreground">{r.codigo}</span> {r.descripcion}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function downloadTextFile(filename: string, content: string) {
   const blob = new Blob([content], { type: "application/xml" });
   const url = URL.createObjectURL(blob);
@@ -183,6 +133,7 @@ export function InvoiceRow({
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const [identificacionTipo, setIdentificacionTipo] = useState(customer?.identificacionTipo || "02");
   const [identificacionNumero, setIdentificacionNumero] = useState(customer?.identificacionNumero || "");
@@ -298,6 +249,58 @@ export function InvoiceRow({
     });
   };
 
+  const handleDownloadSimplePdf = async () => {
+    const TARIFA = 13;
+    await generateSimpleInvoicePDF({
+      numero: electronicDocument?.consecutivo || workOrder.workOrderNumber,
+      fecha: electronicDocument?.fechaEmision || new Date(),
+      clientName: workOrder.clientName,
+      clientEmail: workOrder.clientEmail,
+      items: items.map((it) => ({
+        description: it.description,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        total: it.total,
+      })),
+      subtotal: workOrder.total,
+      tax: workOrder.total * (TARIFA / 100),
+      total: workOrder.total * (1 + TARIFA / 100),
+    });
+  };
+
+  const handleSendSimpleEmail = async () => {
+    setSendingEmail(true);
+    try {
+      const result = await sendSimpleInvoiceEmail(workOrder.id);
+      toast({
+        title: result.ok ? "Enviado" : "Error",
+        description: result.message,
+        variant: result.ok ? undefined : "destructive",
+      });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handleSendElectronicEmail = async () => {
+    if (!electronicDocument) return;
+    setSendingEmail(true);
+    try {
+      const result = await sendElectronicInvoiceEmail(electronicDocument.id);
+      toast({
+        title: result.ok ? "Enviado" : "Error",
+        description: result.message,
+        variant: result.ok ? undefined : "destructive",
+      });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   return (
     <tr className="border-b hover:bg-accent/50 align-top">
       <td className="py-3 px-4">
@@ -402,16 +405,42 @@ export function InvoiceRow({
               Consultar Estado
             </Button>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="ghost" title="Descargar o enviar factura" disabled={sendingEmail}>
+                {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleDownloadSimplePdf}>
+                <FileText className="h-4 w-4" />
+                Descargar factura (sin Hacienda)
+              </DropdownMenuItem>
+              {electronicDocument && emisorConfig && (
+                <DropdownMenuItem onClick={handleDownloadPdf}>
+                  <FileCode className="h-4 w-4" />
+                  Descargar factura electrónica (Hacienda)
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSendSimpleEmail} disabled={sendingEmail}>
+                <Mail className="h-4 w-4" />
+                Enviar por correo (sin Hacienda)
+              </DropdownMenuItem>
+              {electronicDocument && emisorConfig && (
+                <DropdownMenuItem onClick={handleSendElectronicEmail} disabled={sendingEmail}>
+                  <Mail className="h-4 w-4" />
+                  Enviar por correo (Hacienda)
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {electronicDocument && (
             <>
               <Button size="sm" variant="ghost" onClick={handleDownloadXml} title="Descargar XML firmado">
                 <FileCode className="h-4 w-4" />
               </Button>
-              {emisorConfig && (
-                <Button size="sm" variant="ghost" onClick={handleDownloadPdf} title="Descargar PDF">
-                  <Download className="h-4 w-4" />
-                </Button>
-              )}
               {electronicDocument.respuestaXml && (
                 <Button size="sm" variant="ghost" onClick={handleDownloadRespuesta} title="Descargar respuesta de Hacienda">
                   <FileText className="h-4 w-4" />

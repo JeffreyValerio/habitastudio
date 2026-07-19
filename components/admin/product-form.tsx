@@ -16,10 +16,12 @@ import { createUpdateProduct } from "@/app/actions/products";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Package } from "lucide-react";
 import { AiSuggestButton } from "@/components/admin/ai-suggest-button";
+import { CabysField } from "@/components/admin/cabys-field";
+import { CategorySelect } from "@/components/admin/category-select";
 
 const productSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
-  category: z.string().min(1, "La categoría es requerida"),
+  categoryId: z.string().min(1, "La categoría es requerida"),
   cost: z.string().optional(),
   price: z.string().min(1, "El precio es requerido"),
   description: z.string().min(1, "La descripción es requerida"),
@@ -28,6 +30,8 @@ const productSchema = z.object({
   dimensions: z.string().optional(),
   color: z.string().optional(),
   warranty: z.string().optional(),
+  cabysCode: z.string().optional(),
+  unidadMedida: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -38,6 +42,7 @@ interface ProductFormProps {
     name: string;
     slug: string;
     category: string;
+    categoryId: string;
     cost: number;
     price: number;
     image: string;
@@ -47,6 +52,8 @@ interface ProductFormProps {
     dimensions?: string | null;
     color?: string | null;
     warranty?: string | null;
+    cabysCode?: string | null;
+    unidadMedida?: string;
     gallery?: string[];
   };
 }
@@ -54,12 +61,14 @@ interface ProductFormProps {
 type ProductFormExtraProps = {
   cloudName?: string;
   uploadPreset?: string;
+  categories: { id: string; name: string }[];
 };
 
-export function ProductForm({ product, cloudName, uploadPreset }: ProductFormProps & ProductFormExtraProps) {
+export function ProductForm({ product, cloudName, uploadPreset, categories: initialCategories }: ProductFormProps & ProductFormExtraProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [categories, setCategories] = useState(initialCategories);
   const [activeTab, setActiveTab] = useState<"info" | "pricing" | "images" | "details">("info");
   const [gallery, setGallery] = useState<string[]>(product?.gallery || []);
   const [newFiles, setNewFiles] = useState<File[]>([]);
@@ -112,7 +121,7 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
     defaultValues: product
       ? {
           name: product.name,
-          category: product.category,
+          categoryId: product.categoryId,
           cost: formatCurrency(product.cost || 0),
           price: formatCurrency(product.price),
           description: product.description,
@@ -121,16 +130,20 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
           dimensions: product.dimensions || "",
           color: product.color || "",
           warranty: product.warranty || "",
+          cabysCode: product.cabysCode || "",
+          unidadMedida: product.unidadMedida || "Unid",
         }
-      : undefined,
+      : { unidadMedida: "Unid" },
   });
 
   const cost = watch("cost");
   const price = watch("price");
   const name = watch("name");
-  const category = watch("category");
+  const categoryId = watch("categoryId");
+  const category = categories.find((c) => c.id === categoryId)?.name ?? "";
   const description = watch("description");
   const features = watch("features");
+  const cabysCode = watch("cabysCode");
 
   const calculateMargin = (): number => {
     const costNum = parseCurrency(cost || "0");
@@ -196,12 +209,14 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
       }
 
       formData.append("name", data.name);
-      formData.append("category", data.category);
+      formData.append("categoryId", data.categoryId);
       formData.append("cost", parseCurrency(data.cost || "0").toString());
       formData.append("price", parseCurrency(data.price).toString());
       formData.append("description", data.description);
       if (data.features) formData.append("features", data.features);
       if (data.material) formData.append("material", data.material);
+      if (data.cabysCode) formData.append("cabysCode", data.cabysCode);
+      if (data.unidadMedida) formData.append("unidadMedida", data.unidadMedida);
       if (data.dimensions) formData.append("dimensions", data.dimensions);
       if (data.color) formData.append("color", data.color);
       if (data.warranty) formData.append("warranty", data.warranty);
@@ -289,10 +304,15 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category">Categoría *</Label>
-                <Input id="category" {...register("category")} placeholder="Sala" />
-                {errors.category && (
-                  <p className="text-sm text-destructive">{errors.category.message}</p>
+                <Label htmlFor="categoryId">Categoría *</Label>
+                <CategorySelect
+                  categories={categories}
+                  value={categoryId || ""}
+                  onChange={(v) => setValue("categoryId", v, { shouldValidate: true })}
+                  onCategoryCreated={(c) => setCategories((prev) => [...prev, c].sort((a, b) => a.name.localeCompare(b.name)))}
+                />
+                {errors.categoryId && (
+                  <p className="text-sm text-destructive">{errors.categoryId.message}</p>
                 )}
               </div>
             </div>
@@ -506,6 +526,15 @@ export function ProductForm({ product, cloudName, uploadPreset }: ProductFormPro
                 <Label htmlFor="warranty">Garantía</Label>
                 <Input id="warranty" {...register("warranty")} placeholder="2 años" />
               </div>
+            </div>
+
+            <div className="space-y-2 rounded-lg border p-4">
+              <Label>Código CABYS</Label>
+              <p className="text-xs text-muted-foreground">
+                Se copia automáticamente al agregar este producto a una cotización, para no tener que
+                buscarlo de nuevo al facturar.
+              </p>
+              <CabysField value={cabysCode || ""} onChange={(v) => setValue("cabysCode", v)} />
             </div>
           </div>
         )}

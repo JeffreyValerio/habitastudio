@@ -10,7 +10,7 @@ import { getSectionAccess } from "@/app/actions/role-permissions";
 const productSchema = z.object({
   id: z.string().optional().nullable(),
   name: z.string().min(1),
-  category: z.string().min(1),
+  categoryId: z.string().min(1, "La categoría es requerida"),
   cost: z.preprocess(
     (val) => {
       if (typeof val === 'string') {
@@ -37,6 +37,8 @@ const productSchema = z.object({
   dimensions: z.string().optional(),
   color: z.string().optional(),
   warranty: z.string().optional(),
+  cabysCode: z.string().optional(),
+  unidadMedida: z.string().optional(),
   gallery: z.string().optional(), // JSON string de URLs
 });
 
@@ -169,7 +171,7 @@ export async function createUpdateProduct(formData: FormData) {
           data: {
             name: product.name,
             slug,
-            category: product.category,
+            categoryId: product.categoryId,
             cost: costNumber,
             price: priceNumber,
             description: product.description,
@@ -180,6 +182,8 @@ export async function createUpdateProduct(formData: FormData) {
             dimensions: rest.dimensions || null,
             color: rest.color || null,
             warranty: rest.warranty || null,
+            cabysCode: rest.cabysCode || null,
+            unidadMedida: rest.unidadMedida || "Unid",
           },
         });
       } else {
@@ -195,7 +199,7 @@ export async function createUpdateProduct(formData: FormData) {
           data: {
             name: product.name,
             slug,
-            category: product.category,
+            categoryId: product.categoryId,
             cost: costNumber,
             price: priceNumber,
             description: product.description,
@@ -206,6 +210,8 @@ export async function createUpdateProduct(formData: FormData) {
             dimensions: rest.dimensions || null,
             color: rest.color || null,
             warranty: rest.warranty || null,
+            cabysCode: rest.cabysCode || null,
+            unidadMedida: rest.unidadMedida || "Unid",
           },
         });
       }
@@ -282,25 +288,30 @@ export async function deleteProduct(id: string) {
 
 export async function getProducts() {
   const products = await prisma.product.findMany({
+    include: { category: true },
     orderBy: { createdAt: "desc" },
   });
   // Retornar productos con cost y price como números (para admin)
-  return products.map(p => ({
+  return products.map(({ category, ...p }) => ({
     ...p,
     cost: p.cost ?? 0,
     price: p.price,
+    category: category.name,
   }));
 }
 
 export async function getProduct(id: string) {
   const product = await prisma.product.findUnique({
     where: { id },
+    include: { category: true },
   });
   if (!product) return null;
+  const { category, ...rest } = product;
   return {
-    ...product,
+    ...rest,
     cost: product.cost ?? 0,
     price: product.price,
+    category: category.name,
   };
 }
 
@@ -311,16 +322,20 @@ export async function getProductsForQuotes() {
       id: true,
       name: true,
       price: true,
-      category: true,
+      category: { select: { name: true } },
+      cabysCode: true,
+      unidadMedida: true,
     },
     orderBy: { name: "asc" },
   });
-  
+
   return products.map((p) => ({
     id: p.id,
     name: p.name,
     price: typeof p.price === 'number' ? p.price : parseFloat(String(p.price)) || 0,
-    category: p.category,
+    category: p.category.name,
+    cabysCode: p.cabysCode,
+    unidadMedida: p.unidadMedida,
   }));
 }
 

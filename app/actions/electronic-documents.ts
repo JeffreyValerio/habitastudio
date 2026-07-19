@@ -4,11 +4,74 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getSectionAccess } from "@/app/actions/role-permissions";
 import { revalidatePath } from "next/cache";
+import { Resend } from "resend";
 import { buildConsecutivo, buildClaveNumerica, fechaEmisionCR } from "@/lib/hacienda/clave";
 import { buildFacturaXML, type LineaDetalleXmlData } from "@/lib/hacienda/xml";
 import { signXAdES } from "@/lib/hacienda/sign";
 import { submitDocument, queryStatus, readP12Base64, getP12Pin } from "@/lib/hacienda/api";
 import { isCabysMercancia } from "@/lib/hacienda/cabys";
+import { generateInvoicePDFBuffer, generateSimpleInvoicePDFBuffer } from "@/lib/generate-invoice-pdf-server";
+import { formatCRC } from "@/lib/utils";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const TARIFA_IVA = 13;
+
+function invoiceEmailHtml({ title, clientName, numero, total }: { title: string; clientName: string; numero: string; total: number }) {
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+      <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background-color: #ffffff; padding: 30px 40px 20px 40px; text-align: center;">
+                  <img src="https://habitastudio.online/images/logo.png" alt="Habita Studio" style="max-width: 200px; height: auto; margin-bottom: 20px;" />
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #4f46e5; padding: 30px 40px; text-align: center;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">${title}</h1>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 40px;">
+                  <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Estimado/a <strong>${clientName}</strong>,
+                  </p>
+                  <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Adjunto encontrará la factura <strong>${numero}</strong>.
+                  </p>
+                  <p style="margin: 0 0 30px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Monto total: <strong style="color: #4f46e5;">${formatCRC(total)}</strong>.
+                  </p>
+                  <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Si tiene alguna pregunta o necesita más información, no dude en contactarnos.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #f9fafb; padding: 20px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
+                  <p style="margin: 0; color: #6b7280; font-size: 12px; line-height: 1.5;">
+                    <strong style="color: #4f46e5;">Habita Studio</strong><br>
+                    Muebles y Remodelaciones de Calidad<br>
+                    Email: info@habitastudio.online | Tel: +506 6364 4915
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -342,4 +405,127 @@ export async function getWorkOrdersForInvoicing() {
     ...wo,
     electronicDocument: latestByQuoteId.get(wo.quoteId) || null,
   }));
+}
+
+// Envía por correo la factura simple (sin datos de Hacienda) — no requiere
+// que exista un ElectronicDocument, se arma directamente desde la OT/cotización.
+export async function sendSimpleInvoiceEmail(workOrderId: string) {
+  const { allowed } = await getSectionAccess("admin.invoices");
+  if (!allowed) return { ok: false as const, message: "No autorizado" };
+
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: workOrderId },
+    include: { quote: { include: { customer: true, items: true } } },
+  });
+  if (!workOrder) return { ok: false as const, message: "Orden de trabajo no encontrada" };
+
+  const clientEmail = workOrder.quote.customer?.email || workOrder.quote.clientEmail;
+  if (!clientEmail) return { ok: false as const, message: "El cliente no tiene un email registrado" };
+  const clientName = workOrder.quote.customer?.name || workOrder.quote.clientName;
+
+  const subtotal = workOrder.quote.total;
+  const tax = subtotal * (TARIFA_IVA / 100);
+  const total = subtotal * (1 + TARIFA_IVA / 100);
+
+  const pdfBuffer = await generateSimpleInvoicePDFBuffer({
+    numero: workOrder.workOrderNumber,
+    fecha: new Date(),
+    clientName,
+    clientEmail,
+    items: workOrder.quote.items.map((it) => ({
+      description: it.description,
+      quantity: it.quantity,
+      unitPrice: it.unitPrice,
+      total: it.total,
+    })),
+    subtotal,
+    tax,
+    total,
+  });
+
+  const { error } = await resend.emails.send({
+    from: "Habita Studio <info@habitastudio.online>",
+    to: [clientEmail],
+    replyTo: "info@habitastudio.online",
+    subject: `Factura ${workOrder.workOrderNumber} - Habita Studio`,
+    html: invoiceEmailHtml({ title: `Factura ${workOrder.workOrderNumber}`, clientName, numero: workOrder.workOrderNumber, total }),
+    attachments: [{ filename: `Factura-${workOrder.workOrderNumber}.pdf`, content: pdfBuffer.toString("base64") }],
+  });
+
+  if (error) {
+    return { ok: false as const, message: "Error al enviar el email: " + (error as any).message };
+  }
+
+  return { ok: true as const, message: "Factura enviada por email correctamente" };
+}
+
+// Envía por correo la factura electrónica formal (con clave, consecutivo y
+// código CABYS) — requiere que ya se haya generado el ElectronicDocument.
+export async function sendElectronicInvoiceEmail(documentId: string) {
+  const { allowed } = await getSectionAccess("admin.invoices");
+  if (!allowed) return { ok: false as const, message: "No autorizado" };
+
+  const doc = await prisma.electronicDocument.findUnique({
+    where: { id: documentId },
+    include: { quote: { include: { customer: true, items: true } } },
+  });
+  if (!doc || !doc.quote) return { ok: false as const, message: "Comprobante no encontrado" };
+
+  const emisorConfig = await prisma.emisorConfig.findFirst();
+  if (!emisorConfig) return { ok: false as const, message: "Falta configurar los datos del emisor" };
+
+  const clientEmail = doc.quote.customer?.email || doc.quote.clientEmail;
+  if (!clientEmail) return { ok: false as const, message: "El cliente no tiene un email registrado" };
+  const clientName = doc.quote.customer?.name || doc.quote.clientName;
+  const receptorIdentificacion = doc.quote.customer?.identificacionNumero || "—";
+
+  const items = doc.quote.items.map((it) => {
+    const subtotal = it.quantity * it.unitPrice;
+    const impuesto = subtotal * (TARIFA_IVA / 100);
+    return {
+      descripcion: it.description,
+      cabysCode: it.cabysCode || "—",
+      cantidad: it.quantity,
+      unidadMedida: it.unidadMedida,
+      precioUnitario: it.unitPrice,
+      subtotal,
+      impuesto,
+      total: subtotal + impuesto,
+    };
+  });
+
+  const totalVenta = doc.quote.total;
+  const totalImpuesto = totalVenta * (TARIFA_IVA / 100);
+  const totalComprobante = totalVenta * (1 + TARIFA_IVA / 100);
+
+  const pdfBuffer = await generateInvoicePDFBuffer({
+    clave: doc.clave,
+    consecutivo: doc.consecutivo,
+    estado: doc.estado,
+    fechaEmision: doc.fechaEmision,
+    emisorNombre: emisorConfig.nombre,
+    emisorIdentificacion: emisorConfig.identificacionNumero,
+    receptorNombre: clientName,
+    receptorIdentificacion,
+    receptorEmail: clientEmail,
+    items,
+    totalVenta,
+    totalImpuesto,
+    totalComprobante,
+  });
+
+  const { error } = await resend.emails.send({
+    from: "Habita Studio <info@habitastudio.online>",
+    to: [clientEmail],
+    replyTo: "info@habitastudio.online",
+    subject: `Factura Electrónica ${doc.consecutivo} - Habita Studio`,
+    html: invoiceEmailHtml({ title: `Factura Electrónica ${doc.consecutivo}`, clientName, numero: doc.consecutivo, total: totalComprobante }),
+    attachments: [{ filename: `Factura-${doc.consecutivo}.pdf`, content: pdfBuffer.toString("base64") }],
+  });
+
+  if (error) {
+    return { ok: false as const, message: "Error al enviar el email: " + (error as any).message };
+  }
+
+  return { ok: true as const, message: "Factura electrónica enviada por email correctamente" };
 }

@@ -1,6 +1,6 @@
 # Facturación Electrónica — Investigación e Integración con Hacienda (TribuCR)
 
-> Documento vivo. Fase actual: **investigación**, sin código todavío. Se actualiza a medida que avanza cada fase.
+> Documento vivo. Fase actual: **implementado y en uso** (generación, firma, envío a Hacienda, consulta de estado, PDF y envío por correo — módulo `/admin/invoices`). Lo que queda pendiente son notas de crédito/débito, Recibo Electrónico de Pago, y el piloto con credenciales de producción reales de Habita Studio (hoy se prueba con la identidad sandbox de Jeffrey). Ver sección 11 para la guía de cómo replicar esto en otro proyecto.
 > Última investigación: 2026-07-18.
 
 ## 1. Contexto y panorama general
@@ -218,6 +218,80 @@ Basado en `prisma/schema.prisma` actual:
 6. **Fase 5 — Flujo con el receptor**: envío del comprobante aceptado al cliente, manejo de Mensaje Receptor entrante.
 7. **Fase 6 — Piloto en producción**: con credenciales reales, empezando probablemente por un solo tipo de comprobante y un volumen bajo controlado.
 8. **Fase 7 — Notas de crédito/débito y Recibo Electrónico de Pago**: una vez estable el flujo principal.
+
+## 11. Guía reutilizable: cómo implementar esto en otro proyecto
+
+Notas para mí mismo (Claude) la próxima vez que tenga que integrar facturación electrónica de Costa Rica (Hacienda/TRIBU-CR) en un proyecto distinto a Habita Studio — stack Next.js + Prisma/PostgreSQL + Server Actions, pero la mayoría de esto aplica a cualquier backend Node/TypeScript. No es teoría: son las decisiones y errores reales que aparecieron construyendo esto aquí.
+
+### 11.1 Trámites previos (no dependen del código)
+
+Antes de escribir nada, confirmar con el usuario/negocio (ver sección 2 para el detalle completo):
+- Inscripción en RUT/TRIBU-CR con actividad económica activa, régimen (tradicional/simplificado).
+- Llave criptográfica `.p12` generada desde OVI/TRIBU-CR + su PIN (4 dígitos si se generó antes del 27/07/2026, 14 caracteres después).
+- Credenciales de **sandbox** primero (`api-sandbox.comprobanteselectronicos.go.cr`) — nunca empezar contra producción.
+- Códigos CABYS por defecto de los productos/servicios principales del negocio (catalogación es trabajo de negocio, no técnico — no asumirlos).
+
+### 11.2 Modelo de datos mínimo (Prisma, adaptar nombres al proyecto)
+
+```prisma
+model ElectronicDocument {
+  id           String   @id @default(cuid())
+  tipo         String   // factura, tiquete, notaCredito, notaDebito, reciboPago
+  clave        String   @unique // 50 dígitos
+  consecutivo  String   // 20 dígitos
+  estado       String   @default("borrador") // borrador, procesando, aceptado, rechazado, error
+  xmlFirmado   String   @db.Text
+  respuestaXml String?  @db.Text
+  fechaEmision DateTime
+  // relación al documento interno de origen (Quote/Order/lo que exista en el proyecto)
+}
+
+model ElectronicDocumentSequence {
+  tipoDocumento String @id // "01" Factura, "03" Nota Crédito, "04" Tiquete, etc.
+  lastNumber    Int    @default(0)
+}
+
+model EmisorConfig { // datos fiscales del emisor, fila única — las credenciales NO viven aquí, van en env vars
+  nombre, nombreComercial?, identificacionTipo, identificacionNumero,
+  actividadEconomica, provincia, canton, distrito, barrio?, otrasSenas,
+  telefonoCodigoPais, telefono, correoElectronico
+}
+```
+Además: el modelo de cliente/receptor necesita `identificacionTipo`/`identificacionNumero` (fiscal), y cada línea de ítem facturable necesita `cabysCode` (13 dígitos) + `unidadMedida`. Guardar estos datos de vuelta en el modelo de origen (cliente, ítem de cotización) la primera vez que se piden, para no volver a preguntarlos — así fue como se hizo aquí (`generateFacturaForWorkOrder` persiste `cabysCode`/identificación al generar).
+
+### 11.3 Estructura de módulos que funcionó bien
+
+```
+lib/hacienda/
+  clave.ts   — buildConsecutivo(tipoDocumento), buildClaveNumerica(consecutivo, cedulaEmisor, fecha), fechaEmisionCR()
+  xml.ts     — buildFacturaXML(input): arma el XML v4.4 completo a partir de datos ya resueltos (nada de I/O aquí)
+  sign.ts    — signXAdES(xmlString, p12Base64, pin): firma XAdES-EPES
+  api.ts     — getAccessToken(), submitDocument(), queryStatus(), readP12Base64() (env var en prod, archivo en local), getP12Pin()
+  cabys.ts   — isCabysMercancia(codigo): clasifica un CABYS como bien o servicio consultando /fe/cabys
+```
+Mantener `xml.ts` puro (sin `fetch`, sin Prisma) hace que sea trivial de probar con datos falsos antes de tocar Hacienda. Las Server Actions (`app/actions/electronic-documents.ts` aquí) son las que orquestan: leen de la base de datos, arman el input, llaman estos módulos en orden, y persisten el resultado.
+
+### 11.4 Errores reales que van a volver a aparecer — no reinventar la rueda
+
+1. **Import de `xadesjs`/`xml-core` con `import X from "..."` compila con `tsc --noEmit` pero rompe en `next build`** ("Export default doesn't exist in target module"). Usar siempre `import * as xades from "xadesjs"` y `import * as xmlCore from "xml-core"`. **Lección general: `tsc --noEmit` no es suficiente para verificar este tipo de librerías — correr también el build real (`next build`/`webpack`) antes de dar por bueno un cambio.**
+2. **La política de firma XAdES-EPES que casi todo el mundo referencia online (incluyendo librerías como `haciendacostarica-signer`) es la de 2016, no la vigente para v4.4** — el resultado firma "bien" mecánicamente pero Hacienda lo rechaza. Verificar la URL de política + hash SHA-1 exactos contra la documentación oficial vigente al momento de implementar (no confiar en ejemplos de blogs/librerías de terceros sin fecha).
+3. **Falta de separación Mercancía/Servicio en el resumen del XML causa rechazo silencioso hasta que se prueba con una factura real que mezcle bienes y servicios.** Si se prueba solo con líneas de servicio (o solo de mercancía), este bug no aparece — hay que probar explícitamente con una combinación de ambos antes de dar por buena la integración. La clasificación se obtiene consultando `/fe/cabys?codigo=...` y viendo si `categorias[0]` empieza con `"Bienes"` o `"Servicios"`.
+4. **El `.p12` necesita dos formas de lectura**: ruta de archivo local (`.secrets/` o similar, gitignored) para desarrollo, y variable de entorno en base64 para producción (Vercel y plataformas similares no tienen filesystem persistente con esos archivos). Resolver ambos casos en una sola función (`readP12Base64()`) desde el día uno, no como afterthought.
+5. **Server Actions que usan `throw` pierden el mensaje de error en producción** (Next.js redacta errores lanzados en el servidor por seguridad). Usar siempre el patrón `return { ok: true|false, message }` en vez de `throw` para cualquier Server Action de este flujo — si no, cualquier rechazo de Hacienda o error de firma se vuelve invisible en producción y solo se puede depurar re-desplegando con logs.
+6. **Validar la longitud exacta de clave (50) y consecutivo (20) dentro de la propia función que los construye**, lanzando error si no calzan — esto atrapó un bug propio (consecutivo de prueba con 19 caracteres) inmediatamente en vez de que Hacienda lo rechazara con un mensaje críptico.
+7. **PDF generado con `jsPDF`**: si hay columnas con montos en colones (`CRC 207 964,60` es más ancho de lo que parece a 9pt), medir el ancho real del texto con `doc.getTextWidth()` antes de fijar el ancho de columna — no asumir proporciones a ojo, ya causó un solape visual real.
+
+### 11.5 Estrategia de verificación que sí funcionó
+
+- **Probar contra el sandbox real de Hacienda desde el primer momento posible**, no solo contra el XSD/documentación. Cada fase (XML, firma, envío, consulta de estado) se verificó con una llamada real al sandbox, no solo revisión de código — esto encontró bugs reales (formato de `CodigoActividadEmisor`, campos `BaseImponible`/`MedioPago` faltantes, split mercancía/servicio) que la sola lectura de la documentación no hubiera detectado.
+- Si no hay forma de probar por la UI (sin credenciales de login, por ejemplo), escribir un **script standalone de Node** (`scripts/*.ts`, usando el mismo Prisma Client y las mismas variables de entorno que la app real) que ejercite la lógica de negocio real de punta a punta — no mockear nada de Hacienda.
+- Probar con **datos reales de negocio** (una orden/cotización real que ya exista), no solo con datos inventados — los bugs de clasificación (mercancía/servicio) y de formato solo aparecen con combinaciones reales de ítems.
+
+### 11.6 Decisiones de UX que valió la pena mantener
+
+- **Nada es automático**: generar el comprobante (armar XML + firmar) es un paso manual separado de "enviar a Hacienda". Una factura aceptada por Hacienda no se puede borrar, solo corregir con nota de crédito — así que cada paso queda bajo control explícito del usuario, con un botón por paso (Generar → Enviar → Consultar Estado).
+- **Botones de acción sensible (generar, enviar, editar configuración del emisor) restringidos a admin de forma fija**, no configurable por rol — mismo criterio que otras acciones de peso legal/fiscal en el proyecto.
+- Ofrecer **dos variantes del PDF/envío por correo**: una formal con los datos de Hacienda (clave, consecutivo, CABYS) para cuando el comprobante ya se generó y se quiere enviar como factura electrónica real, y una simple/tipo-proforma (mismo layout que una cotización, sin datos fiscales) para cuando el cliente solo necesita un documento de cobro interno. Evita forzar todo el flujo de Hacienda cuando no aplica.
 
 ---
 

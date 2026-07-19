@@ -13,6 +13,7 @@ async function main() {
   await prisma.project.deleteMany({});
   await prisma.service.deleteMany({});
   await prisma.product.deleteMany({});
+  await prisma.category.deleteMany({});
   await prisma.user.deleteMany({});
   
   console.log("All existing data deleted.");
@@ -247,8 +248,17 @@ async function main() {
 
   console.log("Creating products...");
   for (const product of products) {
+    const { category, ...rest } = product;
     await prisma.product.create({
-      data: product,
+      data: {
+        ...rest,
+        category: {
+          connectOrCreate: {
+            where: { name: category },
+            create: { name: category },
+          },
+        },
+      },
     });
   }
   console.log(`Created ${products.length} products`);

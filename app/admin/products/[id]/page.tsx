@@ -1,4 +1,5 @@
 import { getProduct } from "@/app/actions/products";
+import { getCategories } from "@/app/actions/categories";
 import { notFound } from "next/navigation";
 import { ProductForm } from "@/components/admin/product-form";
 
@@ -8,7 +9,7 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = await getProduct(id);
+  const [product, categories] = await Promise.all([getProduct(id), getCategories()]);
 
   if (!product) {
     notFound();
@@ -26,7 +27,7 @@ export default async function EditProductPage({
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Editar Producto</h1>
-      <ProductForm product={product} cloudName={cloudName} uploadPreset={uploadPreset} />
+      <ProductForm product={product} cloudName={cloudName} uploadPreset={uploadPreset} categories={categories} />
     </div>
   );
 }
