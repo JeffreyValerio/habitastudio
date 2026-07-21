@@ -310,7 +310,11 @@ export async function createManualTimeEntry(input: {
       userId: input.userId,
       workOrderId: input.workOrderId || null,
       workType: input.workType || null,
-      entryDate: new Date(input.entryDate),
+      // Igual que entryDateTime: sin el offset "-06:00" explícito, el string
+      // "YYYY-MM-DD" se interpreta como medianoche UTC, que en Costa Rica
+      // (UTC-6) es el día anterior a las 6:00 p.m. — mostraba un día atrás
+      // al formatear en el navegador.
+      entryDate: new Date(`${input.entryDate}T00:00:00-06:00`),
       entryTime: entryDateTime,
       exitTime: exitDateTime,
       description: input.description || null,
@@ -379,7 +383,11 @@ export async function updateManualTimeEntry(
     data: {
       workOrderId: input.workOrderId || null,
       workType: input.workType || null,
-      entryDate: new Date(input.entryDate),
+      // Igual que entryDateTime: sin el offset "-06:00" explícito, el string
+      // "YYYY-MM-DD" se interpreta como medianoche UTC, que en Costa Rica
+      // (UTC-6) es el día anterior a las 6:00 p.m. — mostraba un día atrás
+      // al formatear en el navegador.
+      entryDate: new Date(`${input.entryDate}T00:00:00-06:00`),
       entryTime: entryDateTime,
       exitTime: exitDateTime,
       description: input.description || null,

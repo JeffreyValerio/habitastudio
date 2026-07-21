@@ -27,16 +27,33 @@ export async function buildConsecutivo(tipoDocumento: string): Promise<string> {
   return sucursal + terminal + tipoDocumento + pad(sequence, 10);
 }
 
+// Fecha de emisión en formato ISO con el offset explícito de Costa Rica
+// (UTC-6 todo el año), tal como Hacienda la exige.
+export function fechaEmisionCR(): string {
+  return (
+    new Date()
+      .toLocaleString("sv-SE", { timeZone: "America/Costa_Rica" })
+      .replace(" ", "T") + "-06:00"
+  );
+}
+
 // Clave numérica de 50 dígitos: país(3) + fecha DDMMYY(6) + cédula emisor(12)
 // + consecutivo(20) + situación(1) + código de seguridad(8).
+//
+// La fecha DDMMYY tiene que coincidir exactamente con el campo FechaEmision
+// del comprobante (Hacienda rechaza con -405 si no calzan). Por eso se deriva
+// del mismo string de fechaEmisionCR() en vez de leer un Date con
+// getDate()/getMonth()/getFullYear(), que devuelven la fecha en la zona
+// horaria del proceso — en Vercel eso es UTC, no Costa Rica (UTC-6), así que
+// entre las 00:00 y 05:59 UTC (18:00-23:59 CR del día anterior) el día
+// quedaba desfasado en un día respecto a fechaEmisionCR().
 export function buildClaveNumerica(
   consecutivo: string,
   cedulaEmisor: string,
-  fecha: Date = new Date()
+  fechaEmisionISO: string = fechaEmisionCR()
 ): string {
-  const dd = pad(fecha.getDate(), 2);
-  const mm = pad(fecha.getMonth() + 1, 2);
-  const yy = pad(fecha.getFullYear() % 100, 2);
+  const [yyyy, mm, dd] = fechaEmisionISO.slice(0, 10).split("-");
+  const yy = yyyy.slice(-2);
   const cedula12 = pad(cedulaEmisor, 12);
   const situacion = "1"; // normal (no contingencia/sin internet)
   const codigoSeguridad = pad(Math.floor(Math.random() * 100000000), 8);
@@ -46,14 +63,4 @@ export function buildClaveNumerica(
     throw new Error(`Clave numérica con longitud incorrecta: ${clave.length}`);
   }
   return clave;
-}
-
-// Fecha de emisión en formato ISO con el offset explícito de Costa Rica
-// (UTC-6 todo el año), tal como Hacienda la exige.
-export function fechaEmisionCR(): string {
-  return (
-    new Date()
-      .toLocaleString("sv-SE", { timeZone: "America/Costa_Rica" })
-      .replace(" ", "T") + "-06:00"
-  );
 }

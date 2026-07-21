@@ -249,8 +249,8 @@ export async function generateFacturaForWorkOrder(workOrderId: string, input: Ge
   const totalComprobante = totalVenta + totalImpuesto;
 
   const consecutivo = await buildConsecutivo("01");
-  const clave = buildClaveNumerica(consecutivo, emisorConfig.identificacionNumero);
   const fechaEmision = fechaEmisionCR();
+  const clave = buildClaveNumerica(consecutivo, emisorConfig.identificacionNumero, fechaEmision);
 
   const receptorNombre = workOrder.quote.customer?.name || workOrder.quote.clientName;
   const receptorCorreo = workOrder.quote.customer?.email || workOrder.quote.clientEmail || undefined;
