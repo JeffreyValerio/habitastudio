@@ -1,0 +1,16 @@
+name: Aviso de órdenes de trabajo vencidas
+
+on:
+  schedule:
+    # 13:00 UTC = 7:00 a.m. hora de Costa Rica (UTC-6, todo el año)
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  check-overdue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pegar al endpoint de OT vencidas
+        run: |
+          curl -sS -f -X GET "${{ vars.APP_URL || 'https://habitastudio.online' }}/api/cron/overdue-work-orders" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

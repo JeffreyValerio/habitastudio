@@ -29,6 +29,13 @@ export function todayInCostaRica(): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+// Instante de medianoche de "hoy" en Costa Rica, como Date real (no string) —
+// para comparar contra otras fechas (ej. determinar si una fecha de entrega
+// ya venció) sin importar la zona horaria del proceso donde corra el código.
+export function startOfTodayCR(): Date {
+  return new Date(`${todayInCostaRica()}T00:00:00-06:00`);
+}
+
 // Suma días a una fecha YYYY-MM-DD usando aritmética de calendario pura
 // (ancla en UTC medianoche) para no arrastrar la hora local del navegador,
 // que puede empujar el resultado a otro día según a qué hora se ejecute.

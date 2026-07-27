@@ -5,11 +5,11 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCRC } from "@/lib/utils";
+import { cn, formatCRC, startOfTodayCR } from "@/lib/utils";
 import { WORK_ORDER_STATUS_LABELS } from "@/lib/work-order-types";
 import { setWorkOrderDeliveryDate } from "@/app/actions/work-orders";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Eye, PackageCheck } from "lucide-react";
+import { Calendar, Eye, PackageCheck, AlertTriangle } from "lucide-react";
 
 interface WorkOrder {
   id: string;
@@ -35,6 +35,11 @@ const statusColors: Record<string, string> = {
   in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
   completed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
 };
+
+function isOverdue(wo: Pick<WorkOrder, "deliveryDate" | "entregadoCompletedAt">): boolean {
+  if (!wo.deliveryDate || wo.entregadoCompletedAt) return false;
+  return new Date(wo.deliveryDate) < startOfTodayCR();
+}
 
 export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
   const { toast } = useToast();
@@ -105,8 +110,16 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {visibleWorkOrders.map((wo) => (
-        <Card key={wo.id} className="hover:shadow-lg transition-shadow">
+          {visibleWorkOrders.map((wo) => {
+            const overdue = isOverdue(wo);
+            return (
+        <Card
+          key={wo.id}
+          className={cn(
+            "hover:shadow-lg transition-shadow",
+            overdue && "border-red-400 dark:border-red-700 bg-red-50/50 dark:bg-red-950/20"
+          )}
+        >
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -122,6 +135,12 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
                   <Badge variant="outline" className="text-xs gap-1">
                     <PackageCheck className="h-3 w-3" />
                     Entregado
+                  </Badge>
+                )}
+                {overdue && (
+                  <Badge className="text-xs gap-1 bg-red-600 text-white hover:bg-red-600 dark:bg-red-700">
+                    <AlertTriangle className="h-3 w-3" />
+                    Entrega vencida
                   </Badge>
                 )}
               </div>
@@ -157,8 +176,13 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
 
             {/* Delivery date */}
             <div>
-              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
+              <p
+                className={cn(
+                  "text-xs mb-1 flex items-center gap-1",
+                  overdue ? "text-red-600 dark:text-red-400 font-medium" : "text-muted-foreground"
+                )}
+              >
+                {overdue ? <AlertTriangle className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
                 Fecha de compromiso de entrega
               </p>
               {editingId === wo.id ? (
@@ -179,11 +203,15 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
               ) : (
                 <button
                   onClick={() => startEdit(wo)}
-                  className="text-sm font-medium hover:underline text-left"
+                  className={cn(
+                    "text-sm font-medium hover:underline text-left",
+                    overdue && "text-red-600 dark:text-red-400"
+                  )}
                 >
                   {wo.deliveryDate
                     ? new Date(wo.deliveryDate).toLocaleDateString("es-CR")
                     : "Sin liberar — asignar fecha"}
+                  {overdue && " (vencida)"}
                 </button>
               )}
             </div>
@@ -196,7 +224,8 @@ export function WorkOrdersGrid({ workOrders }: { workOrders: WorkOrder[] }) {
             </Button>
           </CardContent>
         </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

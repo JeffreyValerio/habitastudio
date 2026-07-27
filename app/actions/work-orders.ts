@@ -476,9 +476,12 @@ export async function setWorkOrderDeliveryDate(id: string, deliveryDate: string 
     return { ok: false as const, message: "Solo administradores pueden liberar órdenes de trabajo" };
   }
 
+  // "YYYY-MM-DD" sin offset se interpreta como medianoche UTC, que en Costa
+  // Rica (UTC-6) cae en el día anterior a partir de las 6:00 p.m. — mismo
+  // bug ya corregido en TimeEntry.entryDate.
   const workOrder = await prisma.workOrder.update({
     where: { id },
-    data: { deliveryDate: deliveryDate ? new Date(deliveryDate) : null },
+    data: { deliveryDate: deliveryDate ? new Date(`${deliveryDate}T00:00:00-06:00`) : null },
   });
 
   revalidatePath("/admin/work-orders");
