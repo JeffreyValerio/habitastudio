@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     .join("");
 
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: "Habita Studio <info@habitastudio.online>",
       to: adminEmails,
       replyTo: "info@habitastudio.online",
@@ -130,9 +130,20 @@ export async function GET(req: NextRequest) {
         </html>
       `,
     });
-  } catch (error) {
+
+    if (error) {
+      console.error("Error de Resend al enviar aviso de OT vencidas:", error);
+      return NextResponse.json(
+        { ok: false, overdueCount: overdue.length, emailSent: false, error: error.message },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
     console.error("Error al enviar aviso de OT vencidas:", error);
-    return NextResponse.json({ ok: false, overdueCount: overdue.length, emailSent: false }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, overdueCount: overdue.length, emailSent: false, error: error.message },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true, overdueCount: overdue.length, emailSent: true });
