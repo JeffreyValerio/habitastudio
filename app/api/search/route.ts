@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
           description: product.description,
           category: product.category,
           image: product.image,
-          url: `/catalogo/${product.id}`,
+          url: `/catalogo/${product.slug}`,
         });
       });
 

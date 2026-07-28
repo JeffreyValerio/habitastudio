@@ -31,7 +31,7 @@ export async function FeaturedProducts() {
               key={product.id}
               className="group overflow-hidden border-transparent bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
             >
-              <Link href={`/catalogo/${product.id}`}>
+              <Link href={`/catalogo/${product.slug}`}>
                 <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-b from-muted/40 to-muted/80">
                   <Image
                     src={product.image}
@@ -48,7 +48,7 @@ export async function FeaturedProducts() {
               </Link>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">
-                  <Link href={`/catalogo/${product.id}`} className="hover:text-primary">
+                  <Link href={`/catalogo/${product.slug}`} className="hover:text-primary">
                     {product.name}
                   </Link>
                 </CardTitle>
@@ -57,7 +57,7 @@ export async function FeaturedProducts() {
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-bold text-primary">{product.price}</span>
                   <Button asChild variant="ghost" size="sm" className="group/link -mr-2">
-                    <Link href={`/catalogo/${product.id}`}>
+                    <Link href={`/catalogo/${product.slug}`}>
                       Ver Detalles
                       <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" />
                     </Link>

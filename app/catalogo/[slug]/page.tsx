@@ -54,7 +54,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  const whatsappMessage = `Hola, me interesa cotizar este producto:\n\n*${product.name}*\nCategoría: ${product.category}\nPrecio: ${product.price}\n\n¿Podrían darme más información?`;
+  // Se incluye el link (no solo el texto) para que WhatsApp genere la vista
+  // previa con la imagen del producto, usando el Open Graph ya definido en
+  // generateMetadata de esta misma página.
+  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/catalogo/${product.slug}`;
+  const whatsappMessage = `Hola, me interesa cotizar este producto:\n\n*${product.name}*\nCategoría: ${product.category}\nPrecio: ${product.price}\n\n${productUrl}\n\n¿Podrían darme más información?`;
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`;
 
   const specs = product.specifications;
