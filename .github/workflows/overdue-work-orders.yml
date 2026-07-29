@@ -12,5 +12,5 @@ jobs:
     steps:
       - name: Pegar al endpoint de OT vencidas
         run: |
-          curl -sS -f -L -X GET "${{ vars.APP_URL || 'https://habitastudio.online' }}/api/cron/overdue-work-orders" \
+          curl -sS -f -X GET "${{ vars.APP_URL || 'https://www.habitastudio.online' }}/api/cron/overdue-work-orders" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
