@@ -10,8 +10,11 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // entrega sin haberse marcado como entregadas. Se repite cada día que la OT
 // siga vencida y sin entregar (recordatorio diario, no solo una vez).
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // .trim() por si el valor guardado en Vercel/GitHub quedó con un espacio o
+  // salto de línea de más al copiar/pegar — no debe romper la comparación.
+  const expectedSecret = process.env.CRON_SECRET?.trim();
+  const authHeader = req.headers.get("authorization")?.trim();
+  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
