@@ -2,21 +2,29 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { PlayCircle } from "lucide-react";
 
 type ProductGalleryProps = {
   image: string;
   gallery?: string[];
+  video?: string | null;
   name: string;
   aspect?: "square" | "video";
   fit?: "cover" | "contain";
 };
 
-export function ProductGallery({ image, gallery = [], name, aspect = "square", fit = "contain" }: ProductGalleryProps) {
-  const initial = image || gallery[0] || "";
+export function ProductGallery({ image, gallery = [], video, name, aspect = "square", fit = "contain" }: ProductGalleryProps) {
+  const initial = video || image || gallery[0] || "";
   const [current, setCurrent] = useState<string>(initial);
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const thumbs = [image, ...gallery.filter((u) => u && u !== image)];
+  // El video, si hay, va primero — es el medio destacado del producto.
+  const thumbs = [
+    ...(video ? [video] : []),
+    image,
+    ...gallery.filter((u) => u && u !== image),
+  ];
   const all = thumbs;
+  const isVideoUrl = (url: string) => !!video && url === video;
 
   const currentIndex = all.findIndex((u) => u === current);
   const prev = () => {
@@ -37,15 +45,25 @@ export function ProductGallery({ image, gallery = [], name, aspect = "square", f
         onClick={() => setIsOpen(true)}
         className={`group relative ${aspect === "video" ? "aspect-video" : "aspect-square"} w-full overflow-hidden rounded-xl border bg-gradient-to-br from-muted/50 to-muted shadow-sm focus:outline-none focus:ring-2 focus:ring-primary`}
       >
-        {current && (
-          <Image
+        {current && isVideoUrl(current) ? (
+          <video
             src={current}
-            alt={name}
-            fill
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            className={`${fit === "contain" ? "object-contain p-6" : "object-cover"} transition-transform duration-300 group-hover:scale-105`}
-            unoptimized
+            className="absolute inset-0 h-full w-full object-contain p-6"
+            controls
+            playsInline
+            onClick={(e) => e.stopPropagation()}
           />
+        ) : (
+          current && (
+            <Image
+              src={current}
+              alt={name}
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className={`${fit === "contain" ? "object-contain p-6" : "object-cover"} transition-transform duration-300 group-hover:scale-105`}
+              unoptimized
+            />
+          )
         )}
       </button>
 
@@ -58,14 +76,23 @@ export function ProductGallery({ image, gallery = [], name, aspect = "square", f
               onClick={() => setCurrent(url)}
               className={`relative aspect-square w-full overflow-hidden rounded-md border bg-gradient-to-br from-muted/50 to-muted focus:outline-none focus:ring-2 focus:ring-primary ${current === url ? "ring-2 ring-primary" : ""}`}
             >
-              <Image
-                src={url}
-                alt={`${name} ${idx + 1}`}
-                fill
-                sizes="(max-width: 768px) 33vw, 25vw"
-                className="object-contain p-2"
-                unoptimized
-              />
+              {isVideoUrl(url) ? (
+                <>
+                  <video src={url} muted className="absolute inset-0 h-full w-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <PlayCircle className="h-6 w-6 text-white drop-shadow" />
+                  </div>
+                </>
+              ) : (
+                <Image
+                  src={url}
+                  alt={`${name} ${idx + 1}`}
+                  fill
+                  sizes="(max-width: 768px) 33vw, 25vw"
+                  className="object-contain p-2"
+                  unoptimized
+                />
+              )}
             </button>
           ))}
         </div>
@@ -117,14 +144,18 @@ export function ProductGallery({ image, gallery = [], name, aspect = "square", f
               </>
             )}
             <div className="relative w-full h-full overflow-hidden rounded-lg">
-              <Image
-                src={current}
-                alt={name}
-                fill
-                sizes="100vw"
-                className="object-contain"
-                unoptimized
-              />
+              {isVideoUrl(current) ? (
+                <video src={current} className="h-full w-full object-contain" controls autoPlay playsInline />
+              ) : (
+                <Image
+                  src={current}
+                  alt={name}
+                  fill
+                  sizes="100vw"
+                  className="object-contain"
+                  unoptimized
+                />
+              )}
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { cloudinary } from "@/lib/cloudinary";
-import { getPublicIdFromUrl } from "@/lib/cloudinary";
+import { getPublicIdFromUrl, deleteVideo } from "@/lib/cloudinary";
 import { getSectionAccess } from "@/app/actions/role-permissions";
 
 const productSchema = z.object({
@@ -112,6 +112,10 @@ export async function createUpdateProduct(formData: FormData) {
       // Las imágenes ya se subieron a Cloudinary desde el cliente (vía
       // /api/upload) antes de llamar a esta acción; aquí solo llegan URLs.
       let imageUrl = formData.get("imageUrl") as string | null;
+      // El video se sube directo del navegador a Cloudinary (ver
+      // /api/upload/sign) por su tamaño; aquí también llega solo la URL.
+      // String vacío = el admin quitó el video que ya tenía.
+      const videoUrl = formData.get("videoUrl") as string | null;
 
       const galleryForm = formData.get("gallery") as string | null;
       if (galleryForm) {
@@ -127,7 +131,7 @@ export async function createUpdateProduct(formData: FormData) {
         // ACTUALIZAR
         const existing = await tx.product.findUnique({
           where: { id },
-          select: { image: true, gallery: true },
+          select: { image: true, gallery: true, video: true },
         });
 
         // Eliminar imagen antigua si hay una nueva
@@ -139,6 +143,18 @@ export async function createUpdateProduct(formData: FormData) {
             }
           } catch (error) {
             console.error("Error deleting old image:", error);
+          }
+        }
+
+        // Eliminar video antiguo si se reemplazó o se quitó
+        if (existing?.video && existing.video !== videoUrl) {
+          try {
+            const publicId = getPublicIdFromUrl(existing.video);
+            if (publicId) {
+              await deleteVideo(publicId);
+            }
+          } catch (error) {
+            console.error("Error deleting old video:", error);
           }
         }
 
@@ -166,6 +182,10 @@ export async function createUpdateProduct(formData: FormData) {
         // Usar la galería que viene del formulario (ya tiene las eliminaciones aplicadas)
         const finalGallery = [...new Set(galleryUrls)];
 
+        // videoUrl === null -> el campo ni llegó (mantener el que había);
+        // videoUrl === "" -> el admin lo quitó explícitamente.
+        const finalVideo = videoUrl !== null ? videoUrl || null : existing?.video ?? null;
+
         dbProduct = await tx.product.update({
           where: { id },
           data: {
@@ -177,6 +197,7 @@ export async function createUpdateProduct(formData: FormData) {
             description: product.description,
             image: mainImage,
             gallery: finalGallery,
+            video: finalVideo,
             features: featuresArray,
             material: rest.material || null,
             dimensions: rest.dimensions || null,
@@ -205,6 +226,7 @@ export async function createUpdateProduct(formData: FormData) {
             description: product.description,
             image: mainImage,
             gallery: galleryUrls.length ? [...new Set(galleryUrls)] : [],
+            video: videoUrl || null,
             features: featuresArray,
             material: rest.material || null,
             dimensions: rest.dimensions || null,
@@ -249,7 +271,7 @@ export async function deleteProduct(id: string) {
   // Obtener el producto para eliminar su imagen
   const product = await prisma.product.findUnique({
     where: { id },
-    select: { image: true, gallery: true },
+    select: { image: true, gallery: true, video: true },
   });
 
   if (product?.image) {
@@ -273,6 +295,16 @@ export async function deleteProduct(id: string) {
       } catch (error) {
         console.error("Error deleting gallery image:", error);
       }
+    }
+  }
+  if (product?.video) {
+    try {
+      const publicId = getPublicIdFromUrl(product.video);
+      if (publicId) {
+        await deleteVideo(publicId);
+      }
+    } catch (error) {
+      console.error("Error deleting product video:", error);
     }
   }
 

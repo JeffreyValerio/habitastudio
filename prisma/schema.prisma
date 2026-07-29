@@ -308,6 +308,7 @@ model Product {
   price        Float
   image        String
   gallery      String[] @default([])
+  video        String? // Video destacado (Cloudinary), se muestra primero en la ficha de producto
   description  String   @db.Text
   features     String[] @default([])
   material     String?

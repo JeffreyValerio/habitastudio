@@ -96,6 +96,20 @@ export async function deleteImage(publicId: string): Promise<void> {
 }
 
 /**
+ * Elimina un video de Cloudinary usando su public_id. A diferencia de las
+ * imágenes, hay que indicar resource_type: "video" explícitamente, si no
+ * Cloudinary lo busca entre las imágenes y no encuentra nada que borrar.
+ */
+export async function deleteVideo(publicId: string): Promise<void> {
+  try {
+    await cloudinary.uploader.destroy(publicId, { resource_type: "video" });
+  } catch (error) {
+    console.error("Error deleting video from Cloudinary:", error);
+    throw new Error("Failed to delete video");
+  }
+}
+
+/**
  * Extrae el public_id de una URL de Cloudinary
  * Formato: https://res.cloudinary.com/{cloud_name}/image/upload/{folder}/{public_id}.{format}
  */

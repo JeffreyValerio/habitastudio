@@ -55,6 +55,7 @@ interface ProductFormProps {
     cabysCode?: string | null;
     unidadMedida?: string;
     gallery?: string[];
+    video?: string | null;
   };
 }
 
@@ -75,6 +76,11 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
   const [previews, setPreviews] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
+  const [video, setVideo] = useState<string | null>(product?.video || null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [videoRemoved, setVideoRemoved] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
 
   const handleFilesChange = (filesList: FileList | File[] | null) => {
     const files = filesList ? Array.from(filesList) : [];
@@ -101,6 +107,30 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
   const removePreviewAt = (idx: number) => {
     setPreviews((prev) => prev.filter((_, i) => i !== idx));
     setNewFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
+
+  const handleVideoChange = (file: File | null) => {
+    if (!file) return;
+    if (file.size > MAX_VIDEO_SIZE) {
+      toast({
+        title: "Video muy grande",
+        description: "El video no puede pesar más de 100MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
+    setVideoRemoved(false);
+  };
+
+  const removeVideo = () => {
+    setVideo(null);
+    setVideoFile(null);
+    setVideoPreview(null);
+    setVideoRemoved(true);
   };
 
   const formatCurrency = (amount: number): string => amount.toString();
@@ -166,6 +196,40 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
     return json.url as string;
   };
 
+  // El video se sube directo del navegador a Cloudinary (no vía /api/upload):
+  // un video real puede pasar fácil los ~4.5MB que soporta una función
+  // serverless de Vercel, así que nuestro servidor solo firma la subida,
+  // nunca recibe los bytes del archivo.
+  const uploadVideoToCloudinary = async (file: File, folder: string): Promise<string> => {
+    const signRes = await fetch("/api/upload/sign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder }),
+    });
+    if (!signRes.ok) {
+      throw new Error("No se pudo preparar la subida del video");
+    }
+    const { signature, timestamp, apiKey, cloudName } = await signRes.json();
+
+    const body = new FormData();
+    body.append("file", file);
+    body.append("api_key", apiKey);
+    body.append("timestamp", String(timestamp));
+    body.append("signature", signature);
+    body.append("folder", folder);
+
+    const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
+      method: "POST",
+      body,
+    });
+    if (!uploadRes.ok) {
+      const errJson = await uploadRes.json().catch(() => null);
+      throw new Error(errJson?.error?.message || `No se pudo subir el video "${file.name}"`);
+    }
+    const json = await uploadRes.json();
+    return json.secure_url as string;
+  };
+
   const onSubmit = async (data: ProductFormData, event?: React.BaseSyntheticEvent) => {
     setIsSubmitting(true);
     try {
@@ -180,6 +244,19 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
       let uploadedImageUrl: string | null = null;
       if (mainImageFile) {
         uploadedImageUrl = await uploadToCloudinary(mainImageFile, "habita-studio/products");
+      }
+
+      // undefined = no tocar el video existente; string (incl. "") = fijarlo
+      let finalVideoUrl: string | undefined;
+      if (videoFile) {
+        setUploadingVideo(true);
+        try {
+          finalVideoUrl = await uploadVideoToCloudinary(videoFile, "habita-studio/products/video");
+        } finally {
+          setUploadingVideo(false);
+        }
+      } else if (videoRemoved) {
+        finalVideoUrl = "";
       }
 
       const uploadedGalleryUrls: string[] = [];
@@ -225,6 +302,9 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
         formData.append("imageUrl", uploadedImageUrl || product!.image);
       }
       formData.append("gallery", JSON.stringify(finalGallery));
+      if (finalVideoUrl !== undefined) {
+        formData.append("videoUrl", finalVideoUrl);
+      }
 
       const result = await createUpdateProduct(formData);
 
@@ -400,6 +480,35 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
         {/* Tab: Imágenes */}
         {activeTab === "images" && (
           <div className="space-y-6">
+            <div className="space-y-2 rounded-lg border p-4">
+              <Label htmlFor="video">Video destacado</Label>
+              <p className="text-xs text-muted-foreground">
+                Si hay un video, se muestra primero en la ficha pública del producto, antes que las fotos.
+              </p>
+              {(videoPreview || video) && (
+                <video
+                  key={videoPreview || video}
+                  src={videoPreview || video || undefined}
+                  controls
+                  className="w-full aspect-video rounded-lg border bg-black"
+                />
+              )}
+              <Input
+                id="video"
+                type="file"
+                accept="video/*"
+                onChange={(e) => handleVideoChange(e.target.files?.[0] || null)}
+              />
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">Tamaño máximo: 100MB</p>
+                {(video || videoFile) && (
+                  <Button type="button" variant="outline" size="sm" onClick={removeVideo}>
+                    Quitar video
+                  </Button>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="image">Imagen Principal *</Label>
               {displayImage && (
@@ -543,7 +652,7 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
         <div className="border-t pt-4 flex gap-4">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {product ? "Actualizar Producto" : "Crear Producto"}
+            {uploadingVideo ? "Subiendo video..." : product ? "Actualizar Producto" : "Crear Producto"}
           </Button>
           <Button type="button" variant="outline" onClick={() => router.push("/admin/products")}>
             Cancelar
