@@ -15,7 +15,26 @@ export async function GET(req: NextRequest) {
   const expectedSecret = process.env.CRON_SECRET?.trim();
   const authHeader = req.headers.get("authorization")?.trim();
   if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // DEBUG TEMPORAL: solo longitudes/prefijos, nunca el secreto completo —
+    // se quita en cuanto encontremos la causa del mismatch.
+    return NextResponse.json(
+      {
+        error: "Unauthorized",
+        debug: {
+          hasEnvVar: typeof process.env.CRON_SECRET === "string",
+          envVarLength: process.env.CRON_SECRET?.length ?? 0,
+          envVarRawLength: process.env.CRON_SECRET ? process.env.CRON_SECRET.length : 0,
+          expectedTrimmedLength: expectedSecret.length,
+          expectedPrefix: expectedSecret.slice(0, 6),
+          expectedSuffix: expectedSecret.slice(-6),
+          hasAuthHeader: !!authHeader,
+          authHeaderLength: authHeader?.length ?? 0,
+          authHeaderPrefix: authHeader?.slice(0, 13) ?? null,
+          authHeaderSuffix: authHeader?.slice(-6) ?? null,
+        },
+      },
+      { status: 401 }
+    );
   }
 
   const overdue = await prisma.workOrder.findMany({
