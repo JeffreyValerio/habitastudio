@@ -64,8 +64,8 @@ export function TimeManagementDashboard({ role }: { role: string }) {
 
   const quincenaLabel = {
     all: "Mes completo",
-    "1": "1ra Quincena (1-15)",
-    "2": "2da Quincena (16-fin)",
+    "1": "1ra Quincena (1-15, incluye 30/31 del mes anterior)",
+    "2": "2da Quincena (16-29)",
   }[quincena];
 
   return (

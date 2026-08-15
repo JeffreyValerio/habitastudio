@@ -77,19 +77,30 @@ export async function getCollaboratorsForTimeEntry() {
   });
 }
 
+// Quincenas de longitud fija: 1-15 y 16-29. Los días 30 y 31, cuando el mes
+// los tiene, no forman parte de la 2da quincena — se suman a la 1ra
+// quincena del mes SIGUIENTE (así el pago de la 2da quincena se puede
+// calcular sin esperar a que termine el mes).
 function getPeriodRange(year: number, month: number, quincena?: 1 | 2) {
   const lastDay = new Date(year, month, 0).getDate();
 
   if (quincena === 1) {
+    // Si el mes anterior tuvo día 30 (y/o 31), esos días arrancan esta
+    // quincena en vez del día 1.
+    const prevMonthLastDay = new Date(year, month - 1, 0).getDate();
+    const start =
+      prevMonthLastDay >= 30
+        ? new Date(year, month - 2, 30, 0, 0, 0)
+        : new Date(year, month - 1, 1, 0, 0, 0);
     return {
-      start: new Date(year, month - 1, 1, 0, 0, 0),
+      start,
       end: new Date(year, month - 1, 15, 23, 59, 59, 999),
     };
   }
   if (quincena === 2) {
     return {
       start: new Date(year, month - 1, 16, 0, 0, 0),
-      end: new Date(year, month - 1, lastDay, 23, 59, 59, 999),
+      end: new Date(year, month - 1, Math.min(29, lastDay), 23, 59, 59, 999),
     };
   }
   return {
