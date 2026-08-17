@@ -94,12 +94,12 @@ function getPeriodRange(year: number, month: number, quincena?: 1 | 2) {
         : new Date(year, month - 1, 1, 0, 0, 0);
     return {
       start,
-      end: new Date(year, month - 1, 15, 23, 59, 59, 999),
+      end: new Date(year, month - 1, 14, 23, 59, 59, 999),
     };
   }
   if (quincena === 2) {
     return {
-      start: new Date(year, month - 1, 16, 0, 0, 0),
+      start: new Date(year, month - 1, 15, 0, 0, 0),
       end: new Date(year, month - 1, Math.min(29, lastDay), 23, 59, 59, 999),
     };
   }

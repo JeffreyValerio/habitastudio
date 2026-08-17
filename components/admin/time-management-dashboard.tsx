@@ -64,8 +64,8 @@ export function TimeManagementDashboard({ role }: { role: string }) {
 
   const quincenaLabel = {
     all: "Mes completo",
-    "1": "1ra Quincena (1-15, incluye 30/31 del mes anterior)",
-    "2": "2da Quincena (16-29)",
+    "1": "1ra Quincena (1-14, incluye 30/31 del mes anterior)",
+    "2": "2da Quincena (15-29)",
   }[quincena];
 
   return (
@@ -131,8 +131,8 @@ export function TimeManagementDashboard({ role }: { role: string }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Mes completo</SelectItem>
-                  <SelectItem value="1">1ra Quincena (1-15)</SelectItem>
-                  <SelectItem value="2">2da Quincena (16-fin)</SelectItem>
+                  <SelectItem value="1">1ra Quincena (1-14) + 30/31</SelectItem>
+                  <SelectItem value="2">2da Quincena (15-fin)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
