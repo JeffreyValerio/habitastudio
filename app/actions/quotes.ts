@@ -465,11 +465,15 @@ export async function sendQuote(id: string) {
       };
     }
 
-    // Actualizar estado de la cotización
+    // Actualizar estado de la cotización — solo si sigue en "draft". Si ya
+    // se había aceptado (o rechazado) y se reenvía una copia, no hay que
+    // pisar ese estado de vuelta a "sent" (ya pasó con Denia: se aceptó, se
+    // creó la orden de trabajo, y al reenviar el correo el estado se
+    // revirtió a "sent" aunque la OT real ya existía).
     await prisma.quote.update({
       where: { id },
       data: {
-        status: "sent",
+        status: quote.status === "draft" ? "sent" : quote.status,
         sentAt: new Date(),
       },
     });

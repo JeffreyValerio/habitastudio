@@ -132,7 +132,8 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
     setSending(id);
     try {
       const result = await sendQuote(id);
-      await updateQuoteStatus(id, "sent");
+      // sendQuote ya actualiza el estado internamente (a "sent" solo si
+      // seguía en "draft" — no pisa "accepted"/"rejected" al reenviar).
 
       if (result.ok) {
         toast({ title: "Éxito", description: result.message });
