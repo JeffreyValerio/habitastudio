@@ -214,6 +214,21 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
     generateQuotePDF(quote);
   };
 
+  // Aceptar crea la orden de trabajo y convierte al cliente automáticamente
+  // — no es un cambio de estado cualquiera, así que pide confirmación antes
+  // (un clic accidental aquí ya generó una OT y un cliente de más).
+  const handleAccept = (quote: Quote) => {
+    toast({
+      title: "¿Aceptar esta cotización?",
+      description: `Se creará la orden de trabajo de ${quote.quoteNumber} y se convertirá a ${quote.clientName} en cliente. Esto no se puede deshacer con un clic.`,
+      action: (
+        <ToastAction altText="Confirmar aceptación" onClick={() => handleStatusChange(quote.id, "accepted")}>
+          Aceptar
+        </ToastAction>
+      ),
+    });
+  };
+
   const renderActionsMenu = (quote: Quote) => (
     <div className="flex justify-end">
       <DropdownMenu>
@@ -236,7 +251,7 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
           {quote.status !== "accepted" && (
             <DropdownMenuItem
               className="text-green-600 focus:text-green-600 focus:bg-green-50 dark:focus:bg-green-950"
-              onClick={() => handleStatusChange(quote.id, "accepted")}
+              onClick={() => handleAccept(quote)}
               disabled={updatingStatus === quote.id}
             >
               <Check className="h-4 w-4" />
