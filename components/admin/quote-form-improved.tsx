@@ -425,17 +425,33 @@ export function QuoteFormImproved({
 
               <div className="space-y-2">
                 <Label htmlFor="status">Estado</Label>
-                <select
-                  id="status"
-                  {...register("status")}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="draft">Borrador</option>
-                  <option value="sent">Enviada</option>
-                  <option value="accepted">Aceptada</option>
-                  <option value="rejected">Rechazada</option>
-                  <option value="expired">Expirada</option>
-                </select>
+                {quote?.status === "accepted" || quote?.status === "rejected" ? (
+                  <>
+                    <select
+                      id="status"
+                      {...register("status")}
+                      disabled
+                      className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground"
+                    >
+                      <option value="accepted">Aceptada</option>
+                      <option value="rejected">Rechazada</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Este estado no se cambia desde aquí — usa el botón "Aceptar"/"Rechazar" en la lista de
+                      cotizaciones, así se crea (o no) la orden de trabajo correctamente.
+                    </p>
+                  </>
+                ) : (
+                  <select
+                    id="status"
+                    {...register("status")}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="draft">Borrador</option>
+                    <option value="sent">Enviada</option>
+                    <option value="expired">Expirada</option>
+                  </select>
+                )}
               </div>
             </div>
 
