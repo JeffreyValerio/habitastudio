@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RestrictedAccess } from "@/components/admin/restricted-access";
-import { formatCRC } from "@/lib/utils";
+import { formatCRC, getCurrentPeriodRange } from "@/lib/utils";
 import { Clock, DollarSign, Calendar, Plus } from "lucide-react";
 import { notFound } from "next/navigation";
 import { CollaboratorTimeEntries } from "@/components/admin/collaborator-time-entries";
@@ -54,19 +54,30 @@ export default async function CollaboratorDetailPage({
     return ratesByPeriod[key] ?? collaborator.hourlyRate ?? 0;
   };
 
-  // Calcular horas totales y salario estimado usando la tarifa vigente de cada mes.
+  // Horas y salario de la quincena EN CURSO — antes sumaba todo el historial
+  // desde que existe la cuenta, lo cual no corresponde a ningún período de
+  // pago real. El resto del historial se sigue mostrando completo abajo.
+  const currentPeriod = getCurrentPeriodRange();
+
   // Solo cuentan las horas de "asistencia" (purpose = salary); las horas registradas
   // contra una orden de trabajo rebajan presupuesto pero no forman parte del salario.
   let totalHours = 0;
   let estimatedSalary = 0;
   timeEntries.forEach((entry) => {
-    if (entry.exitTime && entry.purpose === "salary") {
+    const entryDate = new Date(entry.entryDate);
+    const inCurrentPeriod = entryDate >= currentPeriod.start && entryDate <= currentPeriod.end;
+    if (entry.exitTime && entry.purpose === "salary" && inCurrentPeriod) {
       const diffMs = new Date(entry.exitTime).getTime() - new Date(entry.entryTime).getTime();
       const hours = diffMs / (1000 * 60 * 60);
       totalHours += hours;
       estimatedSalary += hours * getRateForEntry(entry.entryDate);
     }
   });
+
+  const periodLabel =
+    currentPeriod.quincena === 1
+      ? `1ra quincena de ${currentPeriod.month}/${currentPeriod.year} (1-14, incluye 30/31 del mes anterior)`
+      : `2da quincena de ${currentPeriod.month}/${currentPeriod.year} (15-29)`;
 
   const entryRates: Record<string, number> = {};
   timeEntries.forEach((entry) => {
@@ -117,7 +128,7 @@ export default async function CollaboratorDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{totalHours.toFixed(1)}h</p>
-            <p className="text-xs text-muted-foreground mt-1">Cuentan para salario</p>
+            <p className="text-xs text-muted-foreground mt-1">{periodLabel}</p>
           </CardContent>
         </Card>
 
@@ -130,6 +141,7 @@ export default async function CollaboratorDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{formatCRC(estimatedSalary)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{periodLabel}</p>
           </CardContent>
         </Card>
       </div>
