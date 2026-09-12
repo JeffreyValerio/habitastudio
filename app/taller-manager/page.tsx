@@ -17,9 +17,14 @@ export default async function TallerManagerDashboard() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
+  // Solo cuentan las horas de asistencia (purpose = "salary"). Las horas que
+  // el jefe de taller registra contra una orden de trabajo (purpose =
+  // "budget") rebajan el presupuesto de esa OT, no forman parte de su
+  // salario — sin este filtro se sumaban ambas y el salario quedaba inflado.
   const todayEntries = await prisma.timeEntry.findMany({
     where: {
       userId: user.id,
+      purpose: "salary",
       entryDate: { gte: today, lt: tomorrow },
       exitTime: { not: null },
     },
@@ -40,6 +45,7 @@ export default async function TallerManagerDashboard() {
   const monthEntries = await prisma.timeEntry.findMany({
     where: {
       userId: user.id,
+      purpose: "salary",
       entryDate: { gte: monthStart, lte: monthEnd },
       exitTime: { not: null },
     },
