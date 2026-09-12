@@ -202,7 +202,7 @@ export function ManualTimeEntryForm({
           </div>
 
           <p className="text-xs text-muted-foreground -mt-2">
-            {requireWorkOrder
+            {workOrderId
               ? "Estas horas rebajan el presupuesto de la orden de trabajo. No cuentan para el salario del colaborador."
               : "Estas horas son de asistencia y cuentan para el salario del colaborador. No afectan el presupuesto de ninguna orden de trabajo."}
           </p>

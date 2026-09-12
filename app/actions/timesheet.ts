@@ -252,11 +252,13 @@ export async function createManualTimeEntry(input: {
     return { ok: false as const, message: "No autorizado para registrar horas manualmente" };
   }
 
-  // El jefe de taller siempre registra horas de producción contra una orden de
-  // trabajo (rebajan presupuesto, no cuentan para salario). Admin/moderador
-  // registran horas de asistencia para nómina, sin necesidad de una orden.
+  // Lo que determina el propósito es si la entrada está enganchada a una
+  // orden de trabajo, no quién la registra: una entrada con OT rebaja
+  // presupuesto (no cuenta para salario), tenga o no un admin de por medio.
+  // El jefe de taller siempre debe enganchar una OT (ver validación abajo),
+  // así que sus entradas siempre quedan como "budget" de todas formas.
   const isTallerManager = user.role === "taller-manager";
-  const purpose = isTallerManager ? "budget" : "salary";
+  const purpose = input.workOrderId ? "budget" : "salary";
 
   if (isTallerManager) {
     if (!input.workOrderId) {
@@ -371,6 +373,10 @@ export async function updateManualTimeEntry(
       entryTime: entryDateTime,
       exitTime: exitDateTime,
       description: input.description || null,
+      // Recalcular: si se agrega o se quita la orden de trabajo al editar,
+      // el propósito debe seguirla (antes quedaba con el valor de la
+      // creación aunque cambiara la OT).
+      purpose: input.workOrderId ? "budget" : "salary",
     },
   });
 

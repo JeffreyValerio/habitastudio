@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatCRC } from "@/lib/utils";
+import { formatCRC, getCurrentPeriodRange } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -132,9 +132,10 @@ export function CollaboratorTimeEntries({ entries, entryRates, workOrders, canEd
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {entries.map((entry) => {
+  const salaryEntries = entries.filter((e) => e.purpose === "salary");
+  const budgetEntries = entries.filter((e) => e.purpose !== "salary");
+
+  const renderEntry = (entry: TimeEntry) => {
         let hours = 0;
         if (entry.exitTime) {
           const diffMs = new Date(entry.exitTime).getTime() - new Date(entry.entryTime).getTime();
@@ -224,15 +225,6 @@ export function CollaboratorTimeEntries({ entries, entryRates, workOrders, canEd
                     {entry.workType && ` · ${WORK_ORDER_TYPE_LABELS[entry.workType] || entry.workType}`}
                   </span>
                 )}
-                {entry.purpose === "salary" ? (
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                    Cuenta para salario
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                    Solo presupuesto (OT)
-                  </span>
-                )}
               </p>
               <p className="text-sm text-muted-foreground">
                 {new Date(entry.entryTime).toLocaleTimeString("es-CR", {
@@ -290,7 +282,69 @@ export function CollaboratorTimeEntries({ entries, entryRates, workOrders, canEd
             </div>
           </div>
         );
-      })}
+  };
+
+  // Subtotal de SOLO la quincena en curso (misma lógica que las tarjetas de
+  // arriba) — sumar todo el historial ahí confundía, porque no coincidía con
+  // "Salario Estimado". La lista de abajo sigue mostrando el historial
+  // completo, sin filtrar.
+  const currentPeriod = getCurrentPeriodRange();
+  const inCurrentPeriod = (e: TimeEntry) => {
+    const d = new Date(e.entryDate);
+    return d >= currentPeriod.start && d <= currentPeriod.end;
+  };
+  const periodSuffix = currentPeriod.quincena === 1 ? "1-14" : "15-29";
+  const periodLabel = `quincena actual, ${periodSuffix}`;
+
+  const columnTotals = (list: TimeEntry[]) =>
+    list.filter(inCurrentPeriod).reduce(
+      (acc, e) => {
+        if (!e.exitTime) return acc;
+        const h = (new Date(e.exitTime).getTime() - new Date(e.entryTime).getTime()) / (1000 * 60 * 60);
+        acc.hours += h;
+        acc.amount += h * (entryRates[e.id] || 0);
+        return acc;
+      },
+      { hours: 0, amount: 0 }
+    );
+
+  const salaryTotals = columnTotals(salaryEntries);
+  const budgetTotals = columnTotals(budgetEntries);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h3 className="font-semibold">Horas de Salario</h3>
+          <p className="text-sm text-muted-foreground">
+            {salaryTotals.hours.toFixed(1)}h · {formatCRC(salaryTotals.amount)}{" "}
+            <span className="text-xs">({periodLabel})</span>
+          </p>
+        </div>
+        {salaryEntries.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center border rounded-lg">
+            Sin horas de asistencia registradas
+          </p>
+        ) : (
+          <div className="space-y-3">{salaryEntries.map(renderEntry)}</div>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h3 className="font-semibold">Horas de Trabajo (OT)</h3>
+          <p className="text-sm text-muted-foreground">
+            {budgetTotals.hours.toFixed(1)}h <span className="text-xs">({periodLabel})</span>
+          </p>
+        </div>
+        {budgetEntries.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center border rounded-lg">
+            Sin horas registradas contra órdenes de trabajo
+          </p>
+        ) : (
+          <div className="space-y-3">{budgetEntries.map(renderEntry)}</div>
+        )}
+      </div>
     </div>
   );
 }

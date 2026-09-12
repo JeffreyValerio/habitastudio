@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getCollaboratorsWithEarnings } from "@/app/actions/timesheet";
-import { formatCRC } from "@/lib/utils";
+import { formatCRC, getCurrentPeriodRange } from "@/lib/utils";
 import { Users, Plus, Clock, DollarSign, Filter } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -34,9 +34,12 @@ interface CollaboratorEarnings {
 export function TimeManagementDashboard({ role }: { role: string }) {
   const canRegisterHours = role === "admin" || role === "moderator";
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [quincena, setQuincena] = useState<"all" | "1" | "2">("all");
+  // Por defecto, la quincena en curso — no "mes completo", que no
+  // corresponde a ningún pago real (se paga quincenal).
+  const currentPeriod = getCurrentPeriodRange();
+  const [year, setYear] = useState(currentPeriod.year);
+  const [month, setMonth] = useState(currentPeriod.month);
+  const [quincena, setQuincena] = useState<"all" | "1" | "2">(String(currentPeriod.quincena) as "1" | "2");
   const [data, setData] = useState<CollaboratorEarnings[]>([]);
   const [loading, setLoading] = useState(true);
 
