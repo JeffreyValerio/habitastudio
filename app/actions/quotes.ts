@@ -624,6 +624,62 @@ export async function updateQuoteStatus(id: string, status: string) {
   }
 }
 
+// Reversa una cotización aceptada a borrador y elimina su OT. Solo si la OT
+// sigue intacta (pendiente, sin horas ni gastos) y no hay recibos ni documentos
+// electrónicos; de lo contrario se perdería trabajo ya registrado.
+export async function revertQuoteToDraft(id: string) {
+  const { allowed } = await getSectionAccess("admin.quotes");
+  if (!allowed) {
+    return { ok: false, message: "Unauthorized" };
+  }
+
+  try {
+    const quote = await prisma.quote.findUnique({
+      where: { id },
+      include: {
+        workOrder: { include: { _count: { select: { timeEntries: true, expenses: true } } } },
+        _count: { select: { receipts: true, electronicDocuments: true } },
+      },
+    });
+
+    if (!quote) return { ok: false, message: "Cotización no encontrada" };
+    if (quote.status !== "accepted") {
+      return { ok: false, message: "Solo se puede reversar una cotización aceptada" };
+    }
+    if (quote._count.receipts > 0 || quote._count.electronicDocuments > 0) {
+      return { ok: false, message: "No se puede reversar: tiene recibos o documentos electrónicos" };
+    }
+    const wo = quote.workOrder;
+    if (wo && (wo.status !== "pending" || wo._count.timeEntries > 0 || wo._count.expenses > 0)) {
+      return {
+        ok: false,
+        message: `No se puede reversar: la ${wo.workOrderNumber} ya tiene avance, horas o gastos`,
+      };
+    }
+
+    await prisma.$transaction([
+      prisma.workOrder.deleteMany({ where: { quoteId: id } }),
+      prisma.quote.update({ where: { id }, data: { status: "draft" } }),
+    ]);
+
+    if (quote.customerId) {
+      await syncCustomerTotalSpent(quote.customerId);
+    }
+
+    revalidatePath("/admin/quotes");
+    revalidatePath(`/admin/quotes/${id}`);
+    revalidatePath("/admin/crm");
+    revalidatePath("/admin/work-orders");
+
+    return { ok: true, message: "Cotización reversada a borrador" };
+  } catch (error) {
+    return {
+      ok: false,
+      message: "Error al reversar la cotización: " + (error as Error).message,
+    };
+  }
+}
+
 export async function getQuotesRevenueTrend(months: number = 12) {
   const user = await getCurrentUser();
   if (!user) {

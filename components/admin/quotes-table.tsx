@@ -7,10 +7,10 @@ import { formatCRC, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { deleteQuote, updateQuoteStatus, sendQuote } from "@/app/actions/quotes";
+import { deleteQuote, updateQuoteStatus, sendQuote, revertQuoteToDraft } from "@/app/actions/quotes";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { Trash2, Send, Check, X, Eye, Download, MoreVertical } from "lucide-react";
+import { Trash2, Send, Check, X, Eye, Download, MoreVertical, Undo2 } from "lucide-react";
 import { generateQuotePDF } from "@/lib/generate-pdf";
 import { Pagination } from "@/components/ui/pagination";
 import { MobileListItem, InitialsAvatar } from "@/components/admin/mobile-list-item";
@@ -229,6 +229,31 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
     });
   };
 
+  const handleRevert = (quote: Quote) => {
+    toast({
+      title: "¿Reversar a borrador?",
+      description: `Se eliminará la orden de trabajo de ${quote.quoteNumber}. Solo es posible si la OT no tiene avance, horas ni gastos.`,
+      action: (
+        <ToastAction
+          altText="Confirmar reverso"
+          onClick={async () => {
+            setUpdatingStatus(quote.id);
+            const res = await revertQuoteToDraft(quote.id);
+            setUpdatingStatus(null);
+            if (res.ok) {
+              toast({ title: "Éxito", description: res.message });
+              window.location.reload();
+            } else {
+              toast({ title: "Error", description: res.message, variant: "destructive" });
+            }
+          }}
+        >
+          Reversar
+        </ToastAction>
+      ),
+    });
+  };
+
   const renderActionsMenu = (quote: Quote) => (
     <div className="flex justify-end">
       <DropdownMenu>
@@ -256,6 +281,17 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
             >
               <Check className="h-4 w-4" />
               Aceptar
+            </DropdownMenuItem>
+          )}
+
+          {quote.status === "accepted" && (
+            <DropdownMenuItem
+              className="text-amber-600 focus:text-amber-600 focus:bg-amber-50 dark:focus:bg-amber-950"
+              onClick={() => handleRevert(quote)}
+              disabled={updatingStatus === quote.id}
+            >
+              <Undo2 className="h-4 w-4" />
+              Reversar a borrador
             </DropdownMenuItem>
           )}
 
