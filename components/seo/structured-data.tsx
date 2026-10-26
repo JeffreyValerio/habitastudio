@@ -1,5 +1,7 @@
+import { SITE_URL } from '@/lib/site-url'
+
 export function StructuredData() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://habitastudio.online'
+  const baseUrl = SITE_URL
 
   const organizationSchema = {
     "@context": "https://schema.org",
@@ -7,7 +9,7 @@ export function StructuredData() {
     "name": "Habita Studio",
     "description": "Habita Studio ofrece muebles de calidad y servicios de remodelación profesional. Transformamos espacios con diseño elegante y funcional.",
     "url": baseUrl,
-    "logo": `${baseUrl}/logo.png`,
+    "logo": `${baseUrl}/brand/logo-vertical-color.png`,
     "contactPoint": {
       "@type": "ContactPoint",
       "telephone": "+506 6364 4915",

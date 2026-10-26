@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 export const metadata: Metadata = {
   title: "Términos y Condiciones",
   description: "Términos y condiciones de uso de Habita Studio. Condiciones de servicio, uso del sitio web y contratación de servicios.",
+  alternates: { canonical: "/terminos-condiciones" },
 };
 
 export default function TermsPage() {

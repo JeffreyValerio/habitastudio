@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 export const metadata: Metadata = {
   title: "Política de Cookies",
   description: "Información sobre el uso de cookies en el sitio web de Habita Studio. Tipos de cookies, su propósito y cómo gestionarlas.",
+  alternates: { canonical: "/cookies" },
 };
 
 export default function CookiesPage() {
