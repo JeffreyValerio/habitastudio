@@ -20,6 +20,15 @@ const nextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
   },
+  // Redirecciones 308 reales para los slugs viejos de productos
+  async redirects() {
+    const map = require('./lib/product-slug-redirects.json')
+    return Object.entries(map).map(([from, to]) => ({
+      source: `/catalogo/${from}`,
+      destination: `/catalogo/${to}`,
+      permanent: true,
+    }))
+  },
   // Aumentar límite de tamaño del body para permitir subir múltiples imágenes
   experimental: {
     serverActions: {
