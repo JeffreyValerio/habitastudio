@@ -1,30 +1,86 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { SiteButton } from "@/components/site/site-button";
+import { cn } from "@/lib/utils";
+import { trackLead } from "@/lib/analytics";
+
+export const SUBJECT_OPTIONS = [
+  "Cotización de mueble a medida",
+  "Closets y organización",
+  "Remodelación",
+  "Diseño de interiores",
+  "Otro",
+] as const;
+
+type SubjectOption = (typeof SUBJECT_OPTIONS)[number];
+
+function phoneDigits(value: string) {
+  let digits = value.replace(/\D/g, "");
+  if (digits.length > 8 && digits.startsWith("506")) digits = digits.slice(3);
+  return digits;
+}
 
 const contactFormSchema = z.object({
-  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  email: z.string().email("Email inválido"),
-  phone: z.string().min(10, "El teléfono debe tener al menos 10 dígitos"),
-  subject: z.string().min(5, "El asunto debe tener al menos 5 caracteres"),
-  message: z.string().min(10, "El mensaje debe tener al menos 10 caracteres"),
+  name: z.string().trim().min(2, "Ingresa tu nombre (mínimo 2 caracteres)."),
+  email: z.string().trim().email("Ingresa un correo válido."),
+  phone: z
+    .string()
+    .refine((v) => phoneDigits(v).length >= 8, "Ingresa un teléfono de al menos 8 dígitos."),
+  subject: z.enum(SUBJECT_OPTIONS, { message: "Selecciona un asunto." }),
+  message: z.string().trim().min(10, "El mensaje debe tener al menos 10 caracteres."),
 });
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 
+const MAX_PARAM = 120;
+
+function cleanParam(value: string | null): string {
+  if (!value) return "";
+  return value.replace(/[\r\n\t]+/g, " ").replace(/[«»<>]/g, "").trim().slice(0, MAX_PARAM);
+}
+
+function normalize(value: string) {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+function mapSubject(asunto: string, producto: string): SubjectOption {
+  const a = normalize(asunto);
+  if (producto || /cotiz|mueble|carpinter|medida/.test(a)) return SUBJECT_OPTIONS[0];
+  if (/closet|vestidor|armario/.test(a)) return SUBJECT_OPTIONS[1];
+  if (/remodel|cocina|bano|piso|pintura|drywall|techo|cielo|iluminacion|led/.test(a))
+    return SUBJECT_OPTIONS[2];
+  if (/diseno|interior/.test(a)) return SUBJECT_OPTIONS[3];
+  return SUBJECT_OPTIONS[4];
+}
+
+const FIELD =
+  "min-h-[48px] w-full rounded-none border border-hs-input bg-white px-3.5 font-sans text-[15px] font-normal text-hs-text placeholder:text-hs-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-hs-accent aria-[invalid=true]:border-red-700";
+const LABEL = "flex flex-col gap-1.5 text-sm font-medium text-hs-text";
+const ERROR = "text-[13px] font-normal text-red-700";
+
 export function ContactForm() {
+  const searchParams = useSearchParams();
+  const asunto = cleanParam(searchParams.get("asunto"));
+  const producto = cleanParam(searchParams.get("producto"));
+  const detail = producto || asunto;
+  const hasParams = Boolean(detail);
+
+  const initialSubject = hasParams ? mapSubject(asunto, producto) : undefined;
+  const initialMessage = !hasParams
+    ? ""
+    : producto
+      ? `Hola, me interesa el modelo «${producto}».`
+      : `Hola, me interesa el servicio «${asunto}».`;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const { toast } = useToast();
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const {
     register,
@@ -33,19 +89,29 @@ export function ContactForm() {
     reset,
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      subject: initialSubject,
+      message: initialMessage,
+    },
   });
 
   const onSubmit = async (data: ContactFormValues) => {
     setIsSubmitting(true);
-    setSubmitSuccess(false);
+    setStatus("idle");
+
+    const payload = {
+      ...data,
+      subject: detail ? `${data.subject} — ${detail}` : data.subject,
+    };
 
     try {
       const response = await fetch("/api/contact", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -54,138 +120,161 @@ export function ContactForm() {
         throw new Error(result.error || "Error al enviar el mensaje");
       }
 
-      setSubmitSuccess(true);
-      reset();
-      toast({
-        title: "Mensaje enviado",
-        description: "Gracias por contactarnos. Nos pondremos en contacto contigo pronto.",
+      // Only non-personal data: subject option and prefilled product/service.
+      trackLead({
+        subject: data.subject,
+        ...(producto ? { product: producto } : asunto ? { service: asunto } : {}),
       });
+      setStatus("success");
+      reset({ name: "", email: "", phone: "", subject: undefined, message: "" });
     } catch (error) {
       console.error("Error submitting form:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Error al enviar el mensaje. Por favor intenta nuevamente.",
-        variant: "destructive",
-      });
+      setErrorMessage(
+        error instanceof Error && error.message
+          ? error.message
+          : "No pudimos enviar tu mensaje. Intenta nuevamente."
+      );
+      setStatus("error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (submitSuccess) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <svg
-                className="h-8 w-8 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h3 className="mb-2 text-xl font-semibold">¡Mensaje Enviado!</h3>
-            <p className="text-muted-foreground">
-              Gracias por contactarnos. Nos pondremos en contacto contigo pronto.
-            </p>
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => setSubmitSuccess(false)}
-            >
-              Enviar Otro Mensaje
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="name">Nombre Completo *</Label>
-        <Input
-          id="name"
-          {...register("name")}
-          placeholder="Tu nombre"
-          aria-invalid={errors.name ? "true" : "false"}
-        />
-        {errors.name && (
-          <p className="text-sm text-destructive">{errors.name.message}</p>
-        )}
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
+      {status === "success" && (
+        <div
+          role="status"
+          className="border border-hs-border bg-hs-successBg px-5 py-4 text-[15px] text-hs-text"
+        >
+          Gracias. Recibimos tu mensaje y te contactaremos en horario de oficina.
+        </div>
+      )}
+      {status === "error" && (
+        <div
+          role="alert"
+          className="border border-red-700 bg-white px-5 py-4 text-[15px] text-red-700"
+        >
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <label htmlFor="name" className={LABEL}>
+          Nombre completo *
+          <input
+            id="name"
+            type="text"
+            autoComplete="name"
+            className={FIELD}
+            aria-invalid={errors.name ? "true" : "false"}
+            aria-describedby={errors.name ? "name-error" : undefined}
+            {...register("name")}
+          />
+          {errors.name && (
+            <span id="name-error" className={ERROR}>
+              {errors.name.message}
+            </span>
+          )}
+        </label>
+
+        <label htmlFor="phone" className={LABEL}>
+          Teléfono *
+          <input
+            id="phone"
+            type="tel"
+            autoComplete="tel"
+            placeholder="+506"
+            className={FIELD}
+            aria-invalid={errors.phone ? "true" : "false"}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
+            {...register("phone")}
+          />
+          {errors.phone && (
+            <span id="phone-error" className={ERROR}>
+              {errors.phone.message}
+            </span>
+          )}
+        </label>
+
+        <label htmlFor="email" className={LABEL}>
+          Correo electrónico *
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            className={FIELD}
+            aria-invalid={errors.email ? "true" : "false"}
+            aria-describedby={errors.email ? "email-error" : undefined}
+            {...register("email")}
+          />
+          {errors.email && (
+            <span id="email-error" className={ERROR}>
+              {errors.email.message}
+            </span>
+          )}
+        </label>
+
+        <label htmlFor="subject" className={LABEL}>
+          Asunto *
+          <select
+            id="subject"
+            defaultValue=""
+            className={cn(FIELD, "pr-8")}
+            aria-invalid={errors.subject ? "true" : "false"}
+            aria-describedby={errors.subject ? "subject-error" : undefined}
+            {...register("subject")}
+          >
+            <option value="" disabled>
+              Selecciona un asunto
+            </option>
+            {SUBJECT_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          {errors.subject && (
+            <span id="subject-error" className={ERROR}>
+              {errors.subject.message}
+            </span>
+          )}
+        </label>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email *</Label>
-        <Input
-          id="email"
-          type="email"
-          {...register("email")}
-          placeholder="tu@email.com"
-          aria-invalid={errors.email ? "true" : "false"}
-        />
-        {errors.email && (
-          <p className="text-sm text-destructive">{errors.email.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="phone">Teléfono *</Label>
-        <Input
-          id="phone"
-          type="tel"
-          {...register("phone")}
-          placeholder="+506 6364 4915"
-          aria-invalid={errors.phone ? "true" : "false"}
-        />
-        {errors.phone && (
-          <p className="text-sm text-destructive">{errors.phone.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="subject">Asunto *</Label>
-        <Input
-          id="subject"
-          {...register("subject")}
-          placeholder="¿En qué podemos ayudarte?"
-          aria-invalid={errors.subject ? "true" : "false"}
-        />
-        {errors.subject && (
-          <p className="text-sm text-destructive">{errors.subject.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="message">Mensaje *</Label>
-        <Textarea
+      <label htmlFor="message" className={LABEL}>
+        Mensaje *
+        <textarea
           id="message"
           rows={6}
-          {...register("message")}
-          placeholder="Cuéntanos sobre tu proyecto..."
+          placeholder="Cuéntanos qué necesitas, medidas aproximadas y ubicación."
+          className={cn(FIELD, "resize-y py-3")}
           aria-invalid={errors.message ? "true" : "false"}
+          aria-describedby={errors.message ? "message-error" : undefined}
+          {...register("message")}
         />
         {errors.message && (
-          <p className="text-sm text-destructive">{errors.message.message}</p>
+          <span id="message-error" className={ERROR}>
+            {errors.message.message}
+          </span>
         )}
-      </div>
+      </label>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Enviando..." : "Enviar Mensaje"}
-      </Button>
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <p className="text-[13px] text-hs-muted">
+          Al enviar aceptas nuestra{" "}
+          <Link
+            href="/politica-privacidad"
+            className="underline underline-offset-2 hover:text-hs-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-accent"
+          >
+            política de privacidad
+          </Link>
+          .
+        </p>
+        <SiteButton type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+          {isSubmitting ? "Enviando…" : "Enviar mensaje"}
+        </SiteButton>
+      </div>
     </form>
   );
 }
-

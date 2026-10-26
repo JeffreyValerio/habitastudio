@@ -2,18 +2,17 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { PlayCircle } from "lucide-react";
 
 type ProductGalleryProps = {
   image: string;
   gallery?: string[];
   video?: string | null;
   name: string;
-  aspect?: "square" | "video";
+  aspect?: "product" | "square" | "video";
   fit?: "cover" | "contain";
 };
 
-export function ProductGallery({ image, gallery = [], video, name, aspect = "square", fit = "contain" }: ProductGalleryProps) {
+export function ProductGallery({ image, gallery = [], video, name, aspect = "product", fit = "cover" }: ProductGalleryProps) {
   const initial = video || image || gallery[0] || "";
   const [current, setCurrent] = useState<string>(initial);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -38,17 +37,23 @@ export function ProductGallery({ image, gallery = [], video, name, aspect = "squ
     setCurrent(all[idx]);
   };
 
+  const FOCUS =
+    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-accent";
+  const aspectClass =
+    aspect === "video" ? "aspect-video" : aspect === "square" ? "aspect-square" : "aspect-[4/3.4]";
+
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-3">
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className={`group relative ${aspect === "video" ? "aspect-video" : "aspect-square"} w-full overflow-hidden rounded-xl border bg-gradient-to-br from-muted/50 to-muted shadow-sm focus:outline-none focus:ring-2 focus:ring-primary`}
+        aria-label="Ampliar imagen"
+        className={`group relative ${aspectClass} w-full overflow-hidden bg-hs-placeholder ${FOCUS}`}
       >
         {current && isVideoUrl(current) ? (
           <video
             src={current}
-            className="absolute inset-0 h-full w-full object-contain p-6"
+            className="absolute inset-0 h-full w-full object-contain"
             controls
             playsInline
             onClick={(e) => e.stopPropagation()}
@@ -59,8 +64,9 @@ export function ProductGallery({ image, gallery = [], video, name, aspect = "squ
               src={current}
               alt={name}
               fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className={`${fit === "contain" ? "object-contain p-6" : "object-cover"} transition-transform duration-300 group-hover:scale-105`}
+              priority
+              sizes="(max-width: 1024px) 100vw, 60vw"
+              className={fit === "contain" ? "object-contain" : "object-cover"}
               unoptimized
             />
           )
@@ -68,33 +74,38 @@ export function ProductGallery({ image, gallery = [], video, name, aspect = "squ
       </button>
 
       {thumbs.length > 1 && (
-        <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-          {thumbs.map((url, idx) => (
-            <button
-              type="button"
-              key={`${url}-${idx}`}
-              onClick={() => setCurrent(url)}
-              className={`relative aspect-square w-full overflow-hidden rounded-md border bg-gradient-to-br from-muted/50 to-muted focus:outline-none focus:ring-2 focus:ring-primary ${current === url ? "ring-2 ring-primary" : ""}`}
-            >
-              {isVideoUrl(url) ? (
-                <>
-                  <video src={url} muted className="absolute inset-0 h-full w-full object-cover" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <PlayCircle className="h-6 w-6 text-white drop-shadow" />
-                  </div>
-                </>
-              ) : (
-                <Image
-                  src={url}
-                  alt={`${name} ${idx + 1}`}
-                  fill
-                  sizes="(max-width: 768px) 33vw, 25vw"
-                  className="object-contain p-2"
-                  unoptimized
-                />
-              )}
-            </button>
-          ))}
+        <div className="grid grid-cols-4 gap-3">
+          {thumbs.map((url, idx) => {
+            const active = current === url;
+            return (
+              <button
+                type="button"
+                key={`${url}-${idx}`}
+                onClick={() => setCurrent(url)}
+                aria-label={`Ver imagen ${idx + 1}`}
+                aria-pressed={active}
+                className={`relative aspect-[4/3] min-h-[44px] w-full overflow-hidden bg-hs-placeholder border-2 ${active ? "border-hs-text" : "border-transparent"} ${FOCUS}`}
+              >
+                {isVideoUrl(url) ? (
+                  <>
+                    <video src={url} muted className="absolute inset-0 h-full w-full object-cover" />
+                    <span className="absolute inset-0 flex items-center justify-center bg-hs-text/30 text-xs font-semibold uppercase tracking-wider text-white">
+                      Video
+                    </span>
+                  </>
+                ) : (
+                  <Image
+                    src={url}
+                    alt=""
+                    fill
+                    sizes="(max-width: 768px) 25vw, 15vw"
+                    className="object-cover"
+                    unoptimized
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -119,7 +130,7 @@ export function ProductGallery({ image, gallery = [], video, name, aspect = "squ
               type="button"
               aria-label="Cerrar"
               onClick={() => setIsOpen(false)}
-              className="absolute top-3 right-3 z-10 rounded-md bg-black/60 px-3 py-2 text-white hover:bg-black/80"
+              className="absolute top-3 right-3 z-10 bg-black/60 px-3 py-2 text-white hover:bg-black/80"
             >
               Cerrar
             </button>
@@ -129,7 +140,7 @@ export function ProductGallery({ image, gallery = [], video, name, aspect = "squ
                   type="button"
                   aria-label="Anterior"
                   onClick={prev}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 z-10 rounded-md bg-black/60 px-3 py-2 text-white hover:bg-black/80"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/60 px-3 py-2 text-white hover:bg-black/80"
                 >
                   ‹
                 </button>
@@ -137,13 +148,13 @@ export function ProductGallery({ image, gallery = [], video, name, aspect = "squ
                   type="button"
                   aria-label="Siguiente"
                   onClick={next}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 rounded-md bg-black/60 px-3 py-2 text-white hover:bg-black/80"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/60 px-3 py-2 text-white hover:bg-black/80"
                 >
                   ›
                 </button>
               </>
             )}
-            <div className="relative w-full h-full overflow-hidden rounded-lg">
+            <div className="relative w-full h-full overflow-hidden">
               {isVideoUrl(current) ? (
                 <video src={current} className="h-full w-full object-contain" controls autoPlay playsInline />
               ) : (

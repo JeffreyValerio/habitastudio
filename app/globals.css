@@ -49,6 +49,38 @@
   }
 }
 
+/* Public site scope (redesign): overrides shadcn tokens only under .site-public.
+   Admin/portals keep the original variables above. */
+@layer base {
+  .site-public {
+    --background: 38 33% 95%;
+    --foreground: 36 9% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 36 9% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 36 9% 11%;
+    --primary: 27 41% 34%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 35 37% 90%;
+    --secondary-foreground: 36 9% 11%;
+    --muted: 38 33% 95%;
+    --muted-foreground: 36 6% 35%;
+    --accent: 35 37% 90%;
+    --accent-foreground: 36 9% 11%;
+    --border: 36 22% 86%;
+    --input: 35 17% 77%;
+    --ring: 27 41% 34%;
+    --radius: 0px;
+    background-color: #F7F4EF;
+    color: #1F1D1A;
+    color-scheme: light;
+  }
+  .site-public *:focus-visible {
+    outline: 2px solid #7A5333;
+    outline-offset: 2px;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

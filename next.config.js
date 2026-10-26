@@ -6,6 +6,7 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
+      // Un producto en la BD aún usa una imagen de Unsplash
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',

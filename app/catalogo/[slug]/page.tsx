@@ -1,16 +1,22 @@
+import { SITE_URL, firstSentence } from "@/lib/site-url";
 import { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { ChevronRight, CheckCircle2, Ruler, Palette, ShieldCheck, Layers } from "lucide-react";
-import { getProductBySlug } from "@/lib/data/products";
+import { notFound, permanentRedirect } from "next/navigation";
+import { PRODUCT_SLUG_REDIRECTS } from "@/lib/product-slug-redirects";
+import { getProductBySlug, getRelatedProducts } from "@/lib/data/products";
 import { ProductGallery } from "@/components/catalog/product-gallery";
-import { Icons } from "@/components/icons";
+import { Container } from "@/components/site/container";
+import { Eyebrow } from "@/components/site/eyebrow";
+import { SiteButtonLink } from "@/components/site/site-button";
+import { SpecList } from "@/components/site/spec-list";
+import { ProcessSteps } from "@/components/site/process-steps";
+import { ProductCard } from "@/components/site/product-card";
+import { categoryHref, categoryLabel, normalizeCategory } from "@/lib/catalog-categories";
+import { SITE_CONFIG } from "@/lib/site-config";
+import { TrackProductView } from "@/components/site/track-view";
 
-const WHATSAPP_NUMBER = "50663644915";
+const CRUMB =
+  "underline underline-offset-2 hover:text-hs-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-accent";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -21,15 +27,20 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const product = await getProductBySlug(slug);
 
   if (!product) {
+    const newSlug = PRODUCT_SLUG_REDIRECTS[slug];
+    if (newSlug) permanentRedirect("/catalogo/" + newSlug);
     return { title: "Producto no encontrado" };
   }
 
+  const description = firstSentence(product.description) || undefined;
   return {
     title: product.name,
-    description: product.description,
+    description,
+    alternates: { canonical: `/catalogo/${product.slug}` },
     openGraph: {
       title: product.name,
-      description: product.description,
+      description,
+      url: `/catalogo/${product.slug}`,
       images: [
         {
           url: product.image,
@@ -40,7 +51,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     twitter: {
       card: "summary_large_image",
       title: product.name,
-      description: product.description,
+      description,
       images: [product.image],
     },
   };
@@ -51,128 +62,165 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const product = await getProductBySlug(slug);
 
   if (!product) {
+    const newSlug = PRODUCT_SLUG_REDIRECTS[slug];
+    if (newSlug) permanentRedirect("/catalogo/" + newSlug);
     notFound();
   }
+
+  const related = await getRelatedProducts(product.slug, product.category, 3);
 
   // Se incluye el link (no solo el texto) para que WhatsApp genere la vista
   // previa con la imagen del producto, usando el Open Graph ya definido en
   // generateMetadata de esta misma página.
-  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/catalogo/${product.slug}`;
+  const productUrl = `${SITE_URL}/catalogo/${product.slug}`;
   const whatsappMessage = `Hola, me interesa cotizar este producto:\n\n*${product.name}*\nCategoría: ${product.category}\nPrecio: ${product.price}\n\n${productUrl}\n\n¿Podrían darme más información?`;
-  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`;
+  const whatsappUrl = `https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
+  const quoteUrl = `/contacto?asunto=${encodeURIComponent("Cotización")}&producto=${encodeURIComponent(product.name)}`;
 
+  const categoryValue = normalizeCategory(product.category);
+  const catLabel = categoryLabel(product.category);
+  const hasPrice =
+    !!product.price && product.price.trim() !== "" && !/^\D*0+\D*$/.test(product.price);
   const specs = product.specifications;
-  const specItems = [
-    { key: "material", label: "Material", value: specs?.material, icon: Layers },
-    { key: "dimensions", label: "Dimensiones", value: specs?.dimensions, icon: Ruler },
-    { key: "color", label: "Colores", value: specs?.color, icon: Palette },
-    { key: "warranty", label: "Garantía", value: specs?.warranty, icon: ShieldCheck },
-  ].filter((s) => s.value);
 
   return (
-    <div className="py-8 md:py-12 pb-28 md:pb-12">
-      <div className="container mx-auto px-4">
-        {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground overflow-x-auto whitespace-nowrap">
-          <Link href="/catalogo" className="hover:text-primary transition-colors">
+    <div className="pb-24 md:pb-0">
+      <TrackProductView
+        slug={product.slug}
+        name={product.name}
+        category={categoryLabel(normalizeCategory(product.category))}
+      />
+      <Container className="pt-6 md:pt-12">
+        <nav aria-label="Migas de pan" className="text-[13px] text-hs-muted">
+          <Link href="/" className={CRUMB}>
+            Inicio
+          </Link>{" "}
+          /{" "}
+          <Link href="/catalogo" className={CRUMB}>
             Catálogo
-          </Link>
-          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-          <Link
-            href={`/catalogo?categoria=${encodeURIComponent(product.category)}`}
-            className="hover:text-primary transition-colors"
-          >
-            {product.category}
-          </Link>
-          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-foreground font-medium truncate">{product.name}</span>
+          </Link>{" "}
+          /{" "}
+          <Link href={categoryHref(categoryValue)} className={CRUMB}>
+            {catLabel}
+          </Link>{" "}
+          / <span aria-current="page">{product.name}</span>
         </nav>
 
-        <div className="grid grid-cols-1 gap-8 lg:gap-12 lg:grid-cols-2">
-          <ProductGallery image={product.image} gallery={product.gallery} video={product.video} name={product.name} />
+        <div className="mt-6 flex flex-wrap gap-8 md:mt-8 md:gap-14">
+          <div className="min-w-0 flex-[1.3_1_520px]">
+            <ProductGallery
+              image={product.image}
+              gallery={product.gallery}
+              video={product.video}
+              name={product.name}
+            />
+          </div>
 
-          <div className="space-y-6">
-            <div>
-              <Badge variant="secondary" className="mb-3">
-                {product.category}
-              </Badge>
-              <h1 className="text-3xl md:text-4xl font-bold text-balance">{product.name}</h1>
-              <div className="mt-4 text-3xl font-bold text-primary">{product.price}</div>
+          <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <Eyebrow>{catLabel}</Eyebrow>
+              <h1 className="font-display text-[38px] font-medium leading-[1.05] text-hs-text md:text-[52px]">
+                {product.name}
+              </h1>
+              {hasPrice && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[28px] font-semibold text-hs-accent">
+                    Desde {product.price}
+                  </span>
+                  <span className="text-sm text-hs-muted">
+                    Precios de referencia. Confirma el precio final en tu cotización.
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Desktop CTA */}
-            <div className="hidden md:flex gap-3">
-              <Button
-                size="lg"
-                className="flex-1 gap-2 bg-[#25D366] hover:bg-[#1fb855] text-white"
-                asChild
-              >
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                  <Icons.whatsapp className="h-5 w-5" />
-                  Cotizar por WhatsApp
-                </a>
-              </Button>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h2 className="mb-3 text-xl font-semibold">Descripción</h2>
-              <p className="text-muted-foreground leading-relaxed">{product.description}</p>
-            </div>
+            {product.description && (
+              <p className="whitespace-pre-line text-base leading-[1.6] text-hs-text2">
+                {product.description}
+              </p>
+            )}
 
             {product.features.length > 0 && (
-              <div>
-                <h2 className="mb-3 text-xl font-semibold">Características</h2>
-                <ul className="space-y-2">
-                  {product.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                      <span className="text-muted-foreground">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ul className="flex flex-col gap-2">
+                {product.features.map((feature, i) => (
+                  <li key={i} className="flex items-start gap-3 text-[15px] text-hs-text2">
+                    <span aria-hidden="true" className="mt-[9px] h-1.5 w-1.5 shrink-0 bg-hs-accent" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
             )}
 
-            {specItems.length > 0 && (
-              <div>
-                <h2 className="mb-3 text-xl font-semibold">Especificaciones</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {specItems.map(({ key, label, value, icon: Icon }) => (
-                    <div
-                      key={key}
-                      className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3"
-                    >
-                      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">{label}</p>
-                        <p className="text-sm font-medium">{value}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <SpecList
+              rows={[
+                { label: "Medidas", value: specs?.dimensions },
+                { label: "Material", value: specs?.material },
+                { label: "Acabados", value: specs?.color },
+                { label: "Garantía", value: specs?.warranty },
+              ]}
+            />
+
+            <div className="flex flex-wrap gap-3">
+              <SiteButtonLink
+                href={quoteUrl}
+                data-track-quote
+                data-track-location="product_page"
+                data-track-product={product.name}
+                className="max-sm:w-full"
+              >
+                Solicitar cotización de este modelo
+              </SiteButtonLink>
+              <SiteButtonLink
+                href={whatsappUrl}
+                data-track-location="product_page"
+                data-track-product={product.name}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="secondary"
+                className="max-sm:w-full"
+              >
+                Consultar por WhatsApp
+              </SiteButtonLink>
+            </div>
+
+            <p className="text-sm text-hs-muted">
+              ¿Necesitas otras medidas? Ajustamos el diseño a tu espacio sin costo de cotización.
+            </p>
           </div>
         </div>
-      </div>
+      </Container>
 
-      {/* Mobile sticky CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur p-4 md:hidden">
-        <Button
-          size="lg"
-          className="w-full gap-2 bg-[#25D366] hover:bg-[#1fb855] text-white"
-          asChild
-        >
-          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-            <Icons.whatsapp className="h-5 w-5" />
-            Cotizar por WhatsApp
-          </a>
-        </Button>
-      </div>
+      <Container className="mt-14 md:mt-[88px]">
+        <div className="border-t border-hs-rule pt-10 md:pt-14">
+          <h2 className="mb-6 font-display text-[28px] font-medium leading-[1.15] text-hs-text md:text-[32px]">
+            Cómo trabajamos
+          </h2>
+          <ProcessSteps compact />
+        </div>
+      </Container>
+
+      {related.length > 0 && (
+        <Container as="section" className="mt-14 pb-14 md:mt-[88px] md:pb-[104px]">
+          <h2 className="mb-8 font-display text-[28px] font-medium leading-[1.15] text-hs-text md:text-[40px]">
+            También te puede interesar
+          </h2>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 md:gap-x-6">
+            {related.map((p) => (
+              <ProductCard
+                key={p.id}
+                slug={p.slug}
+                name={p.name}
+                category={categoryLabel(p.category)}
+                image={p.image}
+                dimensions={p.specifications?.dimensions}
+                material={p.specifications?.material}
+                price={p.price}
+                sizes="(max-width: 768px) 50vw, 33vw"
+              />
+            ))}
+          </div>
+        </Container>
+      )}
     </div>
   );
 }
-
-

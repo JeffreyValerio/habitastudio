@@ -1,12 +1,16 @@
+import { firstSentence } from "@/lib/site-url";
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, MapPin, Calendar, Clock, CheckCircle2 } from "lucide-react";
 import { getProjectBySlug, getAllProjectSlugs } from "@/lib/data/projects";
 import { ProductGallery } from "@/components/catalog/product-gallery";
+import { Container } from "@/components/site/container";
+import { Eyebrow } from "@/components/site/eyebrow";
+import { SpecList } from "@/components/site/spec-list";
+import { CTABand } from "@/components/site/cta-band";
+
+const CRUMB =
+  "underline underline-offset-2 hover:text-hs-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-accent";
 
 interface ProjectPageProps {
   params: Promise<{ slug: string }>;
@@ -24,8 +28,10 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
 
   return {
     title: project.title,
-    description: project.description,
+    description: firstSentence(project.description) || undefined,
+    alternates: { canonical: `/proyectos/${project.slug ?? slug}` },
     openGraph: {
+      url: `/proyectos/${project.slug ?? slug}`,
       title: project.title,
       description: project.description,
       images: [
@@ -51,6 +57,22 @@ export async function generateStaticParams() {
   }));
 }
 
+function BulletList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
+      <h2 className="font-display text-[28px] font-medium leading-[1.1] md:text-[34px]">{title}</h2>
+      <ul className="flex flex-col gap-2 border-t border-hs-rule pt-4">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-3 text-[15px] text-hs-text2">
+            <span aria-hidden="true" className="mt-[9px] h-1.5 w-1.5 shrink-0 bg-hs-accent" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { slug } = await params;
   const project = await getProjectBySlug(slug);
@@ -59,35 +81,25 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     notFound();
   }
 
+  const challenges = (project.challenges ?? []).filter((c) => c.trim() !== "");
+  const solutions = (project.solutions ?? []).filter((s) => s.trim() !== "");
+
   return (
-    <div className="py-12">
-      <div className="container mx-auto px-4">
-        <Button variant="ghost" asChild className="mb-6">
-          <Link href="/proyectos">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver a Proyectos
-          </Link>
-        </Button>
+    <>
+      <Container className="pt-6 md:pt-12">
+        <nav aria-label="Migas de pan" className="text-[13px] text-hs-muted">
+          <Link href="/" className={CRUMB}>
+            Inicio
+          </Link>{" "}
+          /{" "}
+          <Link href="/proyectos" className={CRUMB}>
+            Proyectos
+          </Link>{" "}
+          / <span aria-current="page">{project.title}</span>
+        </nav>
 
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-8">
-            <div className="mb-4 flex flex-wrap items-center gap-4">
-              <span className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-                {project.category}
-              </span>
-              <span className="rounded-full bg-muted px-4 py-2 text-sm font-medium">
-                {project.year}
-              </span>
-            </div>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              {project.title}
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground">
-              {project.description}
-            </p>
-          </div>
-
-          <div className="mb-8">
+        <div className="mt-6 flex flex-wrap gap-8 md:mt-8 md:gap-14">
+          <div className="min-w-0 flex-[1.3_1_520px]">
             <ProductGallery
               image={project.image}
               gallery={project.gallery || []}
@@ -97,113 +109,56 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <div className="mb-8">
-                <h2 className="mb-4 text-2xl font-semibold">Sobre el Proyecto</h2>
-                <p className="text-lg leading-relaxed text-muted-foreground">
-                  {project.longDescription}
-                </p>
-              </div>
-
-              {project.challenges && project.solutions && (
-                <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Desafíos</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {project.challenges.map((challenge, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <span className="mt-1 h-2 w-2 rounded-full bg-primary" />
-                            <span className="text-sm text-muted-foreground">{challenge}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Soluciones</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {project.solutions.map((solution, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary flex-shrink-0" />
-                            <span className="text-sm text-muted-foreground">{solution}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {/* La galería adicional se maneja dentro del componente ProductGallery (miniaturas y lightbox) */}
+          <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <Eyebrow>{project.category}</Eyebrow>
+              <h1 className="font-display text-[38px] font-medium leading-[1.05] text-hs-text md:text-[52px]">
+                {project.title}
+              </h1>
             </div>
-
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Información del Proyecto</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {project.location && (
-                    <div className="flex items-start gap-3">
-                      <MapPin className="mt-0.5 h-5 w-5 text-primary" />
-                      <div>
-                        <div className="text-sm font-medium">Ubicación</div>
-                        <div className="text-sm text-muted-foreground">{project.location}</div>
-                      </div>
-                    </div>
-                  )}
-                  {project.duration && (
-                    <div className="flex items-start gap-3">
-                      <Clock className="mt-0.5 h-5 w-5 text-primary" />
-                      <div>
-                        <div className="text-sm font-medium">Duración</div>
-                        <div className="text-sm text-muted-foreground">{project.duration}</div>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex items-start gap-3">
-                    <Calendar className="mt-0.5 h-5 w-5 text-primary" />
-                    <div>
-                      <div className="text-sm font-medium">Año</div>
-                      <div className="text-sm text-muted-foreground">{project.year}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 h-5 w-5 rounded-full bg-primary/20" />
-                    <div>
-                      <div className="text-sm font-medium">Categoría</div>
-                      <div className="text-sm text-muted-foreground">{project.category}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>¿Te gusta este proyecto?</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="mb-4 text-sm text-muted-foreground">
-                    Contáctanos para discutir cómo podemos crear algo similar para ti.
-                  </p>
-                  <Button asChild className="w-full">
-                    <Link href="/contacto">Solicitar Consulta</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+            {project.description && (
+              <p className="whitespace-pre-line text-base leading-[1.6] text-hs-text2">
+                {project.description}
+              </p>
+            )}
+            <SpecList
+              rows={[
+                { label: "Sector", value: project.category },
+                { label: "Ubicación", value: project.location },
+                { label: "Duración", value: project.duration },
+                { label: "Año", value: project.year },
+              ]}
+            />
           </div>
         </div>
+      </Container>
+
+      {project.longDescription && project.longDescription.trim() !== "" && (
+        <Container as="section" className="pt-14 md:pt-[88px]">
+          <div className="flex max-w-[760px] flex-col gap-4">
+            <h2 className="font-display text-[32px] font-medium leading-[1.1] md:text-[42px]">
+              Sobre el proyecto
+            </h2>
+            <p className="whitespace-pre-line text-base leading-[1.7] text-hs-text2 md:text-[17px]">
+              {project.longDescription}
+            </p>
+          </div>
+        </Container>
+      )}
+
+      {(challenges.length > 0 || solutions.length > 0) && (
+        <Container as="section" className="flex flex-wrap gap-8 pt-14 md:gap-14 md:pt-[88px]">
+          {challenges.length > 0 && <BulletList title="Desafíos" items={challenges} />}
+          {solutions.length > 0 && <BulletList title="Soluciones" items={solutions} />}
+        </Container>
+      )}
+
+      <div className="mt-14 md:mt-[104px]">
+        <CTABand
+          title="¿Te gusta este proyecto?"
+          text="Contáctanos para conversar cómo podemos crear algo similar para ti."
+        />
       </div>
-    </div>
+    </>
   );
 }
-
