@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 export const metadata: Metadata = {
   title: "Política de Privacidad",
   description: "Política de privacidad de Habita Studio. Información sobre cómo recopilamos, usamos y protegemos tus datos personales.",
+  alternates: { canonical: "/politica-privacidad" },
 };
 
 export default function PrivacyPolicyPage() {

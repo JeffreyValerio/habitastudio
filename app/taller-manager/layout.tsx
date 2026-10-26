@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getRolePermissionsMap } from "@/app/actions/role-permissions";
 import { TallerManagerMobileNav } from "@/components/taller-manager/taller-manager-mobile-nav";
 import TallerManagerLayoutClient from "@/components/taller-manager/taller-manager-layout-client";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function TallerManagerLayout({
   children,

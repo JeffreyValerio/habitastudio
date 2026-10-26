@@ -42,11 +42,20 @@ export async function login(email: string, password: string) {
     maxAge: 60 * 60 * 24 * 7, // 7 days
   });
 
+  // Non-httpOnly flag, ONLY so client analytics can skip staff. Never used for auth.
+  (await cookies()).set("hs_staff", "1", {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+
   return { user: { id: user.id, email: user.email, name: user.name, role: user.role } };
 }
 
 export async function logout() {
   (await cookies()).delete("session");
+  (await cookies()).delete("hs_staff");
 }
 
 export async function getSession() {

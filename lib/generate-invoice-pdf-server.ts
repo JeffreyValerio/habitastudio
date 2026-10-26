@@ -1,8 +1,5 @@
 import { jsPDF } from 'jspdf';
-import sizeOf from 'image-size';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
-import sharp from 'sharp';
+import { drawPdfLogo, loadPdfLogo } from './pdf-logo-server';
 
 interface InvoiceItem {
   descripcion: string;
@@ -57,84 +54,6 @@ function formatCurrency(amount: number): string {
   return `CRC ${formatted}`;
 }
 
-// Carga el logo desde el filesystem (build de servidor) y, si no está
-// disponible localmente, cae a la URL pública — igual que generate-pdf-server.ts.
-async function loadLogoBase64(): Promise<string | null> {
-  const logoCandidates = [
-    { name: 'logo.png', type: 'png' as const },
-    { name: 'logo-png.png', type: 'png' as const },
-    { name: 'logo-pdf.png', type: 'png' as const },
-    { name: 'logo-pdf.svg', type: 'svg' as const },
-    { name: 'logo.svg', type: 'svg' as const },
-  ];
-
-  for (const logo of logoCandidates) {
-    try {
-      const logoPath = join(process.cwd(), 'public', 'images', logo.name);
-      const fileBuffer = await readFile(logoPath);
-
-      if (logo.type === 'svg') {
-        const pngBuffer = await sharp(fileBuffer, { density: 300 })
-          .resize({ width: 1200, height: 560, fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
-          .flatten({ background: { r: 255, g: 255, b: 255 } })
-          .png({ quality: 100, compressionLevel: 6 })
-          .toBuffer();
-        return `data:image/png;base64,${pngBuffer.toString('base64')}`;
-      }
-      return `data:image/png;base64,${fileBuffer.toString('base64')}`;
-    } catch {
-      // probar la siguiente ruta local
-    }
-
-    try {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-        'https://habitastudio.online';
-      const response = await fetch(`${baseUrl}/images/${logo.name}`);
-      if (!response.ok) continue;
-
-      if (logo.type === 'svg') {
-        const svgText = await response.text();
-        const pngBuffer = await sharp(Buffer.from(svgText, 'utf-8'), { density: 300 })
-          .resize({ width: 1200, height: 560, fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
-          .flatten({ background: { r: 255, g: 255, b: 255 } })
-          .png({ quality: 100, compressionLevel: 6 })
-          .toBuffer();
-        return `data:image/png;base64,${pngBuffer.toString('base64')}`;
-      }
-      const buffer = Buffer.from(await response.arrayBuffer());
-      return `data:image/png;base64,${buffer.toString('base64')}`;
-    } catch {
-      // probar la siguiente ruta
-    }
-  }
-  return null;
-}
-
-function drawLogo(doc: jsPDF, logoBase64: string | null, x: number, y: number, width: number): number {
-  let height = 25;
-
-  if (logoBase64) {
-    try {
-      const base64Data = logoBase64.includes(',') ? logoBase64.split(',')[1] : logoBase64;
-      const imageBuffer = Buffer.from(base64Data, 'base64');
-      const dimensions = sizeOf(imageBuffer);
-      if (dimensions.width && dimensions.height) {
-        height = width / (dimensions.width / dimensions.height);
-      }
-      doc.addImage(base64Data, 'PNG', x, y, width, height);
-      return height;
-    } catch {
-      // cae al rectángulo de reemplazo
-    }
-  }
-
-  doc.setFillColor(242, 242, 242);
-  doc.rect(x, y, width, height, 'F');
-  return height;
-}
-
 /**
  * Versión servidor (Buffer) de la factura electrónica formal — para
  * adjuntarla en el email al cliente. Misma disposición que la versión
@@ -148,8 +67,8 @@ export async function generateInvoicePDFBuffer(invoice: Invoice): Promise<Buffer
   const contentWidth = pageWidth - margin * 2;
   let yPosition = margin;
 
-  const logoBase64 = await loadLogoBase64();
-  const logoHeight = drawLogo(doc, logoBase64, margin, yPosition, 60);
+  const logo = await loadPdfLogo();
+  const logoHeight = drawPdfLogo(doc, logo, { x: margin, y: yPosition });
   yPosition += logoHeight + 10;
 
   doc.setFontSize(16);
@@ -302,9 +221,9 @@ export async function generateSimpleInvoicePDFBuffer(invoice: SimpleInvoice): Pr
   const contentWidth = pageWidth - margin * 2;
   let yPosition = margin;
 
-  const logoBase64 = await loadLogoBase64();
+  const logo = await loadPdfLogo();
   const logoY = yPosition;
-  const logoHeight = drawLogo(doc, logoBase64, margin, logoY, 60);
+  const logoHeight = drawPdfLogo(doc, logo, { x: margin, y: logoY });
 
   let companyY = logoY + logoHeight + 8;
   doc.setFontSize(10);

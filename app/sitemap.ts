@@ -1,10 +1,11 @@
 import { MetadataRoute } from 'next'
+import { SITE_URL } from '@/lib/site-url'
 import { getProducts } from '@/lib/data/products'
 import { getAllServiceSlugs } from '@/lib/data/services'
 import { getAllProjectSlugs } from '@/lib/data/projects'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://habitastudio.online'
+  const baseUrl = SITE_URL
 
   const staticRoutes = [
     '',
@@ -12,7 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/catalogo',
     '/proyectos',
     '/servicios',
-    '/blog',
+    // '/blog', // Blog oculto hasta tener artículos reales
     '/contacto',
     '/politica-privacidad',
     '/terminos-condiciones',

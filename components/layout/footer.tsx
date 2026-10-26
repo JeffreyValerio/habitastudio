@@ -1,153 +1,117 @@
 import Link from "next/link";
-import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react";
+import { Container } from "@/components/site/container";
+import { categoryHref, type CatalogCategory } from "@/lib/catalog-categories";
 
-const footerLinks = {
-  empresa: [
-    { name: "Sobre Nosotros", href: "/sobre-nosotros" },
-    { name: "Servicios", href: "/servicios" },
-    { name: "Proyectos", href: "/proyectos" },
-    { name: "Blog", href: "/blog" },
-  ],
-  productos: [
-    { name: "Catálogo", href: "/catalogo" },
-    { name: "Salas", href: "/catalogo?categoria=salas" },
-    { name: "Comedores", href: "/catalogo?categoria=comedores" },
-    { name: "Dormitorios", href: "/catalogo?categoria=dormitorios" },
-  ],
-  legal: [
-    { name: "Política de Privacidad", href: "/politica-privacidad" },
-    { name: "Términos y Condiciones", href: "/terminos-condiciones" },
-    { name: "Cookies", href: "/cookies" },
-  ],
-};
+const empresa = [
+  { name: "Sobre nosotros", href: "/sobre-nosotros" },
+  { name: "Servicios", href: "/servicios" },
+  { name: "Proyectos", href: "/proyectos" },
+  // Blog oculto hasta tener artículos reales: { name: "Blog", href: "/blog" },
+];
+const legal = [
+  { name: "Política de privacidad", href: "/politica-privacidad" },
+  { name: "Términos y condiciones", href: "/terminos-condiciones" },
+  { name: "Cookies", href: "/cookies" },
+];
+const social = [
+  { name: "Instagram", href: "https://instagram.com/habitastudio" },
+  { name: "Facebook", href: "https://facebook.com/habitastudio" },
+  { name: "LinkedIn", href: "https://linkedin.com/company/habitastudio" },
+];
 
-export function Footer() {
-  const currentYear = new Date().getFullYear();
+const link =
+  "text-hs-onDarkText hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-onDark";
+const colTitle =
+  "text-xs font-semibold uppercase tracking-[0.14em] text-hs-footerMuted";
 
+export function Footer({ categories = [] }: { categories?: CatalogCategory[] }) {
+  const productos = [
+    ...categories.map((c) => ({ name: c.label, href: categoryHref(c.value) })),
+    { name: "Ver catálogo", href: "/catalogo" },
+  ];
+  // Extra bottom padding on mobile so the fixed action bar never covers content.
   return (
-    <footer className="border-t bg-muted/50">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <h3 className="mb-4 text-lg font-semibold">Habita Studio</h3>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Transformamos espacios con muebles de calidad y remodelaciones profesionales.
-              Diseño elegante y funcional para tu hogar o negocio.
+    <footer className="bg-hs-text text-sm leading-relaxed text-hs-onDarkText">
+      <Container className="flex flex-col gap-10 pb-28 pt-12 md:gap-14 md:pb-10 md:pt-[72px]">
+        <div className="grid grid-cols-2 gap-10 lg:grid-cols-5">
+          <div className="col-span-2 flex min-w-0 flex-col gap-4">
+            <Link href="/" className="block w-fit focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-onDark">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/logo-horizontal-oscuro.svg"
+                alt="Habita Studio"
+                width={467}
+                height={137}
+                className="h-12 w-auto md:h-14"
+              />
+            </Link>
+            <p className="max-w-[380px] text-hs-footerMuted">
+              Transformamos espacios con muebles de calidad y remodelaciones
+              profesionales. Diseño elegante y funcional para tu hogar o negocio.
             </p>
-            <div className="flex space-x-4">
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Facebook"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Instagram"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="h-5 w-5" />
-              </a>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="mb-4 text-lg font-semibold">Empresa</h3>
-            <ul className="space-y-2">
-              {footerLinks.empresa.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground"
+            <ul className="flex flex-wrap gap-x-5">
+              {social.map((s) => (
+                <li key={s.name}>
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${link} inline-flex min-h-[44px] items-center`}
                   >
-                    {link.name}
-                  </Link>
+                    {s.name}
+                  </a>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div>
-            <h3 className="mb-4 text-lg font-semibold">Productos</h3>
-            <ul className="space-y-2">
-              {footerLinks.productos.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <nav aria-label="Empresa" className="flex flex-col gap-1">
+            <span className={`${colTitle} pb-2`}>Empresa</span>
+            {empresa.map((l) => (
+              <Link key={l.href} href={l.href} className={`${link} inline-flex min-h-[32px] items-center`}>
+                {l.name}
+              </Link>
+            ))}
+          </nav>
 
-          <div>
-            <h3 className="mb-4 text-lg font-semibold">Contacto</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start space-x-2">
-                <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Dirección de la empresa
-                </span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <a
-                  href="tel:+50663644915"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  +506 6364 4915
-                </a>
-              </li>
-              <li className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <a
-                  href="mailto:info@habitastudio.online"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  info@habitastudio.online
-                </a>
-              </li>
-            </ul>
+          <nav aria-label="Productos" className="flex flex-col gap-1">
+            <span className={`${colTitle} pb-2`}>Productos</span>
+            {productos.map((l) => (
+              <Link key={l.name} href={l.href} className={`${link} inline-flex min-h-[32px] items-center`}>
+                {l.name}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="col-span-2 flex flex-col gap-1 lg:col-span-1">
+            <span className={`${colTitle} pb-2`}>Contacto</span>
+            <a href="tel:+50663644915" data-track-location="footer" className={`${link} inline-flex min-h-[32px] items-center`}>
+              +506 6364 4915
+            </a>
+            <a href="mailto:info@habitastudio.online" data-track-location="footer" className={`${link} inline-flex min-h-[32px] items-center`}>
+              info@habitastudio.online
+            </a>
+            <span>San José, Costa Rica</span>
+            <span className="text-hs-footerMuted">Lun a vie, 8:00 a. m. a 5:00 p. m.</span>
           </div>
         </div>
 
-        <div className="mt-8 border-t pt-8">
-          <div className="flex flex-col items-center justify-between space-y-4 md:flex-row">
-            <p className="text-sm text-muted-foreground">
-              © {currentYear} Habita Studio. Todos los derechos reservados.
-            </p>
-            <div className="flex space-x-6">
-              {footerLinks.legal.map((link) => (
+        <div className="flex flex-wrap justify-between gap-x-6 gap-y-3 border-t border-hs-darkRule pt-6 text-[13px] text-hs-footerMuted">
+          <span>© 2026 Habita Studio. Todos los derechos reservados.</span>
+          <ul className="flex flex-wrap gap-x-5">
+            {legal.map((l) => (
+              <li key={l.href}>
                 <Link
-                  key={link.name}
-                  href={link.href}
-                  className="text-sm text-muted-foreground hover:text-foreground"
+                  href={l.href}
+                  className="inline-flex min-h-[32px] items-center text-hs-footerMuted hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-onDark"
                 >
-                  {link.name}
+                  {l.name}
                 </Link>
-              ))}
-            </div>
-          </div>
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
+      </Container>
     </footer>
   );
 }
-

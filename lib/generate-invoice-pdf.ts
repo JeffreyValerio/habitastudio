@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { drawPdfLogo, loadPdfLogo } from './pdf-logo';
 
 interface InvoiceItem {
   descripcion: string;
@@ -53,84 +54,6 @@ function formatCurrency(amount: number): string {
   return `CRC ${formatted}`;
 }
 
-// Carga el logo desde /images (PNG o SVG) y lo devuelve como base64 listo
-// para jsPDF. Compartido por ambas variantes de PDF de factura.
-async function loadLogoBase64(): Promise<string | null> {
-  const logoPaths = ['/images/logo.png', '/images/logo-png.png', '/images/logo-pdf.png', '/images/logo-pdf.svg', '/images/logo.svg'];
-
-  for (const logoPath of logoPaths) {
-    try {
-      const response = await fetch(logoPath);
-      if (!response.ok) continue;
-      const blob = await response.blob();
-
-      if (logoPath.endsWith('.svg')) {
-        const svgText = await response.text();
-        const img = new Image();
-        const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svgBlob);
-        return await new Promise<string>((resolve, reject) => {
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width || 600;
-            canvas.height = img.height || 280;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              reject(new Error('No se pudo obtener contexto del canvas'));
-              return;
-            }
-            ctx.drawImage(img, 0, 0);
-            const base64 = canvas.toDataURL('image/png');
-            URL.revokeObjectURL(url);
-            resolve(base64);
-          };
-          img.onerror = () => {
-            URL.revokeObjectURL(url);
-            reject(new Error('Error cargando SVG'));
-          };
-          img.src = url;
-        });
-      }
-
-      const reader = new FileReader();
-      return await new Promise<string>((resolve, reject) => {
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch {
-      // probar la siguiente ruta
-    }
-  }
-  return null;
-}
-
-async function drawLogo(doc: jsPDF, x: number, y: number, width: number): Promise<number> {
-  let height = 25;
-  const logoBase64 = await loadLogoBase64();
-
-  if (logoBase64) {
-    try {
-      const img = new Image();
-      img.src = logoBase64;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-      const aspectRatio = img.width / img.height;
-      height = width / aspectRatio;
-      doc.addImage(logoBase64, 'PNG', x, y, width, height);
-      return height;
-    } catch {
-      // cae al rectángulo de reemplazo
-    }
-  }
-
-  doc.setFillColor(242, 242, 242);
-  doc.rect(x, y, width, height, 'F');
-  return height;
-}
-
 /**
  * Factura electrónica formal: incluye clave, consecutivo, estado ante
  * Hacienda y código CABYS por línea — para cuando el comprobante ya se
@@ -146,8 +69,7 @@ export async function generateInvoicePDF(invoice: Invoice) {
 
   let yPosition = margin;
 
-  const logoWidth = 60;
-  const logoHeight = await drawLogo(doc, margin, yPosition, logoWidth);
+  const logoHeight = drawPdfLogo(doc, await loadPdfLogo(), { x: margin, y: yPosition });
   yPosition += logoHeight + 10;
 
   // === TÍTULO ===
@@ -316,9 +238,8 @@ export async function generateSimpleInvoicePDF(invoice: SimpleInvoice) {
   let yPosition = margin;
 
   // === LOGO ===
-  const logoWidth = 60;
   const logoY = yPosition;
-  const logoHeight = await drawLogo(doc, margin, logoY, logoWidth);
+  const logoHeight = drawPdfLogo(doc, await loadPdfLogo(), { x: margin, y: logoY });
 
   // === INFORMACIÓN DE LA EMPRESA ===
   let companyY = logoY + logoHeight + 8;

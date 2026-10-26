@@ -118,11 +118,18 @@ export function AcceptInvitationForm() {
         <CardHeader className="space-y-4">
           <div className="flex justify-center mb-4">
             <Image
-              src="/images/logo.svg"
+              src="/brand/logo-horizontal-color.svg"
               alt="Habita Studio"
-              width={120}
+              width={204}
               height={60}
-              className="h-12 w-auto"
+              className="h-14 w-auto dark:hidden"
+            />
+            <Image
+              src="/brand/logo-horizontal-oscuro.svg"
+              alt="Habita Studio"
+              width={204}
+              height={60}
+              className="hidden h-14 w-auto dark:block"
             />
           </div>
           <CardTitle className="text-center">Completar Tu Registro</CardTitle>

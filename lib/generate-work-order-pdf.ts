@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_STAGES } from './work-order-types';
+import { drawPdfLogo, loadPdfLogo } from './pdf-logo';
 
 interface WorkOrderItem {
   description: string;
@@ -81,100 +82,9 @@ export async function generateWorkOrderPDF(workOrder: WorkOrder) {
   let yPosition = margin;
 
   // === LOGO ===
-  let logoBase64: string | null = null;
-  const logoPaths = ['/images/logo.png', '/images/logo-png.png', '/images/logo-pdf.png', '/images/logo-pdf.svg', '/images/logo.svg'];
-
-  for (const logoPath of logoPaths) {
-    try {
-      const response = await fetch(logoPath);
-      if (response.ok) {
-        const blob = await response.blob();
-
-        if (logoPath.endsWith('.svg')) {
-          const svgText = await response.text();
-          const img = new Image();
-          const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
-          const url = URL.createObjectURL(svgBlob);
-
-          logoBase64 = await new Promise<string>((resolve, reject) => {
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width || 600;
-              canvas.height = img.height || 280;
-              const ctx = canvas.getContext('2d');
-              if (!ctx) {
-                reject(new Error('No se pudo obtener contexto del canvas'));
-                return;
-              }
-              ctx.drawImage(img, 0, 0);
-              const base64 = canvas.toDataURL('image/png');
-              URL.revokeObjectURL(url);
-              resolve(base64);
-            };
-            img.onerror = () => {
-              URL.revokeObjectURL(url);
-              reject(new Error('Error cargando SVG'));
-            };
-            img.src = url;
-          });
-        } else {
-          const reader = new FileReader();
-          logoBase64 = await new Promise<string>((resolve, reject) => {
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        }
-        console.log(`Logo cargado desde: ${logoPath}`);
-        break;
-      }
-    } catch (error) {
-      console.log(`No se encontró logo en: ${logoPath}`);
-    }
-  }
-
-  const logoWidth = 60;
-  let logoHeight = 25;
-  const logoX = margin;
+  const logo = await loadPdfLogo();
   const logoY = yPosition;
-
-  if (logoBase64) {
-    try {
-      const img = new Image();
-      img.src = logoBase64;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-
-      const aspectRatio = img.width / img.height;
-      logoHeight = logoWidth / aspectRatio;
-
-      doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
-    } catch (error) {
-      console.error('Error agregando logo:', error);
-      doc.setFillColor(242, 242, 242);
-      doc.rect(logoX, logoY, logoWidth, logoHeight, 'F');
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.5);
-      doc.rect(logoX, logoY, logoWidth, logoHeight, 'S');
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.text('LOGO ERROR', logoX + logoWidth / 2, logoY + logoHeight / 2, { align: 'center' });
-    }
-  } else {
-    doc.setFillColor(242, 242, 242);
-    doc.rect(logoX, logoY, logoWidth, logoHeight, 'F');
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.5);
-    doc.rect(logoX, logoY, logoWidth, logoHeight, 'S');
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('NO LOGO', logoX + logoWidth / 2, logoY + logoHeight / 2, { align: 'center' });
-    console.warn('No se encontró ningún logo en las rutas esperadas');
-  }
+  const logoHeight = drawPdfLogo(doc, logo, { x: margin, y: logoY });
 
   yPosition = logoY + logoHeight + 15;
 

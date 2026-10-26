@@ -1,13 +1,25 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { MainWrapper } from "@/components/layout/main-wrapper";
 import { StructuredData } from "@/components/seo/structured-data";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-import GoogleAnalytics from "@/scripts/GoogleAnalytics";
+import { SITE_URL } from "@/lib/site-url";
+import { getPublicCategories } from "@/lib/data/categories";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-sans",
+  display: "swap",
+});
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-display",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -15,9 +27,13 @@ export const metadata: Metadata = {
     template: "%s | Habita Studio",
   },
   icons: {
-    icon: '/images/logo.webp',
-    shortcut: '/images/logo.webp',
-    apple: '/images/logo.webp',
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/brand/favicon.svg", type: "image/svg+xml" },
+      { url: "/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/brand/favicon-16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [{ url: "/brand/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   description: "Habita Studio ofrece muebles de calidad y servicios de remodelación profesional. Transformamos espacios con diseño elegante y funcional.",
   keywords: ["muebles", "remodelaciones", "diseño de interiores", "mobiliario", "decoración", "cocinas", "baños", "salas"],
@@ -29,14 +45,10 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://habitastudio.online"),
-  alternates: {
-    canonical: "/",
-  },
+  metadataBase: new URL(SITE_URL),
   openGraph: {
     type: "website",
-    locale: "es_ES",
-    url: "/",
+    locale: "es_CR",
     title: "Habita Studio - Muebles y Remodelaciones de Calidad",
     description: "Habita Studio ofrece muebles de calidad y servicios de remodelación profesional.",
     siteName: "Habita Studio",
@@ -62,24 +74,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const categories = await getPublicCategories();
   return (
     <html lang="es" suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="canonical" href={process.env.NEXT_PUBLIC_SITE_URL || "https://habitastudio.online"} />
-      </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} ${inter.variable} ${cormorant.variable}`}>
         <ThemeProvider defaultTheme="dark" storageKey="habita-studio-theme">
           <StructuredData />
-          <MainWrapper>{children}</MainWrapper>
+          <MainWrapper categories={categories}>{children}</MainWrapper>
           <Toaster />
-
-          <GoogleAnalytics />
         </ThemeProvider>
       </body>
     </html>

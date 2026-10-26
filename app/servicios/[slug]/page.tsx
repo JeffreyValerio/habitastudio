@@ -1,10 +1,14 @@
+import { firstSentence } from "@/lib/site-url";
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, CheckCircle2, ArrowRight } from "lucide-react";
+import Image from "next/image";
+import { Container } from "@/components/site/container";
+import { Eyebrow } from "@/components/site/eyebrow";
+import { SiteButtonLink } from "@/components/site/site-button";
+import { CTABand } from "@/components/site/cta-band";
+import { ImagePlaceholder } from "@/components/site/image-placeholder";
+import { SITE_CONFIG } from "@/lib/site-config";
 import { getServiceBySlug, getAllServiceSlugs } from "@/lib/data/services";
 
 interface ServicePageProps {
@@ -23,8 +27,10 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
 
   return {
     title: service.title,
-    description: service.description,
+    description: firstSentence(service.description) || undefined,
+    alternates: { canonical: `/servicios/${service.slug ?? slug}` },
     openGraph: {
+      url: `/servicios/${service.slug ?? slug}`,
       title: service.title,
       description: service.description,
       images: service.image ? [service.image] : undefined,
@@ -45,6 +51,25 @@ export async function generateStaticParams() {
   }));
 }
 
+const CRUMB =
+  "underline underline-offset-2 hover:text-hs-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-accent";
+
+function BulletList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
+      <h2 className="font-display text-[28px] font-medium leading-[1.1] md:text-[34px]">{title}</h2>
+      <ul className="flex flex-col gap-2 border-t border-hs-rule pt-4">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-3 text-[15px] text-hs-text2">
+            <span aria-hidden="true" className="mt-[9px] h-1.5 w-1.5 shrink-0 bg-hs-accent" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default async function ServicePage({ params }: ServicePageProps) {
   const { slug } = await params;
   const service = await getServiceBySlug(slug);
@@ -53,120 +78,120 @@ export default async function ServicePage({ params }: ServicePageProps) {
     notFound();
   }
 
-  const Icon = service.icon;
+  const clean = (a?: string[]) => (a ?? []).filter((x) => x.trim() !== "");
+  const features = clean(service.features);
+  const process = clean(service.process);
+  const benefits = clean(service.benefits);
+  const asunto = `/contacto?asunto=${encodeURIComponent(service.title)}`;
 
   return (
-    <div className="py-12">
-      <div className="container mx-auto px-4">
-        <Button variant="ghost" asChild className="mb-6">
-          <Link href="/servicios">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver a Servicios
-          </Link>
-        </Button>
+    <>
+      <Container className="pt-6 md:pt-12">
+        <nav aria-label="Migas de pan" className="text-[13px] text-hs-muted">
+          <Link href="/" className={CRUMB}>
+            Inicio
+          </Link>{" "}
+          /{" "}
+          <Link href="/servicios" className={CRUMB}>
+            Servicios
+          </Link>{" "}
+          / <span aria-current="page">{service.title}</span>
+        </nav>
 
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-8 text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-primary/10">
-                <Icon className="h-10 w-10 text-primary" />
-              </div>
-            </div>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              {service.title}
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground">
-              {service.description}
-            </p>
-          </div>
-
-          {service.image && (
-            <div className="mb-10 flex justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+        <div className="mt-6 flex flex-wrap gap-8 md:mt-8 md:gap-14">
+          <div className="relative aspect-[4/3] min-w-0 flex-[1.3_1_520px] self-start overflow-hidden bg-hs-placeholder">
+            {service.image ? (
+              <Image
                 src={service.image}
                 alt={service.title}
-                className="max-h-[480px] w-full max-w-4xl rounded-lg border bg-muted object-contain"
+                fill
+                sizes="(min-width: 1024px) 720px, 100vw"
+                className="object-cover"
+                priority
               />
+            ) : (
+              <ImagePlaceholder />
+            )}
+          </div>
+
+          <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <Eyebrow>Servicio</Eyebrow>
+              <h1 className="font-display text-[38px] font-medium leading-[1.05] text-hs-text md:text-[52px]">
+                {service.title}
+              </h1>
             </div>
-          )}
+            {service.description && (
+              <p className="whitespace-pre-line text-base leading-[1.6] text-hs-text2">
+                {service.description}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-3">
+              <SiteButtonLink
+                href={asunto}
+                data-track-quote
+                data-track-location="service_detail"
+                data-track-product={service.title}
+              >
+                Cotizar este servicio
+              </SiteButtonLink>
+              <SiteButtonLink
+                href={SITE_CONFIG.whatsappUrl}
+                data-track-location="service_detail"
+                data-track-product={service.title}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="secondary"
+              >
+                Consultar por WhatsApp
+              </SiteButtonLink>
+            </div>
+          </div>
+        </div>
+      </Container>
 
-          <Separator className="my-8" />
-
-          <div className="mb-8">
-            <h2 className="mb-4 text-2xl font-semibold">Sobre este Servicio</h2>
-            <p className="text-lg text-muted-foreground leading-relaxed">
+      {service.longDescription && service.longDescription.trim() !== "" && (
+        <Container as="section" className="pt-14 md:pt-[88px]">
+          <div className="flex max-w-[760px] flex-col gap-4">
+            <h2 className="font-display text-[32px] font-medium leading-[1.1] md:text-[42px]">
+              Sobre este servicio
+            </h2>
+            <p className="whitespace-pre-line text-base leading-[1.7] text-hs-text2 md:text-[17px]">
               {service.longDescription}
             </p>
           </div>
+        </Container>
+      )}
 
-          <div className="mb-8">
-            <h2 className="mb-4 text-2xl font-semibold">Características Principales</h2>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {service.features.map((feature, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-primary flex-shrink-0" />
-                  <span className="text-muted-foreground">{feature}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+      {(features.length > 0 || benefits.length > 0) && (
+        <Container as="section" className="flex flex-wrap gap-8 pt-14 md:gap-14 md:pt-[88px]">
+          {features.length > 0 && <BulletList title="Características principales" items={features} />}
+          {benefits.length > 0 && <BulletList title="Beneficios" items={benefits} />}
+        </Container>
+      )}
 
-          {service.process && (
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle>Nuestro Proceso</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ol className="space-y-4">
-                  {service.process.map((step, index) => (
-                    <li key={index} className="flex gap-4">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 pt-1">
-                        <p className="text-muted-foreground">{step}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </CardContent>
-            </Card>
-          )}
+      {process.length > 0 && (
+        <Container as="section" className="flex flex-col gap-8 pt-14 md:pt-[88px]">
+          <h2 className="font-display text-[32px] font-medium leading-[1.1] md:text-[42px]">
+            Nuestro proceso
+          </h2>
+          <ol className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {process.map((step, i) => (
+              <li key={i} className="flex flex-col gap-2.5 border-t-2 border-hs-text pt-5">
+                <span className="font-display text-4xl font-semibold leading-none">{i + 1}</span>
+                <p className="text-[15px] text-hs-text2">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </Container>
+      )}
 
-          {service.benefits && (
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle>Beneficios</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {service.benefits.map((benefit, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 text-primary flex-shrink-0" />
-                      <span className="text-muted-foreground">{benefit}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="mt-12 rounded-lg border-2 bg-primary/5 p-8 text-center">
-            <h3 className="mb-4 text-2xl font-semibold">¿Listo para comenzar?</h3>
-            <p className="mb-6 text-muted-foreground">
-              Contáctanos hoy y recibe una consulta gratuita para tu proyecto.
-            </p>
-            <Button size="lg" asChild>
-              <Link href="/contacto">
-                Solicitar Consulta Gratuita
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
+      <div className="mt-14 md:mt-[104px]">
+        <CTABand
+          title="¿Listo para comenzar?"
+          text="Contáctanos hoy y recibe una cotización gratuita para tu proyecto."
+        />
       </div>
-    </div>
+    </>
   );
 }
-

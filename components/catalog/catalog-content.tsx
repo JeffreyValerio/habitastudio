@@ -1,177 +1,128 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Search, X, ArrowRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Product } from "@/lib/data/products";
+import { ProductCard } from "@/components/site/product-card";
+import { FilterChips } from "@/components/site/filter-chips";
+import { SiteButton } from "@/components/site/site-button";
+import { buildCategories, normalizeCategory } from "@/lib/catalog-categories";
 
-const categories = [
-  { name: "Todos", slug: "todos" },
-  { name: "Salas", slug: "salas" },
-  { name: "Comedores", slug: "comedores" },
-  { name: "Dormitorios", slug: "dormitorios" },
-  { name: "Oficinas", slug: "oficinas" },
-  { name: "Cocinas", slug: "cocinas" },
-];
+type Sort = "destacados" | "precio-asc" | "precio-desc";
 
-export function CatalogContent({ initialProducts }: { initialProducts: Product[] }) {
-  const searchParams = useSearchParams();
-  const categoryParam = searchParams.get("categoria") || "todos";
-  
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(categoryParam);
-
-  useEffect(() => {
-    const cat = searchParams.get("categoria") || "todos";
-    setSelectedCategory(cat);
-  }, [searchParams]);
-
-  const filteredProducts = useMemo(() => {
-    let filtered = [...initialProducts];
-
-    if (selectedCategory !== "todos") {
-      filtered = filtered.filter(
-        (product) => product.category.toLowerCase() === selectedCategory.toLowerCase()
-      );
-    }
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        (product) =>
-          product.name.toLowerCase().includes(query) ||
-          product.description.toLowerCase().includes(query) ||
-          product.category.toLowerCase().includes(query)
-      );
-    }
-
-    return filtered;
-  }, [selectedCategory, searchQuery, initialProducts]);
-
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
-    const url = new URL(window.location.href);
-    if (category === "todos") {
-      url.searchParams.delete("categoria");
-    } else {
-      url.searchParams.set("categoria", category);
-    }
-    window.history.pushState({}, "", url.toString());
-  };
-
-  return (
-    <div className="mt-12">
-      <div className="mb-8 flex flex-wrap items-center justify-center gap-4">
-        {categories.map((category) => (
-          <Button
-            key={category.slug}
-            variant={selectedCategory === category.slug ? "default" : "outline"}
-            onClick={() => handleCategoryChange(category.slug)}
-          >
-            {category.name}
-          </Button>
-        ))}
-      </div>
-
-      <div className="mb-8">
-        <div className="relative mx-auto max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar productos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-10"
-          />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
-              onClick={() => setSearchQuery("")}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {filteredProducts.length > 0 ? (
-        <>
-          <div className="mb-4 text-sm text-muted-foreground">
-            Mostrando {filteredProducts.length} producto{filteredProducts.length !== 1 ? "s" : ""}
-            {searchQuery && ` para "${searchQuery}"`}
-            {selectedCategory !== "todos" && ` en ${categories.find(c => c.slug === selectedCategory)?.name}`}
-          </div>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {filteredProducts.map((product) => (
-              <Card
-                key={product.id}
-                className="group overflow-hidden border-transparent bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
-              >
-                <div>
-                  <Link href={`/catalogo/${product.slug}`}>
-                    <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-b from-muted/40 to-muted/80">
-                      <Image
-                        src={product.image}
-                        alt={product.name}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        className="object-contain p-6 transition-transform duration-500 group-hover:scale-105"
-                        unoptimized
-                      />
-                      <span className="absolute left-3 top-3 rounded-full bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
-                        {product.category}
-                      </span>
-                    </div>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg hover:text-primary">{product.name}</CardTitle>
-                    </CardHeader>
-                  </Link>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-primary">{product.price}</span>
-                      <Button variant="ghost" size="sm" className="group/link -mr-2" asChild>
-                        <Link href={`/catalogo/${product.slug}`}>
-                          Ver Detalles
-                          <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div className="py-12 text-center">
-          <p className="text-lg text-muted-foreground">
-            No se encontraron productos
-            {searchQuery && ` que coincidan con "${searchQuery}"`}
-            {selectedCategory !== "todos" && ` en la categoría ${categories.find(c => c.slug === selectedCategory)?.name}`}
-          </p>
-          {(searchQuery || selectedCategory !== "todos") && (
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedCategory("todos");
-                handleCategoryChange("todos");
-              }}
-            >
-              Limpiar filtros
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  );
+function priceValue(price: string | null | undefined): number | null {
+  if (!price) return null;
+  const digits = price.replace(/[^\d]/g, "");
+  if (!digits) return null;
+  const n = Number(digits);
+  return n > 0 ? n : null;
 }
 
+export function CatalogContent({ initialProducts }: { initialProducts: Product[] }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const raw = (searchParams.get("categoria") || "todos").trim().toLowerCase();
+  const categories = useMemo(
+    () => buildCategories(initialProducts.map((p) => p.category)),
+    [initialProducts],
+  );
+  const chips = useMemo(() => [{ value: "todos", label: "Todos" }, ...categories], [categories]);
+  const category = categories.some((c) => c.value === raw) ? raw : "todos";
+  const [sort, setSort] = useState<Sort>("destacados");
+
+  const products = useMemo(() => {
+    let list =
+      category === "todos"
+        ? [...initialProducts]
+        : initialProducts.filter((p) => normalizeCategory(p.category) === category);
+
+    if (sort !== "destacados") {
+      const dir = sort === "precio-asc" ? 1 : -1;
+      list = list
+        .map((p, i) => ({ p, i, v: priceValue(p.price) }))
+        .sort((a, b) => {
+          if (a.v === null && b.v === null) return a.i - b.i;
+          if (a.v === null) return 1;
+          if (b.v === null) return -1;
+          return (a.v - b.v) * dir || a.i - b.i;
+        })
+        .map((x) => x.p);
+    }
+    return list;
+  }, [initialProducts, category, sort]);
+
+  const handleCategory = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "todos") params.delete("categoria");
+    else params.set("categoria", value);
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
+
+  const count = products.length;
+
+  return (
+    <>
+      <div className="mt-5 flex flex-col md:mt-8 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-x-6 md:gap-y-4 md:border-y md:border-hs-border md:py-4">
+        {categories.length > 1 && (
+          <FilterChips
+            chips={chips}
+            value={category}
+            onChange={handleCategory}
+            className="-mx-4 scroll-px-4 border-y border-hs-border px-4 py-2 md:mx-0 md:border-0 md:p-0"
+          />
+        )}
+        <div className="flex items-center justify-between gap-3 py-2 md:justify-start md:gap-4 md:py-0">
+          <span className="text-[13px] text-hs-muted md:text-sm" aria-live="polite">
+            {count} {count === 1 ? "producto" : "productos"}
+          </span>
+          <label htmlFor="catalog-sort" className="sr-only md:not-sr-only md:text-sm md:text-hs-muted">
+            Ordenar
+          </label>
+          <select
+            id="catalog-sort"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as Sort)}
+            className="min-h-[44px] border border-hs-input bg-white px-3 font-sans text-sm text-hs-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-accent"
+          >
+            <option value="destacados">Destacados</option>
+            <option value="precio-asc">Precio ↑</option>
+            <option value="precio-desc">Precio ↓</option>
+          </select>
+        </div>
+      </div>
+
+      {count > 0 ? (
+        <>
+          <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-6 md:mt-8 md:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] md:gap-x-6 md:gap-y-10">
+            {products.map((p) => (
+              <ProductCard
+                key={p.id}
+                slug={p.slug}
+                name={p.name}
+                category={p.category}
+                image={p.image}
+                dimensions={p.specifications?.dimensions}
+                material={p.specifications?.material}
+                price={p.price}
+              />
+            ))}
+          </div>
+          <p className="mt-8 text-[13px] text-hs-muted">
+            Precios de referencia. Confirma el precio final en tu cotización.
+          </p>
+        </>
+      ) : (
+        <div className="flex flex-col items-start gap-4 py-16">
+          <p className="text-base text-hs-text2">
+            No hay productos en esta categoría por ahora.
+          </p>
+          <SiteButton variant="secondary" onClick={() => handleCategory("todos")}>
+            Ver todos
+          </SiteButton>
+        </div>
+      )}
+    </>
+  );
+}

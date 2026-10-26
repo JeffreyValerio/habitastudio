@@ -37,7 +37,7 @@ export function ScrollToTopButton() {
   return (
     <button
       onClick={scrollToTop}
-      className="fixed bottom-28 right-6 z-50 flex items-center justify-center w-12 h-12 bg-muted/50 border border-border rounded-md shadow-lg hover:bg-muted transition-all duration-300 hover:scale-110 hover:shadow-xl"
+      className="fixed bottom-24 right-4 md:bottom-28 md:right-6 z-50 flex items-center justify-center w-12 h-12 bg-hs-surface border border-hs-border hover:bg-hs-successBg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-accent"
       aria-label="Volver arriba"
     >
       <ChevronUp className="w-5 h-5 text-foreground" />

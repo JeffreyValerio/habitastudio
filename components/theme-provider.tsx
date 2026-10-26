@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "dark" | "light" | "system";
@@ -33,10 +34,22 @@ export function ThemeProvider({
     () => (typeof window !== "undefined" && (localStorage.getItem(storageKey) as Theme)) || defaultTheme
   );
 
+  const pathname = usePathname();
+  const isPortal =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/taller-manager") ||
+    pathname.startsWith("/collaborator");
+
   useEffect(() => {
     const root = window.document.documentElement;
 
     root.classList.remove("light", "dark");
+
+    // Public site is always light; the stored theme only applies to portals.
+    if (!isPortal) {
+      root.classList.add("light");
+      return;
+    }
 
     if (theme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -48,7 +61,7 @@ export function ThemeProvider({
     }
 
     root.classList.add(theme);
-  }, [theme]);
+  }, [theme, isPortal]);
 
   const value = {
     theme,

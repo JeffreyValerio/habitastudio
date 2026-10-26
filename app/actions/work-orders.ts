@@ -7,6 +7,7 @@ import { calculateLaborCost, calculateExpensesCost } from "@/lib/work-order-cost
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_STAGES, WORK_ORDER_STAGE_LABELS, WorkOrderStage } from "@/lib/work-order-types";
 import { getSectionAccess } from "@/app/actions/role-permissions";
 import { Resend } from "resend";
+import { emailLogoImg } from "@/lib/email-logo";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -59,7 +60,7 @@ async function sendWorkOrderStatusChangeEmail(
                 <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                   <tr>
                     <td style="background-color: #ffffff; padding: 30px 40px 20px 40px; text-align: center;">
-                      <img src="https://habitastudio.online/images/logo.png" alt="Habita Studio" style="max-width: 200px; height: auto; margin-bottom: 20px;" />
+                      ${emailLogoImg()}
                     </td>
                   </tr>
                   <tr>
@@ -156,7 +157,7 @@ async function sendWorkOrderStageEmail(
                 <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                   <tr>
                     <td style="background-color: #ffffff; padding: 30px 40px 20px 40px; text-align: center;">
-                      <img src="https://habitastudio.online/images/logo.png" alt="Habita Studio" style="max-width: 200px; height: auto; margin-bottom: 20px;" />
+                      ${emailLogoImg()}
                     </td>
                   </tr>
                   <tr>

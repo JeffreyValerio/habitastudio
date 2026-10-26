@@ -95,3 +95,7 @@ export async function getAllProjectSlugs(): Promise<string[]> {
   });
   return projects.map((p) => p.slug);
 }
+
+export function pickFeaturedProject<T extends { title: string }>(projects: T[]): T | null {
+  return projects.find((p) => /baltodano/i.test(p.title)) ?? projects[0] ?? null;
+}

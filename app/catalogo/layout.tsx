@@ -1,8 +1,9 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Catálogo de Productos",
-  description: "Explora nuestro catálogo completo de muebles de calidad. Salas, comedores, dormitorios, oficinas y más. Encuentra el mueble perfecto para tu espacio.",
+  title: "Catálogo de Muebles a Medida",
+  description: "Explora muebles a medida para tu hogar u oficina en Costa Rica: cocinas, closets, salas y más. Cotiza gratis con Habita Studio.",
+  alternates: { canonical: "/catalogo" },
 };
 
 export default function CatalogLayout({

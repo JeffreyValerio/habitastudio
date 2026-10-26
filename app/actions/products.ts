@@ -72,16 +72,20 @@ export async function createUpdateProduct(formData: FormData) {
   // Evitar el choque de unicidad en slug (P2002) cuando dos productos
   // generan el mismo slug a partir del nombre: se le agrega un sufijo
   // numerico hasta encontrar uno libre, en vez de fallar al guardar.
+  // Solo se genera al CREAR: al editar se conserva el slug existente para no
+  // romper la URL publica (/catalogo/<slug>), el SEO ni los links compartidos.
   let slug = baseSlug;
-  let suffix = 2;
-  while (
-    await prisma.product.findFirst({
-      where: { slug, ...(id ? { id: { not: id } } : {}) },
-      select: { id: true },
-    })
-  ) {
-    slug = `${baseSlug}-${suffix}`;
-    suffix++;
+  if (!id) {
+    let suffix = 2;
+    while (
+      await prisma.product.findFirst({
+        where: { slug },
+        select: { id: true },
+      })
+    ) {
+      slug = `${baseSlug}-${suffix}`;
+      suffix++;
+    }
   }
 
   // Parsear galería si viene como JSON string
@@ -190,7 +194,6 @@ export async function createUpdateProduct(formData: FormData) {
           where: { id },
           data: {
             name: product.name,
-            slug,
             categoryId: product.categoryId,
             cost: costNumber,
             price: priceNumber,

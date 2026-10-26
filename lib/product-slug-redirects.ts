@@ -1,0 +1,30 @@
+// Generado a partir de backups/products-proposal-2026-10-26.json.
+// Mapa SLUG_ANTIGUO -> SLUG_NUEVO para redirigir (301) las URLs viejas del catálogo.
+export const PRODUCT_SLUG_REDIRECTS: Record<string, string> = {
+  "cama-nido": "cama-tipi-montessori-con-cajon-inferior",
+  "silla-eames": "silla-eames-con-patas-de-madera-de-haya",
+  "descansa-pies": "descansa-pies-ergonomico-de-altura-regulable",
+  "closet": "closet-blanco-con-doble-colgado-y-gavetas",
+  "escritorio-ejecutivo-en-l": "escritorio-en-l-con-gavetero-y-tapa-concreto",
+  "credenza": "credenza-tipo-concreto-con-gavetas-y-puertas",
+  "closet-modular-con-iluminacion-led": "closet-blanco-con-repisas-led-y-gavetas",
+  "puertas-de-interior": "puertas-de-interior-con-acabado-tipo-madera",
+  "walk-in-closet": "walk-in-closet-en-esquina-con-luz-led",
+  "mesa-de-juntas-ejecutiva": "mesa-de-juntas-bitono-madera-y-negro",
+  "closet-abierto": "closet-abierto-con-nichos-y-seis-gavetas",
+  "vanity": "tocador-blanco-con-espejo-led-y-cajonera",
+  "viniera-con-luces-led": "vinera-negra-con-luz-led-y-vitrinas-de-vidrio",
+  "puertas-de-bano": "puertas-de-bano-con-acabado-tipo-madera-clara",
+  "puerta-principal": "puerta-principal-negra-con-jalador-tubular",
+  "veladora": "veladora-gris-tipo-madera-con-dos-cajones",
+  "closet-cambiador": "cambiador-infantil-con-closet-y-cajones",
+  "mueble-alacena": "alacena-alta-blanca-de-dos-puertas",
+  "closet-modular": "closet-blanco-de-puertas-lisas-con-maletero",
+  "closet-2": "closet-abierto-con-repisas-y-barras-de-colgar",
+  "veladora-2": "veladora-cafe-oscuro-con-tres-cajones",
+  "puerta-principal-2": "puerta-principal-oscura-con-cerradura-digital",
+  "closet-3": "closet-abierto-con-gaveta-con-llave-y-repisas",
+  "closet-4": "closet-abierto-con-zapatera-y-cubos",
+  "closet-5": "closet-abierto-con-colgado-y-torre-de-nichos",
+  "closet-6": "closet-abierto-con-doble-barra-y-tres-gavetas"
+};
