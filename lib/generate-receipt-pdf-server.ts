@@ -1,7 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
-import sharp from 'sharp';
+import { drawPdfLogo, loadPdfLogo } from './pdf-logo-server';
 
 interface Receipt {
   receiptNumber: string;
@@ -48,141 +46,9 @@ export async function generateReceiptPDFBuffer(receipt: Receipt): Promise<Buffer
   let yPosition = margin;
   
   // === LOGO ===
-  // Intentar cargar el logo (PNG o SVG) desde varias ubicaciones posibles
-  let logoBase64: string | null = null;
-  const logoPaths = [
-    { name: 'logo.png', type: 'png' },
-    { name: 'logo-png.png', type: 'png' },
-    { name: 'logo-pdf.png', type: 'png' },
-    { name: 'logo-pdf.svg', type: 'svg' },
-    { name: 'logo.svg', type: 'svg' },
-  ];
-  
-  for (const logoInfo of logoPaths) {
-    try {
-      const logoPath = join(process.cwd(), 'public', 'images', logoInfo.name);
-      const fileBuffer = await readFile(logoPath);
-      
-      if (logoInfo.type === 'svg') {
-        // Convertir SVG a PNG usando sharp
-        const svgContent = fileBuffer.toString('utf-8');
-        const pngBuffer = await sharp(Buffer.from(svgContent, 'utf-8'), {
-          density: 300,
-        })
-          .resize({
-            width: 1200,
-            height: 560,
-            fit: 'contain',
-            background: { r: 255, g: 255, b: 255, alpha: 1 }, // Fondo blanco
-          })
-          .flatten({ background: { r: 255, g: 255, b: 255 } }) // Asegurar fondo blanco sólido
-          .png({
-            quality: 100,
-            compressionLevel: 6,
-          })
-          .toBuffer();
-        
-        const base64 = pngBuffer.toString('base64');
-        logoBase64 = `data:image/png;base64,${base64}`;
-        console.log(`Logo SVG convertido a PNG desde: ${logoPath}`);
-        break;
-      } else {
-        // Si es PNG, usarlo directamente
-        const base64 = fileBuffer.toString('base64');
-        logoBase64 = `data:image/png;base64,${base64}`;
-        console.log(`Logo PNG cargado desde: ${logoPath}`);
-        break;
-      }
-    } catch (error) {
-      // Intentar desde URL pública
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-                        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-                        'https://habitastudio.online';
-        const logoUrl = `${baseUrl}/images/${logoInfo.name}`;
-        const response = await fetch(logoUrl);
-        if (response.ok) {
-          if (logoInfo.type === 'svg') {
-            const svgText = await response.text();
-            const pngBuffer = await sharp(Buffer.from(svgText, 'utf-8'), {
-              density: 300,
-            })
-              .resize({
-                width: 1200,
-                height: 560,
-                fit: 'contain',
-                background: { r: 255, g: 255, b: 255, alpha: 1 },
-              })
-              .flatten({ background: { r: 255, g: 255, b: 255 } })
-              .png({
-                quality: 100,
-                compressionLevel: 6,
-              })
-              .toBuffer();
-            
-            const base64 = pngBuffer.toString('base64');
-            logoBase64 = `data:image/png;base64,${base64}`;
-            break;
-          } else {
-            const arrayBuffer = await response.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            const base64 = buffer.toString('base64');
-            logoBase64 = `data:image/png;base64,${base64}`;
-            break;
-          }
-        }
-      } catch (urlError) {
-        // Continuar con el siguiente logo
-        continue;
-      }
-    }
-  }
-  
-  const logoWidth = 60;
-  let logoHeight = 25; // Altura por defecto
-  const logoX = margin;
+  const logo = await loadPdfLogo();
   const logoY = yPosition;
-  
-  if (logoBase64) {
-    try {
-      // Obtener dimensiones de la imagen para mantener proporción
-      const base64Data = logoBase64.includes(',') ? logoBase64.split(',')[1] : logoBase64;
-      const imageBuffer = Buffer.from(base64Data, 'base64');
-      const metadata = await sharp(imageBuffer).metadata();
-      
-      if (metadata.width && metadata.height) {
-        const aspectRatio = metadata.width / metadata.height;
-        logoHeight = logoWidth / aspectRatio;
-      }
-      
-      doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
-      console.log(`Logo agregado al PDF: ${logoWidth}x${logoHeight}mm`);
-    } catch (logoError) {
-      console.error('Error agregando logo:', logoError);
-      // Fallback: rectángulo de prueba
-      doc.setFillColor(242, 242, 242);
-      doc.rect(logoX, logoY, logoWidth, logoHeight, 'F');
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.5);
-      doc.rect(logoX, logoY, logoWidth, logoHeight, 'S');
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.text('LOGO ERROR', logoX + logoWidth / 2, logoY + logoHeight / 2, { align: 'center' });
-    }
-  } else {
-    // Si no se encuentra el logo, mostrar rectángulo de prueba
-    doc.setFillColor(242, 242, 242);
-    doc.rect(logoX, logoY, logoWidth, logoHeight, 'F');
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.5);
-    doc.rect(logoX, logoY, logoWidth, logoHeight, 'S');
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('NO LOGO', logoX + logoWidth / 2, logoY + logoHeight / 2, { align: 'center' });
-    console.warn('No se encontró ningún logo en las rutas esperadas');
-  }
+  const logoHeight = drawPdfLogo(doc, logo, { x: margin, y: logoY });
   
   yPosition = logoY + logoHeight + 15;
   

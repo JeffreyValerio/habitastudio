@@ -10,6 +10,7 @@ import { generateQuotePDFBuffer } from "@/lib/generate-pdf-server";
 import { formatCRC } from "@/lib/utils";
 import { syncCustomerTotalSpent } from "@/app/actions/crm";
 import { getSectionAccess } from "@/app/actions/role-permissions";
+import { emailLogoImg } from "@/lib/email-logo";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -397,7 +398,7 @@ export async function sendQuote(id: string) {
                 <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                   <tr>
                     <td style="background-color: #ffffff; padding: 30px 40px 20px 40px; text-align: center;">
-                      <img src="https://habitastudio.online/images/logo.png" alt="Habita Studio" style="max-width: 200px; height: auto; margin-bottom: 20px;" />
+                      ${emailLogoImg()}
                     </td>
                   </tr>
                   <tr>

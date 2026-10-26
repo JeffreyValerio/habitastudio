@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Resend } from "resend";
 import { generateReceiptPDFBuffer } from "@/lib/generate-receipt-pdf-server";
 import { formatCRC } from "@/lib/utils";
+import { emailLogoImg } from "@/lib/email-logo";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -359,7 +360,7 @@ export async function sendReceipt(id: string) {
         </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <img src="https://habitastudio.online/images/logo.png" alt="Habita Studio" style="max-width: 200px; height: auto;">
+            ${emailLogoImg()}
           </div>
           <h1 style="color: #2c3e50;">Recibo ${receipt.receiptNumber}</h1>
           <p>Estimado/a ${receipt.clientName},</p>

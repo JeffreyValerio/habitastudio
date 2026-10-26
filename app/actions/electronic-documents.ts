@@ -12,6 +12,7 @@ import { submitDocument, queryStatus, readP12Base64, getP12Pin } from "@/lib/hac
 import { isCabysMercancia } from "@/lib/hacienda/cabys";
 import { generateInvoicePDFBuffer, generateSimpleInvoicePDFBuffer } from "@/lib/generate-invoice-pdf-server";
 import { formatCRC } from "@/lib/utils";
+import { emailLogoImg } from "@/lib/email-logo";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const TARIFA_IVA = 13;
@@ -31,7 +32,7 @@ function invoiceEmailHtml({ title, clientName, numero, total }: { title: string;
             <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
               <tr>
                 <td style="background-color: #ffffff; padding: 30px 40px 20px 40px; text-align: center;">
-                  <img src="https://habitastudio.online/images/logo.png" alt="Habita Studio" style="max-width: 200px; height: auto; margin-bottom: 20px;" />
+                  ${emailLogoImg()}
                 </td>
               </tr>
               <tr>

@@ -31,11 +31,18 @@ export function AdminMobileNav({ role, permissions = {} }: { role?: string | nul
       <nav className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-background border-b border-border z-40 flex items-center justify-between px-4">
         <Link href="/admin" className="flex items-center justify-center">
           <Image
-            src="/images/logo.svg"
+            src="/brand/logo-horizontal-color.svg"
             alt="Habita Studio"
-            width={40}
+            width={136}
             height={40}
-            className="h-8 w-auto"
+            className="h-10 w-auto dark:hidden"
+          />
+          <Image
+            src="/brand/logo-horizontal-oscuro.svg"
+            alt="Habita Studio"
+            width={136}
+            height={40}
+            className="hidden h-10 w-auto dark:block"
           />
         </Link>
 

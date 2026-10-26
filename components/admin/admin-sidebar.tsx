@@ -56,17 +56,42 @@ export function AdminSidebar({ role, permissions = {}, collapsed = false, onTogg
 
         <div className="flex items-center justify-center rounded-lg p-4 border border-border/50">
           {!collapsed && (
-            <Image
-              src="/images/logo.svg"
-              alt="Habita Studio"
-              width={600}
-              height={280}
-              className="h-full w-auto object-scale-down"
-              priority
-            />
+            <>
+              <Image
+                src="/brand/logo-horizontal-color.svg"
+                alt="Habita Studio"
+                width={600}
+                height={176}
+                className="h-full w-auto object-scale-down dark:hidden"
+                priority
+              />
+              <Image
+                src="/brand/logo-horizontal-oscuro.svg"
+                alt="Habita Studio"
+                width={600}
+                height={176}
+                className="hidden h-full w-auto object-scale-down dark:block"
+                priority
+              />
+            </>
           )}
           {collapsed && (
-            <div className="text-xl font-bold">HS</div>
+            <>
+              <Image
+                src="/brand/simbolo-color.svg"
+                alt="Habita Studio"
+                width={32}
+                height={32}
+                className="h-8 w-8 dark:hidden"
+              />
+              <Image
+                src="/brand/simbolo-oscuro.svg"
+                alt="Habita Studio"
+                width={32}
+                height={32}
+                className="hidden h-8 w-8 dark:block"
+              />
+            </>
           )}
         </div>
       </div>
