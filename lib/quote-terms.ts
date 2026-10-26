@@ -4,7 +4,7 @@ import type { jsPDF } from 'jspdf';
 export const QUOTE_CONDITIONS: string[] = [
   'Garantía: 12 meses por defectos de fabricación.',
   'Forma de pago: adelanto del 50% para iniciar la fabricación y 50% restante al finalizar.',
-  'Tiempo de entrega: 15 días hábiles a partir de la recepción del adelanto y de la aprobación del diseño y las medidas.',
+  'Tiempo de entrega: 22 días hábiles a partir de la recepción del adelanto y de la aprobación del diseño y las medidas.',
   'Por tratarse de muebles fabricados a medida, no se realizan devoluciones de dinero una vez iniciada la fabricación, incluyendo cambios de opinión, de diseño o de medidas posteriores a la aprobación. Esto no afecta la garantía por defectos de fabricación.',
   'Cualquier cambio solicitado después de la aprobación puede generar costos adicionales y modificar el tiempo de entrega.',
 ];
