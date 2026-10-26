@@ -102,3 +102,17 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     },
   };
 }
+
+/** Hasta `limit` productos relacionados: misma categoría primero, luego recientes. */
+export async function getRelatedProducts(
+  slug: string,
+  category: string,
+  limit = 3
+): Promise<Product[]> {
+  const all = await getProducts(); // ya ordenados por createdAt desc
+  const others = all.filter((p) => p.slug !== slug);
+  const key = category.trim().toLowerCase();
+  const same = others.filter((p) => p.category.trim().toLowerCase() === key);
+  const rest = others.filter((p) => p.category.trim().toLowerCase() !== key);
+  return [...same, ...rest].slice(0, limit);
+}

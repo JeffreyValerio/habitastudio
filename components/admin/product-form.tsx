@@ -173,6 +173,21 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
   const category = categories.find((c) => c.id === categoryId)?.name ?? "";
   const description = watch("description");
   const features = watch("features");
+  const material = watch("material");
+  const dimensions = watch("dimensions");
+  const color = watch("color");
+  const warranty = watch("warranty");
+  const aiContext = {
+    productId: product?.id,
+    name,
+    category,
+    material,
+    dimensions,
+    color,
+    warranty,
+    features,
+    description,
+  };
   const cabysCode = watch("cabysCode");
 
   const calculateMargin = (): number => {
@@ -370,7 +385,7 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
                   <Label htmlFor="name">Nombre *</Label>
                   <AiSuggestButton
                     field="name"
-                    body={{ text: name, category }}
+                    body={{ ...aiContext, text: name }}
                     disabled={!name?.trim()}
                     onResult={(v) =>
                       setValue("name", v.charAt(0).toUpperCase() + v.slice(1), { shouldValidate: true })
@@ -402,8 +417,8 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
                 <Label htmlFor="description">Descripción *</Label>
                 <AiSuggestButton
                   field="description"
-                  body={{ text: description, category }}
-                  disabled={!description?.trim()}
+                  body={{ ...aiContext, text: description }}
+                  disabled={!name?.trim()}
                   onResult={(v) => setValue("description", v, { shouldValidate: true })}
                 />
               </div>
@@ -602,7 +617,7 @@ export function ProductForm({ product, cloudName, uploadPreset, categories: init
                 <AiSuggestButton
                   field="features"
                   label="Generar con IA"
-                  body={{ text: features, category, name }}
+                  body={{ ...aiContext, text: features }}
                   disabled={!name?.trim()}
                   onResult={(v) => setValue("features", v, { shouldValidate: true })}
                 />

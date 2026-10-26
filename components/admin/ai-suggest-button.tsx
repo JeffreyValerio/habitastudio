@@ -33,6 +33,9 @@ export function AiSuggestButton({
       const data = await res.json();
       if (data.result) {
         onResult(data.result);
+        if (data.warning) {
+          toast({ title: "Aviso", description: data.warning });
+        }
       } else {
         toast({
           title: "Error",
