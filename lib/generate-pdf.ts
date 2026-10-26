@@ -1,4 +1,6 @@
 import jsPDF from 'jspdf';
+import { drawQuoteTerms, QUOTE_FOOTER_TEXT } from './quote-terms';
+import { drawPdfLogo, loadPdfLogo } from './pdf-logo';
 
 interface QuoteItem {
   description: string;
@@ -82,108 +84,9 @@ export async function generateQuotePDF(quote: Quote) {
   let yPosition = margin;
   
   // === LOGO ===
-  // Intentar cargar el logo (PNG o SVG) desde varias ubicaciones posibles
-  let logoBase64: string | null = null;
-  const logoPaths = ['/images/logo.png', '/images/logo-png.png', '/images/logo-pdf.png', '/images/logo-pdf.svg', '/images/logo.svg'];
-  
-  for (const logoPath of logoPaths) {
-    try {
-      const response = await fetch(logoPath);
-      if (response.ok) {
-        const blob = await response.blob();
-        
-        // Si es SVG, necesitamos convertirlo a imagen
-        if (logoPath.endsWith('.svg')) {
-          const svgText = await response.text();
-          const img = new Image();
-          const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
-          const url = URL.createObjectURL(svgBlob);
-          
-          logoBase64 = await new Promise<string>((resolve, reject) => {
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width || 600;
-              canvas.height = img.height || 280;
-              const ctx = canvas.getContext('2d');
-              if (!ctx) {
-                reject(new Error('No se pudo obtener contexto del canvas'));
-                return;
-              }
-              ctx.drawImage(img, 0, 0);
-              const base64 = canvas.toDataURL('image/png');
-              URL.revokeObjectURL(url);
-              resolve(base64);
-            };
-            img.onerror = () => {
-              URL.revokeObjectURL(url);
-              reject(new Error('Error cargando SVG'));
-            };
-            img.src = url;
-          });
-        } else {
-          // Si es PNG, leerlo directamente
-          const reader = new FileReader();
-          logoBase64 = await new Promise<string>((resolve, reject) => {
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        }
-        console.log(`Logo cargado desde: ${logoPath}`);
-        break;
-      }
-    } catch (error) {
-      console.log(`No se encontró logo en: ${logoPath}`);
-    }
-  }
-  
-  const logoWidth = 60;
-  let logoHeight = 25; // Altura por defecto
-  const logoX = margin;
+  const logo = await loadPdfLogo();
   const logoY = yPosition;
-  
-  if (logoBase64) {
-    try {
-      // Obtener dimensiones de la imagen para mantener proporción
-      const img = new Image();
-      img.src = logoBase64;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-      
-      // Calcular altura proporcional basada en el ancho deseado
-      const aspectRatio = img.width / img.height;
-      logoHeight = logoWidth / aspectRatio; // Usar la altura real calculada
-      
-      doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
-      console.log(`Logo agregado al PDF: ${logoWidth}x${logoHeight}mm`);
-    } catch (error) {
-      console.error('Error agregando logo PNG:', error);
-      // Fallback: rectángulo de prueba
-      doc.setFillColor(242, 242, 242);
-      doc.rect(logoX, logoY, logoWidth, logoHeight, 'F');
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.5);
-      doc.rect(logoX, logoY, logoWidth, logoHeight, 'S');
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.text('LOGO ERROR', logoX + logoWidth / 2, logoY + logoHeight / 2, { align: 'center' });
-    }
-  } else {
-    // Si no se encuentra el logo, mostrar rectángulo de prueba
-    doc.setFillColor(242, 242, 242);
-    doc.rect(logoX, logoY, logoWidth, logoHeight, 'F');
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.5);
-    doc.rect(logoX, logoY, logoWidth, logoHeight, 'S');
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('NO LOGO', logoX + logoWidth / 2, logoY + logoHeight / 2, { align: 'center' });
-    console.warn('No se encontró ningún logo PNG en las rutas esperadas');
-  }
+  const logoHeight = drawPdfLogo(doc, logo, { x: margin, y: logoY });
   
   // === INFORMACIÓN DE LA EMPRESA ===
   const companyInfoX = margin;
@@ -462,55 +365,21 @@ export async function generateQuotePDF(quote: Quote) {
     }
   }
   
-  // Información de garantía, pago y entrega
-  yPosition += 20;
-  if (yPosition > pageHeight - 80) {
-    doc.addPage();
-    yPosition = margin;
-  }
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text('CONDICIONES DE PAGO Y ENTREGA', margin, yPosition);
-  
-  yPosition += 8;
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('• Garantía: 12 meses por defecto de fabricación', margin + 3, yPosition);
-  yPosition += 6;
-  doc.text('• Forma de pago: Adelanto del 50% y 50% al finalizar', margin + 3, yPosition);
-  yPosition += 6;
-  doc.text('• Tiempo de entrega: 15 días hábiles luego de realizado el adelanto', margin + 3, yPosition);
-  
-  // Datos bancarios
-  yPosition += 12;
-  if (yPosition > pageHeight - 60) {
-    doc.addPage();
-    yPosition = margin;
-  }
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('DATOS BANCARIOS', margin, yPosition);
-  
-  yPosition += 8;
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Sinpe Móvil: 63644915', margin + 3, yPosition);
-  yPosition += 6;
-  doc.text('Cliente: MICHAEL ANDRES VALERIO ANGULO', margin + 3, yPosition);
-  yPosition += 6;
-  doc.text('Número de cuenta BAC: 944908482', margin + 3, yPosition);
-  yPosition += 6;
-  doc.text('Número de cuenta IBAN: CR47010200009449084829', margin + 3, yPosition);
-  
+  // Condiciones, datos bancarios y aceptación del cliente
+  drawQuoteTerms(doc, {
+    startY: yPosition + 8,
+    margin,
+    contentWidth,
+    pageHeight,
+    clientName: quote.clientName,
+  });
+
   // Pie de página
   const footerY = pageHeight - 15;
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
   doc.text(
-    'Este documento es una cotización y no constituye una orden de compra. Válida por el período indicado.',
+    QUOTE_FOOTER_TEXT,
     pageWidth / 2,
     footerY,
     { align: 'center', maxWidth: contentWidth }
