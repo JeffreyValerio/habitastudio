@@ -14,7 +14,7 @@ export const NO_REFUND_CONDITION_INDEX = 3;
 
 export const QUOTE_ACCEPTANCE_TITLE = 'ACEPTACIÓN DEL CLIENTE';
 export const QUOTE_ACCEPTANCE_TEXT =
-  'Declaro que revisé y apruebo el diseño, las medidas, los materiales, los acabados y las condiciones descritas en esta cotización, incluida la política de no devolución de dinero.';
+  'Declaro que revisé y apruebo el diseño, las medidas, los materiales, los acabados y las condiciones descritas en esta cotización.';
 
 export const QUOTE_FOOTER_TEXT =
   'Cotización válida por el período indicado. Una vez firmada por el cliente, constituye la aprobación del diseño, las medidas y las condiciones.';
